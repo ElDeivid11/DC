@@ -19,6 +19,7 @@ func _init(p_run: Node = null) -> void:
 
 func _ready() -> void:
 	super._ready()
+	toggle_action = "open_inventory"
 	show_coins(GameState.run_coins())
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -95,7 +96,7 @@ func _select(index: int) -> void:
 func _use() -> void:
 	if selected < 0 or run == null:
 		return
-	var used: bool = await run.call("use_item_field", selected, self)
+	var used: bool = await (run as RunController).use_item_field(selected, self)
 	if used and is_inside_tree():
 		_rebuild()
 

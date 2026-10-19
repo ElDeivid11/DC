@@ -80,8 +80,9 @@ func new_run(p_seed: int, p_test_room := false) -> void:
 	last_result = {}
 	result_applied = false
 
-	var hp_bonus := int(MetaState.upgrade_bonus("max_hp_flat"))
-	var atk_bonus := int(MetaState.upgrade_bonus("atk_flat"))
+	# Valores por nivel pueden ser fraccionarios (balance fino): se redondea el total.
+	var hp_bonus := roundi(MetaState.upgrade_bonus("max_hp_flat"))
+	var atk_bonus := roundi(MetaState.upgrade_bonus("atk_flat"))
 	var capacity := DataRegistry.bal_i("soul_capacity", 1)
 	party = []
 	for m: Variant in DataRegistry.bal("party", []):

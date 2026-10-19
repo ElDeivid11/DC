@@ -328,5 +328,6 @@
 	"debug.no_enemy_front": "No hay ningún enemigo enfrente.",
 	"debug.not_in_run": "Solo funciona durante una expedición.",
 	"debug.fight_nearest": "Pelear con el más cercano",
-	"debug.fight_boss": "Pelear con el jefe"
+	"debug.fight_boss": "Pelear con el jefe",
+	"upgrades.at_max": "%s al máx."
 }

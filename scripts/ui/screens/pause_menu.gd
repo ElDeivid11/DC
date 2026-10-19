@@ -12,6 +12,7 @@ func _init(p_run: Node = null) -> void:
 
 func _ready() -> void:
 	super._ready()
+	toggle_action = "pause"
 	show_coins(GameState.run_coins())
 	var center := CenterContainer.new()
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL

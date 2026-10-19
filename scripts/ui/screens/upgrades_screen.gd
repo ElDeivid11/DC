@@ -21,7 +21,7 @@ static func pips(level: int, max_level: int) -> String:
 
 static func effect_text(up: Dictionary, levels: int) -> String:
 	var e: Dictionary = up.efecto
-	return DataRegistry.t("upgrade.effect." + String(e.tipo), [int(float(e.valor) * levels)])
+	return DataRegistry.t("upgrade.effect." + String(e.tipo), [roundi(float(e.valor) * levels)])
 
 func _fill_list() -> void:
 	for id in ids:
@@ -32,8 +32,7 @@ func _fill_list() -> void:
 		var cost_var := "CoinLabel" if cost >= 0 and MetaState.coins >= cost else "DimLabel"
 		add_row(String(up.nombre), [
 			[pips(lvl, int(up.max_nivel)), "AccentLabel", 90],
-			[effect_text(up, 1), "DimLabel", 170],
-			[cost_txt, cost_var, 90],
+			[cost_txt, cost_var, 80],
 		])
 
 func _show_detail(index: int) -> void:
@@ -45,6 +44,7 @@ func _show_detail(index: int) -> void:
 	detail.set_title(String(up.nombre))
 	detail_line(String(up.descripcion))
 	detail_line(DataRegistry.t("upgrades.level", [lvl, max_lvl, pips(lvl, max_lvl)]), "AccentLabel")
+	detail_line(DataRegistry.t("upgrades.at_max", [effect_text(up, max_lvl)]), "DetailLabel")
 	detail_line(DataRegistry.t("upgrades.now", [effect_text(up, lvl) if lvl > 0 else DataRegistry.t("ui.none")]))
 	if cost >= 0:
 		detail_line(DataRegistry.t("upgrades.next", [effect_text(up, lvl + 1)]), "GoodLabel")

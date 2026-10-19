@@ -16,6 +16,10 @@ var footer: HBoxContainer
 var panel: PanelContainer
 ## false = Esc no cierra (p. ej. pantallas que deciden ellas qué hace "atrás").
 var closable := true
+## Acción que abrió la pantalla (p. ej. "open_status" = Tab): volver a
+## pulsarla la cierra. Se mira en _input, ANTES que la GUI, porque Godot usa
+## Tab para mover el foco.
+var toggle_action := ""
 
 func _init(title := "") -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -46,9 +50,18 @@ func _init(title := "") -> void:
 	coins_label.visible = false
 	header.add_child(coins_label)
 	vbox.add_child(HSeparator.new())
+	# El cuerpo va en un ScrollContainer: con la escala de UI alta (150%) o
+	# ventanas chicas, lo que no entre se desplaza siguiendo al foco en vez
+	# de cortarse. Si entra, el cuerpo se estira y no aparece barra.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	vbox.add_child(scroll)
 	body = VBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(body)
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(body)
 	footer = HBoxContainer.new()
 	footer.alignment = BoxContainer.ALIGNMENT_END
 	footer.add_theme_constant_override("separation", UIStyle.SPACE * 3)
@@ -73,6 +86,18 @@ func focus_first() -> void:
 func close() -> void:
 	closed.emit()
 	queue_free()
+
+func _input(event: InputEvent) -> void:
+	if toggle_action != "" and closable and event.is_action_pressed(toggle_action) and _is_topmost():
+		get_viewport().set_input_as_handled()
+		close()
+
+## Solo la pantalla de más arriba reacciona (p. ej. Estado abierto desde Pausa).
+func _is_topmost() -> bool:
+	for c in get_children():
+		if c is UIScreen or c is UIConfirmDialog or c is UIChoiceDialog:
+			return false
+	return true
 
 func _unhandled_input(event: InputEvent) -> void:
 	if closable and event.is_action_pressed("ui_cancel"):

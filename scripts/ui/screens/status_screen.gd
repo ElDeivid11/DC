@@ -9,6 +9,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	super._ready()
+	toggle_action = "open_status"
 	show_coins(GameState.run_coins())
 	var tabs := UITabs.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL

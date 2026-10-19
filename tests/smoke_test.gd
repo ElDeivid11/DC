@@ -89,6 +89,44 @@ func _run() -> void:
 	check((GameState.get_member("bjorn").souls as Array).size() == 1, "Bjorn recibe el alma")
 	check(GameState.run_coins() > 0, "la kill da monedas")
 
+	# Un combate jugado de verdad: atacar turno a turno hasta que termine.
+	DebugTools.god_mode = true
+	run.debug_fight_nearest()
+	await _wait_frames(3)
+	check(run.combat != null, "combate jugado")
+	if run.combat != null:
+		combat = run.combat
+		var kills_before := GameState.kills_total
+		for turn in 400:
+			if bool(combat.get("finished")):
+				break
+			if not bool(combat.get("busy")):
+				combat.call("_on_attack")
+			await _wait_frames(2)
+		check(bool(combat.get("finished")), "el combate termina atacando")
+		check(int((combat.get("enemy") as Dictionary).hp) <= 0, "el enemigo cae")
+		combat.call("_after_victory_summary")
+		await _wait_frames(2)
+		if run.combat != null:
+			# soltó alma: dejarla
+			run.combat.emit_signal("combat_ended", "victory", run.combat.call("_result"))
+			await _wait_frames(2)
+		check(GameState.kills_total == kills_before + 1, "kill del combate jugado")
+	DebugTools.god_mode = false
+
+	# Caminar: los enemigos reaccionan y nada se rompe.
+	for step in 6:
+		var p: Node3D = run.player
+		if not bool(p.get("input_locked")) and run.combat == null:
+			p.call("_try_move", 1)
+			p.call("_turn", 1)
+		await _wait_frames(25)
+	if run.combat != null:
+		run.combat.call("debug_win")
+		await _wait_frames(2)
+		run.combat.emit_signal("combat_ended", "victory", run.combat.call("_result"))
+		await _wait_frames(2)
+
 	run.debug_kill_boss()
 	check(run.exit_open, "matar al jefe abre la salida")
 	run.advance_floor()

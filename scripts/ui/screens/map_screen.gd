@@ -10,6 +10,7 @@ func _init(p_run: Node = null) -> void:
 
 func _ready() -> void:
 	super._ready()
+	toggle_action = "open_map"
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(row)

@@ -8,6 +8,7 @@ extends Node
 ##   --screen=ClaseUI     abre esa pantalla (class_name) encima de la escena
 ##   --demo               carga datos de ejemplo en MetaState (no se guardan)
 ##   --run                arranca una run de ejemplo (objetos y un alma)
+##   --ui-scale=1.5       escala de UI (como en Opciones)
 
 var _scene_path := "res://scenes/ui/UIGallery.tscn"
 var _out := "user://screenshot.png"
@@ -32,6 +33,9 @@ func _ready() -> void:
 			_demo_meta()
 		elif arg == "--run":
 			_demo_run()
+		elif arg.begins_with("--ui-scale="):
+			MetaState.settings["ui_scale"] = float(arg.substr(11))
+			GameSettings.apply(MetaState.settings, get_tree())
 	var packed: PackedScene = load(_scene_path)
 	_scene = packed.instantiate()
 	get_tree().root.add_child.call_deferred(_scene)

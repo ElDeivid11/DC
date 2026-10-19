@@ -18,7 +18,7 @@ func test_comprar_mejora() -> void:
 	MetaState.coins = 100000
 	MetaState.upgrades["vitalidad"] = 5
 	check(not MetaState.can_buy("vitalidad"), "tope de 5 niveles aunque sobren monedas")
-	near(MetaState.upgrade_bonus("max_hp_flat"), 10.0, "5 niveles × 2 HP")
+	near(MetaState.upgrade_bonus("max_hp_flat"), 5 * float(DataRegistry.get_upgrade("vitalidad").efecto.valor), "5 niveles × valor por nivel")
 
 func test_provisiones_suma_pociones() -> void:
 	MetaState.reset()

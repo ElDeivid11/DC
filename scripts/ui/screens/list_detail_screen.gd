@@ -19,6 +19,7 @@ func _ready() -> void:
 	body.add_child(row)
 	list_scroll = ScrollContainer.new()
 	list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list_scroll.size_flags_stretch_ratio = 1.3
 	list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	list_scroll.follow_focus = true
 	row.add_child(list_scroll)
@@ -27,7 +28,8 @@ func _ready() -> void:
 	list_box.add_theme_constant_override("separation", UIStyle.SPACE)
 	list_scroll.add_child(list_box)
 	detail = UIPanel.new("", "PanelAlt")
-	detail.custom_minimum_size.x = 440
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail.custom_minimum_size.x = 300
 	row.add_child(detail)
 	detail_box = detail.body
 	rebuild()
