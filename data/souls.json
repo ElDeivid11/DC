@@ -1,0 +1,94 @@
+{
+	"goblin": {
+		"species": "goblin",
+		"active": {"name": "Golpe Bárbaro"},
+		"passive": {
+			"name": "Piel Curtida",
+			"description": "Reduce el daño recibido en combate",
+			"effect": {"type": "damage_reduction_flat", "value": 1}
+		},
+		"stat_modifiers": {}
+	},
+	"goblin_archer": {
+		"species": "goblin_archer",
+		"active": {"name": "Disparo Certero"},
+		"passive": {
+			"name": "Puntería Letal",
+			"description": "Suma daño plano extra a cada golpe (ataque normal o activa)",
+			"effect": {"type": "damage_bonus_flat", "value": 1}
+		},
+		"stat_modifiers": {}
+	},
+	"goblin_warrior": {
+		"species": "goblin_warrior",
+		"active": {"name": "Estocada Brutal"},
+		"passive": null,
+		"stat_modifiers": {"atk": 2, "max_hp": 2}
+	},
+	"rata_cripta": {
+		"species": "rata_cripta",
+		"active": {"name": "Mordisco Rabioso"},
+		"passive": null,
+		"stat_modifiers": {"atk": 1}
+	},
+	"esqueleto_guardian": {
+		"species": "esqueleto_guardian",
+		"active": {"name": "Corte Óseo"},
+		"passive": {
+			"name": "Guardia Inquebrantable",
+			"description": "Bloquea más daño de lo normal al Defender",
+			"effect": {"type": "defend_bonus_multiplier", "value": 0.25}
+		},
+		"stat_modifiers": {"max_hp": 3}
+	},
+	"jefe_goblin": {
+		"species": "goblin",
+		"active": {"name": "Tajo del Cabecilla"},
+		"passive": {
+			"name": "Ojo del Cazador",
+			"description": "Probabilidad de golpe crítico (daño doble)",
+			"effect": {"type": "crit_chance", "value": 0.15}
+		},
+		"stat_modifiers": {}
+	},
+	"jefe_rata": {
+		"species": "rata_cripta",
+		"active": {"name": "Plaga Voraz"},
+		"passive": {
+			"name": "Sed de Sangre",
+			"description": "Recupera parte del daño que inflige",
+			"effect": {"type": "lifesteal_pct", "value": 0.3}
+		},
+		"stat_modifiers": {}
+	},
+	"jefe_caudillo": {
+		"species": "goblin_warrior",
+		"active": {"name": "Embestida del Caudillo"},
+		"passive": {
+			"name": "Espinas de Hierro",
+			"description": "Devuelve daño plano a quien te golpea",
+			"effect": {"type": "thorns_flat", "value": 2}
+		},
+		"stat_modifiers": {"max_hp": 2}
+	},
+	"jefe_capitan": {
+		"species": "esqueleto_guardian",
+		"active": {"name": "Sentencia Ósea"},
+		"passive": {
+			"name": "Codicia Ósea",
+			"description": "Más monedas por cada enemigo derrotado",
+			"effect": {"type": "coin_bonus_pct", "value": 0.25}
+		},
+		"stat_modifiers": {"atk": 1}
+	},
+	"jefe_senor": {
+		"species": "esqueleto_guardian",
+		"active": {"name": "Lamento de la Cripta"},
+		"passive": {
+			"name": "Hambre de Almas",
+			"description": "Recupera parte del daño que inflige",
+			"effect": {"type": "lifesteal_pct", "value": 0.5}
+		},
+		"stat_modifiers": {"atk": 2, "max_hp": 4}
+	}
+}

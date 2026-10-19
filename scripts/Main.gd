@@ -31,90 +31,15 @@ var test_map := [
 # largo trecho, elegir con cuál enemigo enfrentarse primero, ver la niebla a
 # distancia real, esquivar props/columnas, etc.
 
-# Bestiario de prueba: cada especie tiene su rango (10 = más débil, 1 = más
-# fuerte) y el alma que otorga. Cada alma SIEMPRE da 1 activa (de combate).
-# La pasiva es opcional: algunas especies no dan pasiva con nombre, y en su
-# lugar dan modificadores planos a las stats base del personaje que la lleve
-# (stat_modifiers). Algunas dan ambas cosas a la vez. hp/atk del enemigo y el
-# daño de su activa salen del rango vía stats_for_rank().
-const SPECIES_DB := {
-	"goblin": {
-		"display_name": "Goblin explorador",
-		"rank": 9,
-		"model_path": "res://assets/goblin_pack/Basic_Goblin.glb",
-		"model_scale": 1.3, # el modelo mide ~1m de alto en su escala original
-		"soul": {
-			"active": {"name": "Golpe Bárbaro"}, # el daño se completa según el rango al armar el combate
-			"passive": {
-				"name": "Piel Curtida",
-				"description": "Reduce el daño recibido en combate",
-				"effect": {"type": "damage_reduction_flat", "value": 1},
-			},
-			"stat_modifiers": {},
-		},
-	},
-	"goblin_archer": {
-		"display_name": "Goblin arquero",
-		"rank": 7,
-		"model_path": "res://assets/goblin_pack/Goblin_Archer.glb",
-		"model_scale": 1.5,
-		"soul": {
-			"active": {"name": "Disparo Certero"},
-			"passive": {
-				"name": "Puntería Letal",
-				"description": "Suma daño plano extra a cada golpe (ataque normal o activa)",
-				"effect": {"type": "damage_bonus_flat", "value": 1},
-			},
-			"stat_modifiers": {},
-		},
-	},
-	"goblin_warrior": {
-		"display_name": "Goblin guerrero",
-		"rank": 5, # el más fuerte de la familia goblin
-		"model_path": "res://assets/goblin_pack/Goblin_Warrior.glb",
-		"model_scale": 1.7,
-		"soul": {
-			"active": {"name": "Estocada Brutal"},
-			"passive": null, # esta alma tampoco da pasiva...
-			"stat_modifiers": {"atk": 2, "max_hp": 2}, # ...da dos modificadores planos en su lugar
-		},
-	},
-	"rata_cripta": {
-		"display_name": "Rata de cripta",
-		"rank": 8,
-		"color_a": Color(0.35, 0.32, 0.15),
-		"color_b": Color(0.18, 0.16, 0.07),
-		"soul": {
-			"active": {"name": "Mordisco Rabioso"},
-			"passive": null, # esta alma NO da pasiva...
-			"stat_modifiers": {"atk": 1}, # ...da un modificador plano de stat en su lugar
-		},
-	},
-	"esqueleto_guardian": {
-		"display_name": "Esqueleto guardián",
-		"rank": 4, # bastante más fuerte que los otros — para notar la escalada por rango
-		"color_a": Color(0.55, 0.55, 0.5),
-		"color_b": Color(0.3, 0.3, 0.28),
-		"soul": {
-			"active": {"name": "Corte Óseo"},
-			"passive": {
-				"name": "Guardia Inquebrantable",
-				"description": "Bloquea más daño de lo normal al Defender",
-				"effect": {"type": "defend_bonus_multiplier", "value": 0.25},
-			},
-			"stat_modifiers": {"max_hp": 3}, # ejemplo de alma con pasiva Y modificador a la vez
-		},
-	},
-}
+# Bestiario: vive en data/species.json + data/souls.json (DataRegistry).
+# Cada especie tiene su rango (10 = más débil, 1 = más fuerte) y el alma que
+# otorga. Cada alma SIEMPRE da 1 activa (de combate). La pasiva es opcional:
+# algunas especies no dan pasiva con nombre, y en su lugar dan modificadores
+# planos a las stats base del personaje que la lleve (stat_modifiers). hp/atk
+# del enemigo y el daño de su activa salen del rango vía
+# DataRegistry.stats_for_rank().
 
-static func stats_for_rank(rank: int) -> Dictionary:
-	return {
-		"hp": 10 + (11 - rank) * 2,
-		"atk": 1 + (11 - rank),
-		"ability_damage": int((11 - rank) * 1.5),
-	}
-
-# Celdas de enemigos de prueba: celda -> id de especie (en SPECIES_DB).
+# Celdas de enemigos de prueba: celda -> id de especie (en data/species.json).
 # Más adelante esto vendrá del bestiario/generador, no de un diccionario fijo.
 # Repartidos al fondo de la sala (arriba y abajo), así el jugador cruza
 # espacio real antes de llegar a cualquiera de los dos — y ahora, además,
@@ -224,7 +149,7 @@ func get_enemy_at(cell: Vector2i) -> bool:
 
 func _spawn_enemies() -> void:
 	for cell in enemy_species.keys():
-		var species: Dictionary = SPECIES_DB[enemy_species[cell]]
+		var species: Dictionary = DataRegistry.get_species(enemy_species[cell])
 		var node: Node3D
 		if species.has("model_path"):
 			node = _spawn_model_enemy(species)
@@ -276,13 +201,12 @@ func _spawn_box_enemy(species: Dictionary) -> Node3D:
 ## para que su UI se renderice a resolución nativa y no en baja resolución.
 func start_combat(cell: Vector2i, player: Node3D) -> void:
 	player.set_input_locked(true)
-	var species: Dictionary = SPECIES_DB[enemy_species[cell]]
-	var stats := stats_for_rank(species.rank)
+	var species: Dictionary = DataRegistry.get_species(enemy_species[cell])
+	var stats := DataRegistry.stats_for_rank(species.rank)
 
-	var soul_data: Dictionary = species.soul.duplicate(true)
-	soul_data.active.damage = stats.ability_damage # el daño de la activa depende del rango de ESTE monstruo
-	soul_data["source_species"] = species.display_name # para poder mostrarlo en el menú de estado
-	soul_data["source_rank"] = species.rank
+	# El daño de la activa depende del rango de ESTE monstruo; make_soul()
+	# también anota de qué especie/rango salió, para el menú de estado.
+	var soul_data := DataRegistry.make_soul(species.soul_id, species.rank, species.display_name)
 
 	# Garantiza alma (para testing) mientras no todos los personajes tengan
 	# ya una equipada — así se puede probar la asignación con cada uno sin

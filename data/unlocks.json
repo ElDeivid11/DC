@@ -1,0 +1,37 @@
+{
+	"u_piso_3": {
+		"nombre": "Sello de Retiro",
+		"descripcion": "Llega al piso 3.",
+		"condicion": {"tipo": "reach_floor", "parametros": {"n": 3}},
+		"recompensa": "sello_retiro",
+		"oculto": false
+	},
+	"u_goblins_10": {
+		"nombre": "Talismán de goblin",
+		"descripcion": "Mata 10 goblins de cualquier tipo (acumulado entre expediciones).",
+		"condicion": {"tipo": "kill_species_total", "parametros": {"species": ["goblin", "goblin_archer", "goblin_warrior"], "n": 10}},
+		"recompensa": "talisman_goblin",
+		"oculto": false
+	},
+	"u_huir_3": {
+		"nombre": "Bomba de humo",
+		"descripcion": "Huye con éxito de 3 combates (acumulado).",
+		"condicion": {"tipo": "flee_count", "parametros": {"n": 3}},
+		"recompensa": "bomba_humo",
+		"oculto": false
+	},
+	"u_esqueleto": {
+		"nombre": "Amuleto de hueso",
+		"descripcion": "Derrota a un esqueleto guardián.",
+		"condicion": {"tipo": "kill_species_total", "parametros": {"species": ["esqueleto_guardian"], "n": 1}},
+		"recompensa": "amuleto_hueso",
+		"oculto": true
+	},
+	"u_sin_pociones": {
+		"nombre": "Poción mayor",
+		"descripcion": "Termina una expedición con vida (retiro o victoria) sin usar pociones menores.",
+		"condicion": {"tipo": "no_item_use_run", "parametros": {"item": "pocion_menor", "resultados": ["retiro", "victoria"]}},
+		"recompensa": "pocion_mayor",
+		"oculto": false
+	}
+}

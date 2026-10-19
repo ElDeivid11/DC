@@ -20,6 +20,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
+DataRegistry="*res://autoload/DataRegistry.gd"
 psx_post_process="*uid://u3y0jxl0vtmg"
 
 [editor_plugins]

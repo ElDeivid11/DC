@@ -1,0 +1,66 @@
+{
+	"party": [
+		{"id": "bjorn", "name": "Bjorn", "base_hp": 20, "base_atk": 5},
+		{"id": "elena", "name": "Elena", "base_hp": 16, "base_atk": 4}
+	],
+	"stats_for_rank": {
+		"hp_base": 10,
+		"hp_per_rank": 2,
+		"atk_base": 1,
+		"atk_per_rank": 1,
+		"ability_per_rank": 1.5
+	},
+	"floors_per_run": 5,
+	"start_items": ["pocion_menor"],
+	"inventory_capacity": 8,
+	"soul_capacity": 1,
+	"heal_between_floors_pct": 0.3,
+	"coins": {
+		"kill_base": 11,
+		"boss_per_floor": 25,
+		"first_kill_mult": 10,
+		"chest_per_floor": 6,
+		"elite_mult": 2,
+		"coin_keep_on_death": 0.5
+	},
+	"enemies": {
+		"elite_chance": 0.1,
+		"elite_stat_mult": 1.25,
+		"boss_stat_mult": 1.5,
+		"aggro_radius": 5,
+		"wander_chance": 0.3
+	},
+	"soul_drop": {
+		"normal_base": 0.08,
+		"rank_factor_per_rank": 0.1,
+		"elite": 0.25,
+		"boss": 1.0
+	},
+	"combat": {
+		"damage_variance": 1,
+		"defend_block": 0.5,
+		"defend_block_max": 0.9,
+		"crit_mult": 2.0,
+		"surprise_damage_mult": 1.5,
+		"surprise_free_turn": true,
+		"ambush_enabled": true,
+		"ambush_damage_mult": 1.5
+	},
+	"flee": {
+		"base": 0.5,
+		"per_rank": 0.1,
+		"min": 0.1,
+		"max": 0.9,
+		"allow_boss": false
+	},
+	"fog": {
+		"near": 10.0,
+		"far": 24.0,
+		"torch_near_bonus": 6.0,
+		"torch_far_bonus": 10.0
+	},
+	"render": {
+		"low_res_height": 180,
+		"pixelated_default": true
+	}
+}

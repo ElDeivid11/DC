@@ -1,0 +1,97 @@
+{
+	"generation": {
+		"room_min": 3,
+		"room_max": 7,
+		"cells_per_room": 65,
+		"room_attempts": 400,
+		"min_enemy_distance_from_start": 5,
+		"props_per_room": 1.2
+	},
+	"floors": [
+		{
+			"n": 1,
+			"size": 25,
+			"rank_min": 8,
+			"rank_max": 9,
+			"enemies": 7,
+			"chests": 2,
+			"floor_items": 2,
+			"boss": {
+				"display_name": "Cabecilla goblin",
+				"species": "goblin",
+				"rank": 7,
+				"soul_id": "jefe_goblin",
+				"scale_mult": 1.5,
+				"tint": [1.0, 0.62, 0.55]
+			}
+		},
+		{
+			"n": 2,
+			"size": 30,
+			"rank_min": 6,
+			"rank_max": 8,
+			"enemies": 9,
+			"chests": 2,
+			"floor_items": 2,
+			"boss": {
+				"display_name": "Rata reina",
+				"species": "rata_cripta",
+				"rank": 5,
+				"soul_id": "jefe_rata",
+				"scale_mult": 1.6,
+				"tint": [0.8, 0.55, 0.9]
+			}
+		},
+		{
+			"n": 3,
+			"size": 35,
+			"rank_min": 5,
+			"rank_max": 7,
+			"enemies": 11,
+			"chests": 3,
+			"floor_items": 3,
+			"boss": {
+				"display_name": "Caudillo goblin",
+				"species": "goblin_warrior",
+				"rank": 4,
+				"soul_id": "jefe_caudillo",
+				"scale_mult": 1.35,
+				"tint": [0.7, 0.7, 0.75]
+			}
+		},
+		{
+			"n": 4,
+			"size": 40,
+			"rank_min": 3,
+			"rank_max": 6,
+			"enemies": 12,
+			"chests": 3,
+			"floor_items": 3,
+			"boss": {
+				"display_name": "Capitán esqueleto",
+				"species": "esqueleto_guardian",
+				"rank": 2,
+				"soul_id": "jefe_capitan",
+				"scale_mult": 1.4,
+				"tint": [0.65, 0.8, 1.0]
+			}
+		},
+		{
+			"n": 5,
+			"size": 45,
+			"rank_min": 2,
+			"rank_max": 5,
+			"enemies": 14,
+			"chests": 3,
+			"floor_items": 3,
+			"boss": {
+				"display_name": "Señor de la cripta",
+				"species": "esqueleto_guardian",
+				"rank": 1,
+				"soul_id": "jefe_senor",
+				"scale_mult": 1.8,
+				"tint": [0.75, 0.5, 0.95]
+			}
+		}
+	]
+}
