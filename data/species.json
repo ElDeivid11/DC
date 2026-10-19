@@ -11,8 +11,9 @@
 		"dormant_chance": 0.5,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_esbirro.glb",
-			"scale": 0.86,
-			"head_scale": 0.8,
+			"scale": 0.92,
+			"head_scale": 0.58,
+			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
 			"weapon_r": "res://assets/enemies/weapons/hoja.glb",
 			"eye_color": "#9be05a",
@@ -40,8 +41,9 @@
 		"dormant_chance": 0.3,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_picaro.glb",
-			"scale": 0.86,
-			"head_scale": 0.8,
+			"scale": 0.92,
+			"head_scale": 0.58,
+			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
 			"weapon_r": "res://assets/enemies/weapons/ballesta.glb",
 			"eye_color": "#6ac8ff",
@@ -70,7 +72,8 @@
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_guardian.glb",
 			"scale": 0.92,
-			"head_scale": 0.82,
+			"head_scale": 0.62,
+			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
 			"weapon_r": "res://assets/enemies/weapons/hacha.glb",
 			"weapon_l": "res://assets/enemies/weapons/escudo.glb",
@@ -100,7 +103,8 @@
 		"visual": {
 			"model_path": "res://assets/enemies/nigromante.glb",
 			"scale": 1.0,
-			"head_scale": 0.85,
+			"head_scale": 0.66,
+			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
 			"weapon_r": "res://assets/enemies/weapons/baculo.glb",
 			"eye_color": "#c77dff",

@@ -90,7 +90,7 @@ func _build_panel() -> void:
 	])
 	_row(box, [
 		[DataRegistry.t("debug.fight_nearest"), func() -> void: _run_call("debug_fight_nearest", [false])],
-		[DataRegistry.t("debug.fight_boss"), func() -> void: _run_call("debug_fight_nearest", [true])],
+		[DataRegistry.t("debug.fight_boss"), func() -> void: _run_call("debug_fight_boss", [])],
 	])
 	_row(box, [
 		[DataRegistry.t("debug.heal"), func() -> void: _run_call("debug_heal_party", [])],

@@ -1,7 +1,8 @@
 class_name OptionsScreen
 extends UIScreen
-## Opciones: volumen, pantalla completa, escala de UI (80–150%), pixelado
-## PS1, controles (lista) e idioma. Se guardan y aplican al instante.
+## Opciones: volumen, pantalla completa, escala de UI (80–150%), estilo de
+## imagen (presets PS1, ver RetroView), balanceo de cámara, controles (lista)
+## e idioma. Se guardan y aplican al instante.
 ## Desde el Hub (con build de debug) además: sala de pruebas, galería de UI
 ## y reiniciar guardado.
 
@@ -40,12 +41,22 @@ func _ready() -> void:
 	fs.toggled.connect(func(on: bool) -> void: _apply_setting("fullscreen", on))
 	general.body.add_child(fs)
 
-	var px := CheckBox.new()
-	px.text = DataRegistry.t("options.pixelated")
-	px.button_pressed = bool(s.get("pixelated", true))
-	px.toggled.connect(func(on: bool) -> void: _apply_setting("pixelated", on))
-	UITooltip.attach(px, DataRegistry.t("options.pixelated_tip"))
-	general.body.add_child(px)
+	var image_label := _label(DataRegistry.t("options.image"))
+	general.body.add_child(image_label)
+	var image := OptionButton.new()
+	for id in RetroView.PRESETS:
+		image.add_item(DataRegistry.t("options.preset_" + id))
+	image.selected = RetroView.PRESETS.find(RetroView.preset_id())
+	image.item_selected.connect(func(i: int) -> void: _apply_setting("retro_preset", RetroView.PRESETS[i]))
+	UITooltip.attach(image, DataRegistry.t("options.image_tip"))
+	general.body.add_child(image)
+
+	var bob := CheckBox.new()
+	bob.text = DataRegistry.t("options.head_bob")
+	bob.button_pressed = bool(s.get("head_bob", true))
+	bob.toggled.connect(func(on: bool) -> void: _apply_setting("head_bob", on))
+	UITooltip.attach(bob, DataRegistry.t("options.head_bob_tip"))
+	general.body.add_child(bob)
 
 	var scale_row := HBoxContainer.new()
 	general.body.add_child(scale_row)

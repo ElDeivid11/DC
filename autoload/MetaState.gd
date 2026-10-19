@@ -34,7 +34,7 @@ func reset() -> void:
 	progress = default_progress()
 	stats = default_stats()
 	settings = GameSettings.defaults()
-	settings["pixelated"] = bool(DataRegistry.bal("render.pixelated_default", true))
+	settings["retro_preset"] = String(DataRegistry.bal("render.preset_default", "clasico"))
 	changed.emit()
 
 func default_progress() -> Dictionary:
@@ -83,7 +83,12 @@ func from_dict(d: Dictionary) -> void:
 	bestiary = _dict_or_empty(d.get("bestiary", {}))
 	progress = _merge(default_progress(), _dict_or_empty(d.get("progress", {})))
 	stats = _merge(default_stats(), _dict_or_empty(d.get("stats", {})))
-	settings = _merge(settings, _dict_or_empty(d.get("settings", {})))
+	var saved := _dict_or_empty(d.get("settings", {}))
+	# Guardados anteriores a los presets de imagen: "pixelado: no" = limpio.
+	if not saved.has("retro_preset") and saved.get("pixelated", true) == false:
+		saved["retro_preset"] = "limpio"
+	saved.erase("pixelated")
+	settings = _merge(settings, saved)
 	changed.emit()
 
 static func _dict_or_empty(v: Variant) -> Dictionary:

@@ -20,7 +20,7 @@ const DIRS: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), 
 var fd: FloorData
 var builder: FloorBuilder
 var world: Node3D
-var container: SubViewportContainer
+var container: RetroView
 var viewport: SubViewport
 var player: Node3D
 var hud: RunHud
@@ -42,11 +42,11 @@ func _ready() -> void:
 	hud = RunHud.new()
 	add_child(hud)
 	_after_move()
-	EventBus.settings_changed.connect(_apply_pixelation)
 	if GameState.floor_n == 1 and GameState.elapsed_sec < 0.5:
-		EventBus.hud_message.emit(DataRegistry.t("run.start_msg") if not GameState.test_room else DataRegistry.t("run.test_room_msg"))
+		var theme_name := String(DataRegistry.get_theme(GameState.floor_n).get("nombre", ""))
+		EventBus.hud_message.emit(DataRegistry.t("run.start_msg", [theme_name]) if not GameState.test_room else DataRegistry.t("run.test_room_msg"))
 	else:
-		EventBus.hud_message.emit(DataRegistry.t("run.floor_msg", [GameState.floor_n]))
+		EventBus.hud_message.emit(DataRegistry.t("run.floor_msg", [GameState.floor_n, String(DataRegistry.get_theme(GameState.floor_n).get("nombre", ""))]))
 
 func _exit_tree() -> void:
 	if builder:
@@ -58,30 +58,15 @@ static func _pick_seed() -> int:
 
 # --- Construcción -------------------------------------------------------------------
 
+## Resolución baja, trama y globals PSX: ver RetroView.
 func _setup_viewport() -> void:
-	container = SubViewportContainer.new()
-	container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	container.stretch = true
-	container.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST # reescalado sin blur: el pixelado real
+	container = RetroView.new()
 	add_child(container)
-	viewport = SubViewport.new()
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	container.add_child(viewport)
-	world = Node3D.new()
-	viewport.add_child(world)
-	container.resized.connect(_apply_pixelation)
-	_apply_pixelation()
-
-## Con stretch=true el tamaño del SubViewport lo decide el contenedor:
-## stretch_shrink divide la resolución para llegar a ~180 líneas (PS1).
-func _apply_pixelation() -> void:
-	var shrink := 1
-	if bool(MetaState.settings.get("pixelated", true)) and container.size.y > 0:
-		shrink = maxi(1, roundi(container.size.y / float(DataRegistry.bal_i("render.low_res_height", 180))))
-	container.stretch_shrink = shrink
+	viewport = container.viewport
+	world = container.world
 
 func _build_floor() -> void:
-	builder = FloorBuilder.new(world)
+	builder = FloorBuilder.new(world, DataRegistry.get_theme(GameState.floor_n))
 	if GameState.test_room:
 		fd = FloorGenerator.test_room()
 	else:
@@ -89,7 +74,8 @@ func _build_floor() -> void:
 	builder.build_blocks(fd)
 	builder.build_pillars(fd)
 	builder.build_props(fd)
-	builder.build_lighting(DataRegistry.bal_f("fog.near", 10.0), DataRegistry.bal_f("fog.far", 24.0))
+	builder.build_lighting()
+	builder.build_torches(fd)
 	if GameState.floor_flags.get("torch", false):
 		_light_torch()
 	for e: Dictionary in fd.enemies:
@@ -105,21 +91,29 @@ func _build_floor() -> void:
 	player.set_script(PLAYER_SCRIPT)
 	var cam := Camera3D.new()
 	cam.current = true
-	cam.fov = 75.0
+	cam.fov = DataRegistry.bal_f("render.fov", 64.0)
 	player.add_child(cam) # antes de entrar al árbol (ver gotcha de @onready en docs)
-	# Luz tenue que acompaña al equipo (antorcha de mano): sin ella, las
-	# paredes que dan la espalda a la luz direccional quedan negras.
-	var lamp := OmniLight3D.new()
-	lamp.light_color = Color(1.0, 0.82, 0.6)
-	lamp.light_energy = DataRegistry.bal_f("render.player_light_energy", 0.9)
-	lamp.omni_range = DataRegistry.bal_f("render.player_light_range", 7.0)
+	# El charco de luz cálida que acompaña al equipo (la antorcha de mano):
+	# con niebla y sin sol, es lo que deja ver lo que hay cerca.
+	var lamp := FlickerLight.make(
+		Color.html(String(DataRegistry.bal("render.player_light_color", "#ffc98a"))),
+		DataRegistry.bal_f("render.player_light_energy", 1.3),
+		DataRegistry.bal_f("render.player_light_range", 7.0),
+		DataRegistry.bal_f("render.player_light_attenuation", 1.5),
+		DataRegistry.bal_f("render.flicker_amount", 0.05),
+		DataRegistry.bal_f("render.flicker_hz", 10.0))
 	lamp.position = Vector3(0, 0.3, 0)
 	player.add_child(lamp)
 	world.add_child(player)
 	player.call("setup", fd.start_cell, self, fd.start_facing)
+	_apply_head_bob()
+	EventBus.settings_changed.connect(_apply_head_bob)
 	player.connect("moved", _on_player_moved)
 	player.connect("turned", func(_f: int) -> void: _after_move())
 	player.connect("bumped", func(_c: Vector2i) -> void: SceneRouter.play_ui("error"))
+
+func _apply_head_bob() -> void:
+	player.set("bob_amount", DataRegistry.bal_f("render.head_bob", 0.04) if bool(MetaState.settings.get("head_bob", true)) else 0.0)
 
 func _process(delta: float) -> void:
 	_time += delta
@@ -454,6 +448,8 @@ func _frame_combat_camera(on: bool) -> void:
 		return
 	var tw := cam.create_tween()
 	tw.tween_property(cam, "position", Vector3(0, 0.15, 0.75) if on else Vector3.ZERO, 0.2)
+	# FOV más cerrado en combate: el enemigo llena el cuadro.
+	tw.parallel().tween_property(cam, "fov", DataRegistry.bal_f("render.combat_fov" if on else "render.fov", 64.0), 0.2)
 
 ## Parpadeo PS1 del modelo al recibir un golpe.
 func _blink(node: Node3D) -> void:
@@ -600,7 +596,8 @@ func _ask_member(ui_parent: Node, title: String, alive_only: bool) -> Dictionary
 	return members[i]
 
 func _light_torch() -> void:
-	FloorBuilder.set_fog(DataRegistry.bal_f("fog.near", 10.0) + DataRegistry.bal_f("fog.torch_near_bonus", 6.0), DataRegistry.bal_f("fog.far", 24.0) + DataRegistry.bal_f("fog.torch_far_bonus", 10.0))
+	var th := DataRegistry.get_theme(GameState.floor_n)
+	FloorBuilder.set_fog(float(th.get("niebla_cerca", 5.0)) + DataRegistry.bal_f("fog.torch_near_bonus", 3.0), float(th.get("niebla_lejos", 16.0)) + DataRegistry.bal_f("fog.torch_far_bonus", 6.0))
 
 # --- Menús ----------------------------------------------------------------------------------
 
@@ -694,6 +691,20 @@ func debug_teleport(spec: String) -> void:
 		return
 	player.call("teleport", Vector2i(int(p[0]), int(p[1])), int(p[2]))
 	_after_move()
+
+## Pone al jugador frente al jefe del piso y empieza el combate (capturas).
+func debug_fight_boss() -> void:
+	for e: Dictionary in fd.enemies:
+		if e.kind != RunRules.BOSS:
+			continue
+		var target_cell: Vector2i = e.cell
+		for i in DIRS.size():
+			var stand := target_cell - DIRS[i]
+			if not is_wall(stand) and fd.enemy_at(stand).is_empty():
+				player.call("teleport", stand, i)
+				_after_move()
+				start_combat(target_cell, player, "normal")
+				return
 
 func debug_heal_party() -> void:
 	for m: Dictionary in GameState.party:

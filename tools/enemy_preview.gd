@@ -13,6 +13,7 @@ var visuals: Array[EnemyVisual] = []
 
 func _ready() -> void:
 	FloorBuilder.ensure_psx_shader_globals()
+	FloorBuilder.set_fog_color(Color(0.18, 0.18, 0.2))
 	FloorBuilder.set_fog(80.0, 120.0)
 	var env := WorldEnvironment.new()
 	env.environment = Environment.new()
@@ -39,6 +40,16 @@ func _ready() -> void:
 			add_child(v)
 			v.play_role("idle")
 			visuals.append(v)
+	# Referencias: techo normal (2 m), techo de la sala del jefe (3 m) y ojos
+	# del equipo (1 m).
+	for h: float in [1.0, FloorBuilder.WALL_HEIGHT, DataRegistry.bal_f("render.boss_room_height", 3.0)]:
+		var bar := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(width + SPACING, 0.015, 0.015)
+		bar.mesh = box
+		bar.position = Vector3(0, h, 0.6)
+		bar.material_override = FloorBuilder.make_glow_material(Color(1, 0.3, 0.3) if h > 1.5 else Color(0.3, 1, 0.3))
+		add_child(bar)
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	cam.position = Vector3(0, 1.6, 5.2 + width * 0.5)

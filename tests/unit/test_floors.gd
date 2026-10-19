@@ -122,3 +122,18 @@ func test_elite_de_especie_sin_sufijo() -> void:
 	var b := FloorGenerator.make_enemy(Vector2i(1, 1), "esqueleto_esbirro", RunRules.ELITE)
 	check(String(b.display_name) != "Esqueleto esbirro", "la variante élite de una básica sí lleva sufijo")
 	eq(int(b.rank), 9, "sin rango pedido = el de la especie")
+
+func test_antorchas_en_paredes_y_separadas() -> void:
+	for n in range(1, DataRegistry.floor_count() + 1):
+		var fd := _gen(n, 90 + n)
+		var every := int(DataRegistry.get_theme(n).antorcha_cada)
+		check(fd.torches.size() >= 2, "piso %d: hay antorchas (%d)" % [n, fd.torches.size()])
+		for i in fd.torches.size():
+			var t: Dictionary = fd.torches[i]
+			var c: Vector2i = t.cell
+			check(not fd.is_wall(c), "antorcha en una celda de piso")
+			check(fd.is_wall(c + FloorGenerator.DIRS[int(t.dir)]), "antorcha sobre una pared")
+			for j in range(i + 1, fd.torches.size()):
+				var o: Vector2i = (fd.torches[j] as Dictionary).cell
+				check(absi(o.x - c.x) + absi(o.y - c.y) >= every, "piso %d: antorchas demasiado juntas" % n)
+		check(fd.torches.any(func(t: Dictionary) -> bool: return fd.rooms[0].has_point(t.cell)), "piso %d: una en la sala de inicio" % n)

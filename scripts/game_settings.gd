@@ -13,7 +13,8 @@ static func defaults() -> Dictionary:
 		"fullscreen": false,
 		"ui_scale": 1.0,
 		"language": "es",
-		"pixelated": true,
+		"retro_preset": "clasico",
+		"head_bob": true,
 	}
 
 static func apply(settings: Dictionary, tree: SceneTree) -> void:

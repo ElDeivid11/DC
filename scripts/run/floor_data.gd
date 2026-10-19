@@ -27,12 +27,22 @@ var items: Array = []
 var props: Array = []
 ## Columnas decorativas: posición en mundo (Vector3) del centro de la base.
 var pillars: Array[Vector3] = []
+## Antorchas de pared: {cell, dir} = en la celda `cell`, sobre la pared que
+## está hacia DIRS[dir] (0 N, 1 E, 2 S, 3 O).
+var torches: Array = []
+## Celdas con techo más alto que el normal (Vector2i -> metros): la sala del
+## jefe, para que el nigromante no atraviese el techo.
+var ceilings: Dictionary = {}
 var is_test_room := false
 
 func is_wall(cell: Vector2i) -> bool:
 	if cell.y < 0 or cell.y >= height or cell.x < 0 or cell.x >= width:
 		return true
 	return int(cells[cell.y][cell.x]) == WALL
+
+## Altura del techo en una celda de piso.
+func ceiling_at(cell: Vector2i) -> float:
+	return float(ceilings.get(cell, FloorBuilder.WALL_HEIGHT))
 
 func set_cell(cell: Vector2i, value: int) -> void:
 	cells[cell.y][cell.x] = value

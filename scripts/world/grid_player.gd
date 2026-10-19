@@ -6,8 +6,9 @@ extends Node3D
 ## El "dungeon" (RunController) decide qué bloquea: paredes, cofres, enemigos.
 
 const CELL_SIZE := 2.0
-const MOVE_TIME := 0.15
-const TURN_TIME := 0.12
+## Pausado y "pesado", como King's Field / Lunacid.
+const MOVE_TIME := 0.22
+const TURN_TIME := 0.16
 const EYE_HEIGHT := 1.0
 
 ## Terminó un paso: la run reacciona (recoger objetos, salida, turno enemigo).
@@ -21,6 +22,8 @@ var facing := 0 # 0 = norte (-Z), 1 = este (+X), 2 = sur (+Z), 3 = oeste (-X)
 var is_moving := false
 var input_locked := false # se activa durante el combate y los menús, para que no puedas moverte
 var dungeon: Node = null # referencia a la run, para chequear paredes/enemigos
+## Cuánto baja la cámara a mitad de cada paso (0 = sin balanceo). Lo fija la run.
+var bob_amount := 0.0
 
 # Vectores de dirección en el mismo orden que "facing" (0..3)
 # Tipado explícito como Array[Vector2i]: sin esto, Godot no puede inferir
@@ -70,11 +73,19 @@ func _try_move(dir_mult: int) -> void:
 	var target_world := cell_to_world(grid_pos, position.y)
 	is_moving = true
 	var tween := create_tween()
-	tween.tween_property(self, "position", target_world, MOVE_TIME)
+	tween.tween_property(self, "position", target_world, MOVE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if bob_amount > 0.0:
+		# Una sola bajada por paso, sin balanceo lateral (no marea).
+		tween.parallel().tween_method(_set_bob, 0.0, 1.0, MOVE_TIME)
 	tween.finished.connect(func() -> void:
 		is_moving = false
 		moved.emit(grid_pos)
 	)
+
+func _set_bob(t: float) -> void:
+	var cam := get_child(0) as Camera3D
+	if cam:
+		cam.position.y = -bob_amount * sin(PI * t)
 
 func _turn(step: int) -> void:
 	facing = posmod(facing + step, 4)
@@ -83,7 +94,7 @@ func _turn(step: int) -> void:
 	# Godot rota positivo en sentido antihorario visto desde arriba, al revés
 	# del orden N→E→S→O usado en DIRS — por eso el signo va invertido (-step)
 	# para que "derecha" gire visualmente hacia donde el jugador espera.
-	tween.tween_property(self, "rotation_degrees:y", rotation_degrees.y - step * 90.0, TURN_TIME)
+	tween.tween_property(self, "rotation_degrees:y", rotation_degrees.y - step * 90.0, TURN_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.finished.connect(func() -> void:
 		is_moving = false
 		turned.emit(facing)

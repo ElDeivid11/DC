@@ -42,6 +42,7 @@ static func generate(floor_n: int, run_seed: int, item_pool: Array[String]) -> F
 	_place_enemies(fd, rng, def, dist, blocked, int(gen.get("min_enemy_distance_from_start", 5)))
 	_place_items(fd, rng, int(def.get("floor_items", 2)), item_pool, blocked)
 	_place_decor(fd, rng, float(gen.get("props_per_room", 1.0)), blocked)
+	_place_torches(fd, rng, int(DataRegistry.get_theme(floor_n).get("antorcha_cada", 5)))
 	return fd
 
 ## La sala 15x9 del prototipo, con columnas y props en los mismos lugares y
@@ -56,6 +57,8 @@ static func test_room() -> FloorData:
 		for x in range(1, 14):
 			fd.set_cell(Vector2i(x, y), FloorData.FLOOR)
 	fd.rooms = [Rect2i(1, 1, 13, 7)]
+	for c in fd.floor_cells():
+		fd.ceilings[c] = DataRegistry.bal_f("render.boss_room_height", 3.0)
 	fd.start_cell = Vector2i(2, 4)
 	fd.start_facing = 1
 	# [celda, especie, rango, tipo, dormido]. El orden importa: el Hub usa los
@@ -81,6 +84,12 @@ static func test_room() -> FloorData:
 		{"prop": "Crate_1", "pos": Vector3(3 * 2.0 + 0.5, 0, 2 * 2.0 + 0.5), "rot": 15.0},
 		{"prop": "Barrel_1", "pos": Vector3(7 * 2.0 + 0.5, 0, 4 * 2.0 - 0.5), "rot": -20.0},
 		{"prop": "Crate_2", "pos": Vector3(11 * 2.0 - 0.5, 0, 4 * 2.0 + 0.5), "rot": 40.0},
+	]
+	fd.torches = [
+		{"cell": Vector2i(4, 1), "dir": 0},
+		{"cell": Vector2i(8, 7), "dir": 2},
+		{"cell": Vector2i(13, 4), "dir": 1},
+		{"cell": Vector2i(1, 6), "dir": 3},
 	]
 	fd.exit_cell = Vector2i(-1, -1)
 	return fd
@@ -109,8 +118,10 @@ static func make_enemy(cell: Vector2i, species_id: String, kind: String, rank :=
 	if kind == RunRules.ELITE and String(sp.get("tier", "basico")) != "elite":
 		e["display_name"] = DataRegistry.t("enemy.elite_name", [sp.display_name])
 		e["scale_mult"] = DataRegistry.bal_f("enemies.elite_scale", 1.15)
-		var tint: Array = DataRegistry.bal("enemies.elite_tint", [1.0, 0.8, 0.55])
+		var tint: Array = DataRegistry.bal("enemies.elite_tint", [1.0, 0.9, 0.78])
 		e["tint"] = Color(float(tint[0]), float(tint[1]), float(tint[2]))
+		# Ojos ámbar: la élite se reconoce en la oscuridad antes de verla entera.
+		e["eye_color"] = Color.html(String(DataRegistry.bal("enemies.elite_eye", "#ffb040")))
 	return e
 
 ## Especies que pueden salir como enemigo común entre los rangos dados:
@@ -251,6 +262,10 @@ static func _place_boss_and_exit(fd: FloorData, dist: Dictionary, def: Dictionar
 			far = d
 			boss_i = i
 	fd.boss_room = fd.rooms[boss_i]
+	var tall := DataRegistry.bal_f("render.boss_room_height", 3.0)
+	for y in range(fd.boss_room.position.y, fd.boss_room.end.y):
+		for x in range(fd.boss_room.position.x, fd.boss_room.end.x):
+			fd.ceilings[Vector2i(x, y)] = tall
 	var exit := _center(fd.boss_room)
 	var exit_d := -1
 	for y in range(fd.boss_room.position.y, fd.boss_room.end.y):
@@ -389,6 +404,35 @@ static func _place_decor(fd: FloorData, rng: RandomNumberGenerator, per_room: fl
 		if r.size.x >= 5 and r.size.y >= 5 and rng.randf() < 0.6:
 			fd.pillars.append(Vector3((r.position.x + 1) * 2.0 + 0.6, 0, (r.position.y + 1) * 2.0 + 0.6))
 			fd.pillars.append(Vector3((r.end.x - 2) * 2.0 + 1.4, 0, (r.end.y - 2) * 2.0 + 1.4))
+
+## Antorchas en las paredes, separadas al menos `every` pasos (Manhattan).
+## Primero una en la sala de inicio y otra en la del jefe (que el comienzo y
+## el final se vean), después el resto.
+static func _place_torches(fd: FloorData, rng: RandomNumberGenerator, every: int) -> void:
+	var start_room := fd.rooms[0] if not fd.rooms.is_empty() else Rect2i()
+	var groups: Array = [[], [], []]
+	for c in fd.floor_cells():
+		for d in DIRS.size():
+			if not fd.is_wall(c + DIRS[d]):
+				continue
+			var g := 2
+			if start_room.has_point(c):
+				g = 0
+			elif fd.boss_room.has_point(c):
+				g = 1
+			(groups[g] as Array).append({"cell": c, "dir": d})
+	for g: Array in groups:
+		_shuffle(g, rng)
+		for t: Dictionary in g:
+			var c: Vector2i = t.cell
+			var ok := true
+			for other: Dictionary in fd.torches:
+				var oc: Vector2i = other.cell
+				if absi(oc.x - c.x) + absi(oc.y - c.y) < every:
+					ok = false
+					break
+			if ok:
+				fd.torches.append(t)
 
 ## Fisher-Yates con la rng del piso (determinista; Array.shuffle() no lo es).
 static func _shuffle(arr: Array, rng: RandomNumberGenerator) -> void:

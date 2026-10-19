@@ -8,7 +8,7 @@ extends Control
 
 var builder: FloorBuilder
 var cam_pivot: Node3D
-var container: SubViewportContainer
+var container: RetroView
 var coins_label: Label
 var last_run_panel: UIPanel
 var menu_items: Array = []
@@ -18,7 +18,6 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_build_background()
 	_build_ui()
-	EventBus.settings_changed.connect(_apply_pixelation)
 	MetaState.changed.connect(_refresh)
 	_refresh()
 	UIFocus.grab_first(self)
@@ -34,23 +33,16 @@ func _process(delta: float) -> void:
 # --- Fondo 3D -----------------------------------------------------------------------
 
 func _build_background() -> void:
-	container = SubViewportContainer.new()
-	container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	container.stretch = true
-	container.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container = RetroView.new()
 	add_child(container)
-	var vp := SubViewport.new()
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	container.add_child(vp)
-	var world := Node3D.new()
-	vp.add_child(world)
+	var world := container.world
 	builder = FloorBuilder.new(world)
 	var fd := FloorGenerator.test_room()
 	builder.build_blocks(fd)
 	builder.build_pillars(fd)
 	builder.build_props(fd)
-	builder.build_lighting(6.0, 18.0)
+	builder.build_lighting()
+	builder.build_torches(fd)
 	# Un par de "trofeos" quietos: lo que espera abajo.
 	for e: Dictionary in fd.enemies.slice(0, 3):
 		builder.spawn_enemy(e)
@@ -63,14 +55,6 @@ func _build_background() -> void:
 	cam.position = Vector3(0, 0.3, 3.5)
 	cam.rotation_degrees.x = -6.0
 	cam_pivot.add_child(cam)
-	container.resized.connect(_apply_pixelation)
-	_apply_pixelation()
-
-func _apply_pixelation() -> void:
-	var shrink := 1
-	if bool(MetaState.settings.get("pixelated", true)) and container.size.y > 0:
-		shrink = maxi(1, roundi(container.size.y / float(DataRegistry.bal_i("render.low_res_height", 180))))
-	container.stretch_shrink = shrink
 
 # --- UI ---------------------------------------------------------------------------------
 

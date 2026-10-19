@@ -1,6 +1,6 @@
 # Estado técnico — roguelike jugable de punta a punta
 
-Complemento técnico de `CLAUDE.md` (reglas) y `docs/GUIA_CLAUDE_CODE.md` (plan por fases). Actualizado al terminar las fases 0–9 de la guía (19-oct-2026).
+Complemento técnico de `CLAUDE.md` (reglas) y `docs/GUIA_CLAUDE_CODE.md` (plan por fases). Actualizado al terminar las fases 0–9 de la guía y la etapa "enemigos + estilo Lunacid" (19-oct-2026).
 
 > `docs/PLAN_DE_DISENO_ROGUELIKE.md` y `docs/archive/` todavía no están en el repo.
 
@@ -10,7 +10,7 @@ Complemento técnico de `CLAUDE.md` (reglas) y `docs/GUIA_CLAUDE_CODE.md` (plan 
 tools/verify.sh
 ```
 
-Corre import, lint, arranque (`--quit-after 120`), 38 tests unitarios y el smoke test. Todo pasa con **cero errores y cero warnings**: los warnings de GDScript se suben a error con un `override.cfg` temporal, porque fuera del editor Godot no los imprime. Godot 4.7.2 headless; en este entorno el comando es `godot`.
+Corre import, lint, arranque (`--quit-after 120`), 43 tests unitarios y el smoke test. Todo pasa con **cero errores y cero warnings**: los warnings de GDScript se suben a error con un `override.cfg` temporal, porque fuera del editor Godot no los imprime. Godot 4.7.2 headless; en este entorno el comando es `godot`.
 
 Capturas de pantalla reales (OpenGL por software sobre Xvfb):
 
@@ -49,12 +49,12 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 
 | Archivo | Contenido |
 |---|---|
-| `species.json` | Especies: rango, modelo o colores de caja, `soul_id`, familia y descripción. Las claves siguen las del prototipo (`display_name`, `rank`...). |
+| `species.json` | Especies: rango base, `rank_range` (rangos en los que aparece), `tier` (basico/elite/jefe), `peso` (sorteo), `dormant_chance`, `soul_id`, familia, descripción y el bloque `visual` (modelo, escala, cabeza/manos, armas, color de ojos, luz propia y qué animación usar para cada papel). `"activo": false` la saca del juego (los goblins, sin licencia). |
 | `souls.json` | Plantillas de alma: `active{name}`, `passive{name, description, effect{type, value}}` o `null`, y `stat_modifiers`. Incluye las 5 almas de jefe con las pasivas nuevas. |
 | `items.json` | 8 objetos: `nombre`, `descripcion`, `tipo` (consumible/pasivo), `efecto{tipo, valor, en_combate, fuera_combate}`, `peso_aparicion`, `unlock_id`. |
 | `unlocks.json` | Condiciones: `condicion{tipo, parametros}`, `recompensa` (id de objeto) y `oculto`. |
 | `upgrades.json` | Mejoras: `efecto{tipo, valor}` (el valor puede ser fraccionario; el total se redondea), `coste_base` y `max_nivel`. |
-| `floors.json` | Generación (tamaño de salas, densidad...) y, por piso: tamaño, rango min/max, enemigos, cofres, objetos y jefe. |
+| `floors.json` | Generación (tamaño de salas, densidad...), los **biomas** (`themes`: texturas, niebla, ambiente, color de antorchas, luna) y, por piso: bioma, tamaño, rango min/max, enemigos, cofres, objetos y jefe (especie, nombre, alma, escala, tinte y color de ojos). |
 | `balance.json` | Todos los números de balance (ver el README). |
 | `texts.json` | **Todos** los textos de UI, con `%s/%d`. El lint revisa que cada `t("clave")` usada exista. |
 
@@ -62,18 +62,28 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 
 ### Pisos — `FloorGenerator` → `FloorData` → `FloorBuilder`
 
-- **Generador propio con semilla**: `hash([semilla, piso])`. Pone salas rectangulares sin solaparse y las une con pasillos en L, siempre a la sala más cercana ya conectada, más algunos lazos extra. El jefe va en la sala más lejana del inicio (por BFS), parado junto a la salida. Los cofres van en esquinas de sala y **solo se aceptan si no cortan ningún camino** (BFS). Los enemigos salen de las especies cuyo rango cae en el rango del piso, y algunos son élite. Los objetos sueltos salen de una tabla ponderada **solo con los objetos disponibles**. También pone props y columnas de decoración.
-- `FloorGenerator.test_room()`: la sala 15×9 del prototipo, con los 5 enemigos, columnas y props en las mismas posiciones.
+- **Generador propio con semilla**: `hash([semilla, piso])`. Pone salas rectangulares sin solaparse y las une con pasillos en L, siempre a la sala más cercana ya conectada, más algunos lazos extra. El jefe va en la sala más lejana del inicio (por BFS), parado junto a la salida y mirando hacia el camino; esa sala tiene **techo de 3 m** (`render.boss_room_height`). Los cofres van en esquinas de sala y **solo se aceptan si no cortan ningún camino** (BFS). Los enemigos salen de `FloorGenerator.roll_enemy()` (lo usa también `balance_sim`): especie ponderada por `peso` entre las activas no jefe cuyo `rank_range` se cruza con el del piso, rango al azar en el cruce, y tipo (las especies élite siempre lo son; las básicas con `enemies.elite_chance`). Algunos quedan **dormidos**. Los objetos sueltos salen de una tabla ponderada **solo con los objetos disponibles**. También pone props, columnas y **antorchas** (separadas `antorcha_cada` pasos; una siempre en la sala de inicio y otra en la del jefe).
+- `FloorGenerator.test_room()`: la sala 15×9 del prototipo (techo alto), con un ejemplar de cada enemigo (uno dormido) y el jefe del piso 1, columnas, props y 4 antorchas.
 - **`addons/dungeon_crawler_3d` se evaluó y se descartó**: trabaja con escenas de salas 3D prearmadas, conectores y su propio grafo. Adoptarlo obligaba a rehacer la construcción del mapa (grilla lógica y geometría), y el generador propio produce el mismo formato `cells[y][x]` que ya usaba el prototipo.
-- `FloorBuilder`: **la geometría del piso es UNA sola malla**, hecha con el mismo algoritmo de caras, UV y normales de `LevelBlock.create_mesh()`, así que el aspecto es idéntico. Con un nodo LevelBlock por celda (hasta ~900 en el piso 5) se agotaba el buffer de *instance uniforms* del shader PSX, que usa 3 por instancia, y eran cientos de draw calls. LevelBlock sigue habilitado para armar salas a mano en el editor (con su parche de `material: Material`).
-- Los props del pack PSX ahora también reciben material PSX, con la misma niebla y snapping que el resto.
+- `FloorBuilder(world, tema)`: la geometría va en **una malla por bloque de 8×8 celdas** (cada bloque con su lista de luces; con un nodo por celda eran cientos de draw calls). Las caras de 2×2 m están **subdivididas 4×4** para que la luz por vértice dibuje el charco de las antorchas y la deformación afín no se exagere. **UV de mundo**: cada textura de 128 px cubre 4×4 m y se repite sin costura; un % de caras usa la variante `_b`. Los **colores de vértice** llevan una oclusión falsa horneada (unión piso-pared, rincones, techo más oscuro) y ±8% de ruido. Las celdas de techo alto agregan el "dintel" contra las vecinas más bajas.
+- Luz: **sin sol** (solo luz de luna en los Salones de la Luna), ambiente tintado del bioma, fondo = color de la niebla, antorchas de pared (`FlickerLight`, parpadeo escalonado a 12 Hz) y la lámpara cálida del equipo.
+- Columnas: prisma de 8 lados con basa y capitel, con la textura de pared del bioma. Antorchas: modelo de KayKit Dungeon Remastered (CC0) + llama sin sombrear.
+- Los props del pack PSX también reciben material PSX, con la misma niebla y snapping que el resto. LevelBlock sigue habilitado para armar salas a mano en el editor (con su parche de `material: Material`).
+
+### Enemigos — `EnemyVisual` (`scripts/world/enemy_visual.gd`)
+
+- Modelos: KayKit Character Pack: Skeletons (CC0), adaptados por `tools/assets/process_enemies.mjs` (solo las animaciones usadas, remuestreadas a 12 fps; malla simplificada ~40%; textura de 64 px con paleta de 15 bits). Armas aparte, en `BoneAttachment3D` sobre `handslot.l/r`.
+- Animación **a pasos**: el `AnimationPlayer` va en modo manual y se avanza de a 1/12 s. Cada papel (`idle`, `combat`, `walk`, `attack`, `hit`, `death`, `spawn`, `dormant`, `ability`, `taunt`) se mapea en `species.json → visual.anims` (texto o lista para variar).
+- Proporciones: la cabeza y las manos se achican con escala de huesos tras cada cuadro (`head_scale`, `bone_scale`); el arma compensa la escala de la mano.
+- Ojos: material sin sombrear **y sin niebla** (se ven antes que el cuerpo). Sombra "blob" con trama Bayer en recorte (sin mezcla alfa). Material un poco más claro que el entorno (`enemies.albedo_boost`).
+- RunController: caminar (`walk` → `idle`), despertar (`spawn`), golpe recibido (`hit` + parpadeo), ataque y habilidad del jefe (señal `enemy_acting`, el daño llega `combat.enemy_attack_windup` s después), burla del jefe al empezar, muerte (`enemy_defeated`) y el cadáver se hunde en el piso (un montón de huesos quieto ya significa "esqueleto dormido").
 
 ### Exploración — `RunController` (Run.tscn)
 
-- Mantiene el SubViewport de baja resolución del prototipo. **Arreglo**: con `SubViewportContainer.stretch = true` el tamaño lo decide el contenedor, y `viewport.size` se ignoraba, así que antes se renderizaba a resolución completa. Ahora `stretch_shrink` se calcula para llegar a unas 180 líneas. Se puede desactivar en Opciones → Pixelado PS1.
+- **`RetroView`** (la usan la run y el Hub): SubViewport a ~240 líneas (con `stretch = true` el tamaño lo decide el contenedor: se usa `stretch_shrink`), **trama de 15 bits dentro del SubViewport** (`shaders/psx_viewport_dither.gdshader`: cada celda Bayer es un píxel del juego y la UI queda limpia; el dither del addon se apaga con `psx_bit_depth = 0`) y los globals afín/temblor. Presets en `balance.json → render.presets`: Clásica (240 líneas, afín 0,6, temblor 160), Crujiente (180, afín 1,0, temblor 110) y Limpia (sin filtros). Opciones → Imagen.
 - **Arreglo**: el jugador y los enemigos van al **centro** de la celda (`cell*2 + 1`). Antes iban a la esquina (`cell*2`), con la cámara pegada al plano de la pared oeste.
-- El jugador lleva una luz tenue (antorcha de mano), porque sin ella las paredes de espaldas a la luz direccional quedaban negras.
-- Enemigos: tras cada paso del jugador, los que están a ≤ 5 pasos **de camino** se acercan por BFS y el resto deambula. Si uno llega a tu celda: de frente es combate normal; por la espalda o un costado, **emboscada**. Después de huir, el enemigo queda aturdido 2 turnos. El jefe no se mueve.
+- Cámara: FOV 64 al explorar y 58 en combate; pasos de 0,22 s con suavizado y un leve balanceo vertical (Opciones → Balanceo al caminar). La lámpara del equipo es una `FlickerLight` cálida.
+- Enemigos: tras cada paso del jugador, los que están a ≤ 5 pasos **de camino** se acercan por BFS y el resto deambula. Los dormidos no se mueven hasta que el equipo está a ≤ 2 pasos (ese turno solo se levantan); chocarlos los despierta en un ataque sorpresa. Si uno llega a tu celda: de frente es combate normal; por la espalda o un costado, **emboscada**. Después de huir, el enemigo queda aturdido 2 turnos. El jefe no se mueve.
 - Cofres: se abren chocándolos y dan monedas más un objeto de la tabla. Si el inventario está lleno, el objeto queda en el suelo. Los objetos sueltos se recogen al pisarlos.
 - La salida está sellada hasta matar al jefe. Pisarla abre el **punto de retiro**: bajar / retirarse / quedarse. En el último piso, salir es la victoria.
 - Menús: Pausa (el árbol queda en pausa y el reloj de la run también), Estado, Inventario (`use_item_field()`) y Mapa. Tab/I/M/Esc abren y cierran.
@@ -102,7 +112,22 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 - Fuentes: Pixelify Sans, más Noto Sans Symbols 1 y 2 de respaldo para ◈ ✦ ▶ ★ ← ↑… Todas sin antialiasing desde el `.import`. **Gotcha**: Godot calcula la altura de línea con la fuente más alta de la cadena de respaldo. Por eso las Noto están recortadas y con ascent/descent igualados a Pixelify; si no, el interlineado se duplica.
 - Ventana base 1280×720 con `stretch canvas_items`: se ve igual a 1080p. La escala de UI (80–150%) es `content_scale_factor`. A 150% en 1280×720 todo cabe, porque los cuerpos se desplazan.
 
+## Parches en `addons/psx` (reaplicar si se actualiza el addon)
+
+- `PsxConversionDialog.gd` líneas 199/256: tipadas como `Variant`.
+- `shaders/psx.gdshaderinc`:
+  - **Niebla**: usaba `v_clip.w`, que en espacio de vista vale siempre 1, así que **la niebla nunca aparecía**. Ahora usa la distancia real a la cámara. Con niebla total el color es exactamente el de la niebla (en los materiales sombreados el albedo se apaga y la niebla entra por emisión; los sin sombrear usan `#define SHADING_UNSHADED`).
+  - **Afín**: el truco UV·w / w necesita la w de **clip** (`v_w`); con la de vista no hacía nada.
+  - **Snapping**: `min(v_clip.z, -0.001)` evita la división por cero (triángulos que desaparecían pegados a una pared).
+  - `i_precision_uv/xy/z` pasaron de `instance uniform` a constantes: cada instancia gastaba 3 lugares del buffer de variables globales (4096 en Compatibilidad) y los pisos grandes lo agotaban ("Too many instances using shader instance variables").
+- `scripts/PsxMaterial3D.gd`: la permutación "unshaded" agrega `#define SHADING_UNSHADED` (y las de `shaders/cache/` ya generadas se editaron a mano).
+- **Las permutaciones de `shaders/cache/` se generan al usarse por primera vez y hay que commitearlas**: en un juego exportado no se pueden escribir y el material queda sin shader.
+
 ## Gotchas nuevos (además de los de CLAUDE.md)
+
+- Texturas del mundo y de enemigos: `detect_3d/compress_to=0` en su `.import`. Si no, el editor las pasa a VRAM comprimida con mipmaps la primera vez que las ve en 3D y se pierde el píxel limpio.
+- Los modelos KayKit miden entre 2,1 y 2,6 m (con casco o sombrero) y el techo normal es de 2 m: por eso las escalas de `species.json` y el techo alto de la sala del jefe. Revisar con `tools/enemy_preview.tscn` (líneas de 1, 2 y 3 m).
+- `tools/screenshot.gd --call=metodo:arg` pasa el argumento como texto ("true"/"false" se convierten a bool).
 
 - `RenderingServer.global_shader_parameter_get_list()` **solo funciona en el editor**: en el juego devuelve vacío y tira un error. Para saber si un global PSX ya existe se mira `ProjectSettings.has_setting("shader_globals/<nombre>")`.
 - Los métodos de un autoload no pueden ser `static` si se llaman como `Autoload.metodo()`: da el warning *static called on instance*.
@@ -113,7 +138,8 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 
 ## Cómo extender
 
-- **Especie nueva**: una entrada en `species.json` y su alma en `souls.json`. Aparece en los pisos cuyo rango la incluya.
+- **Especie nueva**: una entrada en `species.json` (con `rank_range`, `tier`, `peso` y el bloque `visual`) y su alma en `souls.json`. Aparece en los pisos cuyo rango se cruce con su `rank_range`. Modelo nuevo: sumarlo a `ENEMIES` en `tools/assets/process_enemies.mjs` y revisar con `tools/enemy_preview.tscn`.
+- **Bioma nuevo**: una entrada en `floors.json → themes`, sus 5 texturas (`tools/assets/make_textures.py`, tabla `THEMES`) y asignarlo a un piso con `"theme"`.
 - **Pasiva nueva**: el tipo en `DataRegistry.PASSIVE_EFFECTS`, su `case` en `CombatManager` (o donde se aplique) y su texto `effect.<tipo>` en `texts.json`.
 - **Objeto nuevo**: `items.json`. Si tiene un efecto nuevo: `DataRegistry.ITEM_EFFECTS`, `RunController.use_item_field()` y/o `CombatManager._on_item()`.
 - **Condición de desbloqueo nueva**: `DataRegistry.UNLOCK_CONDITIONS` y su caso en `UnlockEvaluator.progress_of()`; si depende de un dato nuevo de la run, sumarlo a `GameState.snapshot()`.
@@ -127,6 +153,6 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 
 ## Pendiente
 
-- Arte propio de jefes; integrar Gothic Furniture; sonidos reales.
-- Confirmar la licencia del pack de goblins antes de publicar.
+- Modelos de enemigos de proporciones más realistas (los de KayKit son estilizados); integrar Gothic Furniture; sonidos reales.
+- Licencias: el pack de goblins no tiene (sus especies están inactivas); el pack PSX de cajas/barriles prohíbe redistribuirlo (revisar si el repo es público).
 - Diferido: razas, árbol de habilidades, crafting, eventos mensuales, niveles/XP.

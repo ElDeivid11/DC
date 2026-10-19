@@ -11,6 +11,7 @@ extends Node
 ##   --ui-scale=1.5       escala de UI (como en Opciones)
 ##   --summary            deja terminada una run de ejemplo (para RunSummary.tscn)
 ##   --test-room          la run arranca en la sala de pruebas (un enemigo de cada)
+##   --floor=N            la run arranca en el piso N (semilla fija: revisar biomas)
 
 var _scene_path := "res://scenes/ui/UIGallery.tscn"
 var _out := "user://screenshot.png"
@@ -39,6 +40,9 @@ func _ready() -> void:
 			_demo_summary()
 		elif arg == "--test-room":
 			GameState.new_run(1, true)
+		elif arg.begins_with("--floor="):
+			GameState.new_run(4242, false)
+			GameState.floor_n = int(arg.substr(8))
 		elif arg.begins_with("--ui-scale="):
 			MetaState.settings["ui_scale"] = float(arg.substr(11))
 			GameSettings.apply(MetaState.settings, get_tree())
@@ -62,7 +66,11 @@ func _capture() -> void:
 			var parts := _call.split(":")
 			if _scene.has_method(parts[0]):
 				if parts.size() > 1:
-					_scene.call(parts[0], parts[1])
+					# "true"/"false" llegan como texto: se pasan como bool.
+					var arg: Variant = parts[1]
+					if parts[1] == "true" or parts[1] == "false":
+						arg = parts[1] == "true"
+					_scene.call(parts[0], arg)
 				else:
 					_scene.call(parts[0])
 	await RenderingServer.frame_post_draw

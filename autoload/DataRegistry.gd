@@ -32,6 +32,8 @@ var upgrades: Dictionary = {}
 var unlocks: Dictionary = {}
 var floors: Array = []
 var floor_generation: Dictionary = {}
+## Biomas (floors.json → themes): niebla, ambiente, texturas, antorchas.
+var floor_themes: Dictionary = {}
 var balance: Dictionary = {}
 var texts: Dictionary = {}
 
@@ -53,6 +55,7 @@ func reload() -> void:
 	var floors_file := _load_dict("floors.json")
 	floors = floors_file.get("floors", [])
 	floor_generation = floors_file.get("generation", {})
+	floor_themes = floors_file.get("themes", {})
 
 	_validate_species()
 	_validate_souls()
@@ -97,6 +100,14 @@ func get_floor(n: int) -> Dictionary:
 
 func floor_count() -> int:
 	return floors.size()
+
+## Bioma del piso n (o el del piso 1 si n está fuera de rango: Hub, sala de pruebas).
+func get_theme(n: int) -> Dictionary:
+	var fl := get_floor(n)
+	if fl.is_empty():
+		fl = get_floor(1)
+	var d: Dictionary = floor_themes.get(String(fl.get("theme", "")), {})
+	return d
 
 ## Especies ordenadas de más débil (rango 10) a más fuerte (rango 1), que es
 ## el orden natural del bestiario y de aparición. Las marcadas "activo": false
@@ -278,6 +289,15 @@ func _validate_visual(F: String, id: String, s: Dictionary) -> void:
 	v["head_scale"] = float(v.get("head_scale", 1.0))
 	v["anim_fps"] = maxi(1, int(v.get("anim_fps", 12)))
 	v["eye_color"] = _to_color(v.get("eye_color", "#ffffff"))
+	v["shadow"] = float(v.get("shadow", 0.9))
+	if v.has("bone_scale"):
+		if typeof(v.bone_scale) != TYPE_DICTIONARY:
+			_err("%s → '%s': visual.bone_scale debe ser un objeto {hueso: escala}" % [F, id])
+			v.erase("bone_scale")
+		else:
+			var bs: Dictionary = v.bone_scale
+			for bone: String in bs.keys():
+				bs[bone] = clampf(float(bs[bone]), 0.2, 3.0)
 	if v.has("light"):
 		if typeof(v.light) != TYPE_DICTIONARY:
 			_err("%s → '%s': visual.light debe ser un objeto" % [F, id])
@@ -376,6 +396,7 @@ func _validate_floors() -> void:
 	const F := "floors.json"
 	if floors.is_empty():
 		_err("%s: no hay pisos definidos en 'floors'" % F)
+	_validate_themes(F)
 	for i in floors.size():
 		var fl: Dictionary = floors[i]
 		var id := "piso %d" % (i + 1)
@@ -383,6 +404,8 @@ func _validate_floors() -> void:
 			if _req(F, id, fl, field, TYPE_FLOAT):
 				fl[field] = int(fl[field])
 		fl["n"] = i + 1
+		if _req(F, id, fl, "theme", TYPE_STRING) and not floor_themes.has(fl.theme):
+			_err("%s → %s: el tema '%s' no existe en 'themes'" % [F, id, fl.theme])
 		if fl.get("rank_min", 0) > fl.get("rank_max", 0):
 			_err("%s → %s: rank_min no puede ser mayor que rank_max" % [F, id])
 		var any_species := false
@@ -408,6 +431,28 @@ func _validate_floors() -> void:
 			b["tint"] = _to_color(b.get("tint", [1, 1, 1]))
 			if b.has("eye_color"):
 				b["eye_color"] = _to_color(b.eye_color)
+
+func _validate_themes(F: String) -> void:
+	for id: String in floor_themes.keys():
+		var th: Dictionary = floor_themes[id]
+		_req(F, id, th, "nombre", TYPE_STRING)
+		if _req(F, id, th, "texturas", TYPE_STRING) and not DirAccess.dir_exists_absolute(String(th.texturas)):
+			_err("%s → tema '%s': la carpeta de texturas '%s' no existe" % [F, id, th.texturas])
+		for c: String in ["niebla", "ambiente", "antorcha"]:
+			if _req(F, id, th, c, TYPE_STRING):
+				th[c] = _to_color(th[c])
+		for n: String in ["niebla_cerca", "niebla_lejos", "ambiente_energia", "variante_pared", "variante_piso"]:
+			if _req(F, id, th, n, TYPE_FLOAT):
+				th[n] = float(th[n])
+		if float(th.get("niebla_cerca", 0.0)) >= float(th.get("niebla_lejos", 1.0)):
+			_err("%s → tema '%s': niebla_cerca debe ser menor que niebla_lejos" % [F, id])
+		if _req(F, id, th, "antorcha_cada", TYPE_FLOAT):
+			th["antorcha_cada"] = maxi(2, int(th.antorcha_cada))
+		if th.has("luna"):
+			var m: Dictionary = th.luna
+			m["color"] = _to_color(m.get("color", "#ffffff"))
+			m["energia"] = float(m.get("energia", 0.3))
+		th["id"] = id
 
 func _validate_balance() -> void:
 	const F := "balance.json"

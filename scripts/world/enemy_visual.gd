@@ -6,9 +6,12 @@ extends Node3D
 ## Estilo PS1/Lunacid:
 ## - Animación a PASOS (12 fps): el AnimationPlayer va en modo manual y se
 ##   avanza de a 1/12 s, sin interpolar entre cuadros.
-## - Cabeza más chica que el original "chibi" (bone pose scale tras animar).
+## - Proporciones menos "chibi" que el original: cabeza y manos más chicas
+##   (escala de huesos tras animar: visual.head_scale y visual.bone_scale).
 ## - Material PSX (snapping, afín, niebla por vértice) con un tinte por tipo,
-##   y ojos que brillan sin sombrear (se ven en la oscuridad).
+##   y ojos que brillan sin sombrear NI niebla: dos puntos en la oscuridad
+##   que se ven antes que el cuerpo.
+## - Sombra "blob" con trama (recorte, sin transparencia) bajo los pies.
 ##
 ## Roles de animación (data: visual.anims): idle, combat, walk, attack
 ## (lista), hit (lista), death, spawn, dormant, ability, block.
@@ -27,7 +30,8 @@ var head_scale := 1.0
 var current_role := ""
 var _then := "idle"
 var _acc := 0.0
-var _head_bone := -1
+## Índice de hueso -> escala (cabeza, manos...), aplicada en cada cuadro.
+var _bone_scales: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var _dead := false
 
@@ -45,10 +49,19 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 	anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	skeleton = model.find_child("Skeleton3D", true, false) as Skeleton3D
 	if skeleton:
-		_head_bone = skeleton.find_bone("head")
-		_attach_weapon(def.get("weapon_r", ""), "handslot.r")
-		_attach_weapon(def.get("weapon_l", ""), "handslot.l")
+		var scales: Dictionary = (def.get("bone_scale", {}) as Dictionary).duplicate()
+		if head_scale != 1.0:
+			scales["head"] = head_scale
+		for bone_name: String in scales.keys():
+			var idx := skeleton.find_bone(bone_name)
+			if idx >= 0:
+				_bone_scales[idx] = float(scales[bone_name])
+		# El arma cuelga de la mano: se compensa la escala de la mano para
+		# que el arma conserve su tamaño.
+		_attach_weapon(def.get("weapon_r", ""), "handslot.r", 1.0 / float(scales.get("hand.r", 1.0)))
+		_attach_weapon(def.get("weapon_l", ""), "handslot.l", 1.0 / float(scales.get("hand.l", 1.0)))
 	_apply_materials(model, tint, eye)
+	add_child(_make_blob_shadow(float(def.get("shadow", 0.9))))
 	if anim:
 		anim.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 		anim.animation_finished.connect(_on_finished)
@@ -58,21 +71,47 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 				anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
 	if def.has("light"):
 		var l: Dictionary = def.light
-		light = OmniLight3D.new()
-		light.light_color = eye.lerp(l.get("color", eye), 0.5)
-		light.light_energy = float(l.get("energy", 1.0))
-		light.omni_range = float(l.get("range", 3.0))
+		light = FlickerLight.make(eye.lerp(l.get("color", eye), 0.5), float(l.get("energy", 1.0)), float(l.get("range", 3.0)), 1.0, 0.1, 8.0)
 		light.position = Vector3(0, 1.4, 0.4)
 		add_child(light)
 
-func _attach_weapon(path: Variant, bone: String) -> void:
+func _attach_weapon(path: Variant, bone: String, counter_scale := 1.0) -> void:
 	if typeof(path) != TYPE_STRING or String(path) == "" or skeleton.find_bone(bone) < 0:
 		return
 	var att := BoneAttachment3D.new()
 	att.bone_name = bone
 	skeleton.add_child(att)
 	var weapon: Node3D = (load(String(path)) as PackedScene).instantiate()
+	weapon.scale = Vector3.ONE * counter_scale
 	att.add_child(weapon)
+
+## Mancha de sombra redonda con trama Bayer (recorte, sin mezcla alfa: no hay
+## problemas de orden de dibujo, y es como lo hacía PS1).
+static var _shadow_mat: PsxMaterial3D = null
+
+static func _make_blob_shadow(diameter: float) -> MeshInstance3D:
+	if _shadow_mat == null:
+		const SIZE := 16
+		const BAYER: Array[int] = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+		var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+		for y in SIZE:
+			for x in SIZE:
+				var d := Vector2(x + 0.5 - SIZE / 2.0, y + 0.5 - SIZE / 2.0).length() / (SIZE / 2.0)
+				var a := clampf(1.0 - d, 0.0, 1.0) * 1.6
+				var on := a > (BAYER[(x % 4) + (y % 4) * 4] + 0.5) / 16.0
+				img.set_pixel(x, y, Color(0, 0, 0, 1.0 if on else 0.0))
+		_shadow_mat = FloorBuilder.make_psx_material(Color(0.02, 0.02, 0.02), ImageTexture.create_from_image(img))
+		_shadow_mat.transparency_mode = 1 # Cutout
+		_shadow_mat.shading_mode = 0 # Unshaded
+		_shadow_mat.refresh_shader()
+	var quad := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(diameter, diameter)
+	quad.mesh = plane
+	quad.material_override = _shadow_mat
+	quad.position.y = 0.02
+	quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return quad
 
 ## Reemplaza materiales por PSX; los ojos ("*_Eyes") brillan con su color.
 func _apply_materials(node: Node, tint: Color, eye: Color) -> void:
@@ -82,13 +121,14 @@ func _apply_materials(node: Node, tint: Color, eye: Color) -> void:
 		var n: int = mi.mesh.get_surface_count() if mi.mesh else 0
 		for i in n:
 			if glow:
-				mi.set_surface_override_material(i, FloorBuilder.make_glow_material(eye))
+				mi.set_surface_override_material(i, FloorBuilder.make_glow_material(eye, false))
 				continue
 			var original: Material = mi.mesh.surface_get_material(i)
 			var tex: Texture2D = null
 			if original is BaseMaterial3D:
 				tex = (original as BaseMaterial3D).albedo_texture
-			mi.set_surface_override_material(i, FloorBuilder.make_psx_material(tint, tex))
+			# Algo más claros que el entorno: se leen contra paredes oscuras.
+			mi.set_surface_override_material(i, FloorBuilder.make_psx_material(tint * DataRegistry.bal_f("enemies.albedo_boost", 1.0), tex))
 	for c in node.get_children():
 		_apply_materials(c, tint, eye)
 
@@ -142,8 +182,10 @@ func _process(delta: float) -> void:
 	_apply_bone_overrides()
 
 func _apply_bone_overrides() -> void:
-	if skeleton and _head_bone >= 0 and head_scale != 1.0:
-		skeleton.set_bone_pose_scale(_head_bone, Vector3.ONE * head_scale)
+	if skeleton == null:
+		return
+	for idx: int in _bone_scales.keys():
+		skeleton.set_bone_pose_scale(idx, Vector3.ONE * float(_bone_scales[idx]))
 
 func _on_finished(_name: StringName) -> void:
 	var role := current_role

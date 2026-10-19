@@ -7,9 +7,78 @@
 		"min_enemy_distance_from_start": 5,
 		"props_per_room": 1.2
 	},
+	"themes": {
+		"catacumbas": {
+			"nombre": "Catacumbas del Pozo",
+			"texturas": "res://assets/textures/catacumbas/",
+			"niebla": "#120e0b",
+			"niebla_cerca": 5.0,
+			"niebla_lejos": 16.0,
+			"ambiente": "#3a3028",
+			"ambiente_energia": 0.75,
+			"antorcha": "#ff9a3c",
+			"antorcha_cada": 5,
+			"variante_pared": 0.15,
+			"variante_piso": 0.2
+		},
+		"cisterna": {
+			"nombre": "Cisterna Anegada",
+			"texturas": "res://assets/textures/cisterna/",
+			"niebla": "#14241d",
+			"niebla_cerca": 4.0,
+			"niebla_lejos": 13.0,
+			"ambiente": "#2a4038",
+			"ambiente_energia": 0.75,
+			"antorcha": "#ffb45a",
+			"antorcha_cada": 5,
+			"variante_pared": 0.15,
+			"variante_piso": 0.2
+		},
+		"luna": {
+			"nombre": "Salones de la Luna",
+			"texturas": "res://assets/textures/luna/",
+			"niebla": "#0e1428",
+			"niebla_cerca": 6.0,
+			"niebla_lejos": 20.0,
+			"ambiente": "#24305a",
+			"ambiente_energia": 0.65,
+			"antorcha": "#ffc98a",
+			"antorcha_cada": 6,
+			"luna": {"color": "#b8c8ff", "energia": 0.3},
+			"variante_pared": 0.15,
+			"variante_piso": 0.2
+		},
+		"castillo": {
+			"nombre": "Castillo Carmesí",
+			"texturas": "res://assets/textures/castillo/",
+			"niebla": "#2a0608",
+			"niebla_cerca": 5.0,
+			"niebla_lejos": 16.0,
+			"ambiente": "#4a1a1e",
+			"ambiente_energia": 0.7,
+			"antorcha": "#ffb36b",
+			"antorcha_cada": 4,
+			"variante_pared": 0.15,
+			"variante_piso": 0.2
+		},
+		"abismo": {
+			"nombre": "El Abismo",
+			"texturas": "res://assets/textures/abismo/",
+			"niebla": "#0a0614",
+			"niebla_cerca": 3.0,
+			"niebla_lejos": 11.0,
+			"ambiente": "#1e1438",
+			"ambiente_energia": 0.8,
+			"antorcha": "#c9a0ff",
+			"antorcha_cada": 6,
+			"variante_pared": 0.15,
+			"variante_piso": 0.2
+		}
+	},
 	"floors": [
 		{
 			"n": 1,
+			"theme": "catacumbas",
 			"size": 25,
 			"rank_min": 8,
 			"rank_max": 9,
@@ -28,6 +97,7 @@
 		},
 		{
 			"n": 2,
+			"theme": "cisterna",
 			"size": 30,
 			"rank_min": 6,
 			"rank_max": 8,
@@ -39,13 +109,14 @@
 				"species": "nigromante",
 				"rank": 5,
 				"soul_id": "jefe_osario",
-				"scale_mult": 1.1,
+				"scale_mult": 1.05,
 				"tint": [0.95, 0.9, 0.78],
 				"eye_color": "#ffd27a"
 			}
 		},
 		{
 			"n": 3,
+			"theme": "luna",
 			"size": 35,
 			"rank_min": 5,
 			"rank_max": 7,
@@ -57,13 +128,14 @@
 				"species": "nigromante",
 				"rank": 4,
 				"soul_id": "jefe_ahogado",
-				"scale_mult": 1.15,
+				"scale_mult": 1.1,
 				"tint": [0.7, 0.85, 1.0],
 				"eye_color": "#6ad8ff"
 			}
 		},
 		{
 			"n": 4,
+			"theme": "castillo",
 			"size": 40,
 			"rank_min": 3,
 			"rank_max": 6,
@@ -75,13 +147,14 @@
 				"species": "nigromante",
 				"rank": 2,
 				"soul_id": "jefe_archi",
-				"scale_mult": 1.25,
+				"scale_mult": 1.15,
 				"tint": [0.85, 0.6, 0.6],
 				"eye_color": "#ff4a3a"
 			}
 		},
 		{
 			"n": 5,
+			"theme": "abismo",
 			"size": 45,
 			"rank_min": 2,
 			"rank_max": 5,
@@ -93,7 +166,7 @@
 				"species": "nigromante",
 				"rank": 1,
 				"soul_id": "jefe_senor",
-				"scale_mult": 1.4,
+				"scale_mult": 1.25,
 				"tint": [0.75, 0.6, 0.95],
 				"eye_color": "#c77dff"
 			}

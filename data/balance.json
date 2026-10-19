@@ -24,10 +24,12 @@
 		"coin_keep_on_death": 0.5
 	},
 	"enemies": {
-		"elite_chance": 0.1,
+		"elite_chance": 0.05,
 		"elite_stat_mult": 1.25,
 		"elite_scale": 1.15,
-		"elite_tint": [1.0, 0.8, 0.55],
+		"elite_tint": [1.0, 0.9, 0.78],
+		"elite_eye": "#ffb040",
+		"albedo_boost": 1.35,
 		"boss_stat_mult": 1.5,
 		"wake_radius": 2,
 		"aggro_radius": 5,
@@ -62,15 +64,25 @@
 		"allow_boss": false
 	},
 	"fog": {
-		"near": 10.0,
-		"far": 24.0,
-		"torch_near_bonus": 6.0,
-		"torch_far_bonus": 10.0
+		"torch_near_bonus": 3.0,
+		"torch_far_bonus": 6.0
 	},
 	"render": {
-		"low_res_height": 180,
-		"pixelated_default": true,
-		"player_light_energy": 0.9,
-		"player_light_range": 7.0
+		"preset_default": "clasico",
+		"presets": {
+			"clasico": {"lines": 240, "dither_bits": 5, "affine": 0.6, "precision_xy": 160},
+			"crujiente": {"lines": 180, "dither_bits": 5, "affine": 1.0, "precision_xy": 110},
+			"limpio": {"lines": 0, "dither_bits": 0, "affine": 0.0, "precision_xy": 0}
+		},
+		"fov": 64.0,
+		"combat_fov": 58.0,
+		"player_light_color": "#ffc98a",
+		"player_light_energy": 1.5,
+		"player_light_range": 8.5,
+		"player_light_attenuation": 1.0,
+		"flicker_amount": 0.05,
+		"flicker_hz": 10.0,
+		"head_bob": 0.04,
+		"boss_room_height": 3.0
 	}
 }
