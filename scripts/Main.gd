@@ -186,7 +186,13 @@ func _ensure_psx_shader_globals() -> void:
 		&"psx_precision_xy": [RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 256.0],
 		&"psx_precision_z": [RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 512.0],
 	}
+	# project.godot ya declara estos globals en [shader_globals]; volver a
+	# agregarlos tira "global_shader_variables.has(p_name)". Solo se registran
+	# los que falten.
+	var existing := RenderingServer.global_shader_parameter_get_list()
 	for k: StringName in defaults.keys():
+		if existing.has(k):
+			continue
 		var rtype: int = defaults[k][0]
 		var default_value: Variant = defaults[k][1]
 		RenderingServer.global_shader_parameter_add(k, rtype, default_value)
@@ -464,6 +470,12 @@ func _get_props_template() -> Node3D:
 		var packed: PackedScene = load("res://assets/psx_boxes_barrels/Crates_and_barrels_glb.glb")
 		_props_template = packed.instantiate()
 	return _props_template
+
+# La plantilla nunca entra al árbol, así que nadie la libera por nosotros.
+func _exit_tree() -> void:
+	if _props_template:
+		_props_template.free()
+		_props_template = null
 
 func _spawn_prop(node_name: String, cell_pos: Vector3, rot_y_deg: float = 0.0) -> void:
 	var template := _get_props_template()

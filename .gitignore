@@ -1,0 +1,3 @@
+# Caché que Godot regenera solo
+.godot/
+*.tmp
