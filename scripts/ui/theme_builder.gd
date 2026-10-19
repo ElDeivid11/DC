@@ -9,7 +9,7 @@ extends RefCounted
 ##   godot --headless --path . res://tools/build_theme.tscn
 ##
 ## Variaciones disponibles (theme_type_variation):
-##   Label:          TitleLabel, SubtitleLabel, DimLabel, DetailLabel,
+##   Label:          HeroLabel, TitleLabel, SubtitleLabel, DimLabel, DetailLabel,
 ##                   AccentLabel, CoinLabel, SoulLabel, GoodLabel, DangerLabel
 ##   Button:         MenuItem (ítem de menú en lista), DangerButton, ItemSlot
 ##   PanelContainer: PanelAlt, ScreenBg, HudPanel, DimOverlay, Card
@@ -107,6 +107,7 @@ static func _labels(t: Theme, bold: Font) -> void:
 	t.set_constant("line_spacing", "Label", 2)
 
 	var variations := {
+		"HeroLabel": [UIStyle.ACCENT, UIStyle.FONT_HERO, true],
 		"TitleLabel": [UIStyle.ACCENT, UIStyle.FONT_TITLE, true],
 		"SubtitleLabel": [UIStyle.TEXT, UIStyle.FONT_SUBTITLE, true],
 		"DimLabel": [UIStyle.TEXT_DIM, UIStyle.FONT_BODY, false],

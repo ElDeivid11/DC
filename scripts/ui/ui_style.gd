@@ -25,6 +25,7 @@ const COIN := Color("#e8c85a")
 ## defecto de Godot sin antialiasing.
 const FONT_PATH := "res://assets/fonts/PixelifySans-Regular.woff"
 
+const FONT_HERO := 48
 const FONT_TITLE := 28
 const FONT_SUBTITLE := 20
 const FONT_BODY := 16

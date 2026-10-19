@@ -26,6 +26,8 @@
 	"enemies": {
 		"elite_chance": 0.1,
 		"elite_stat_mult": 1.25,
+		"elite_scale": 1.15,
+		"elite_tint": [1.0, 0.8, 0.55],
 		"boss_stat_mult": 1.5,
 		"aggro_radius": 5,
 		"wander_chance": 0.3
@@ -44,7 +46,11 @@
 		"surprise_damage_mult": 1.5,
 		"surprise_free_turn": true,
 		"ambush_enabled": true,
-		"ambush_damage_mult": 1.5
+		"ambush_damage_mult": 1.5,
+		"boss_ability_every": 3,
+		"boss_ability_mult": 0.7,
+		"enemy_turn_delay": 0.35,
+		"flee_stun_turns": 2
 	},
 	"flee": {
 		"base": 0.5,
@@ -61,6 +67,8 @@
 	},
 	"render": {
 		"low_res_height": 180,
-		"pixelated_default": true
+		"pixelated_default": true,
+		"player_light_energy": 0.9,
+		"player_light_range": 7.0
 	}
 }

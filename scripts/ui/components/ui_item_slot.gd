@@ -5,10 +5,13 @@ extends UIButton
 ## como tooltip al enfocar/pasar el mouse.
 
 var item_id := ""
+## false cuando la pantalla ya muestra la descripción en un panel de detalle.
+var with_tooltip := true
 
-func _init(p_item_id := "") -> void:
+func _init(p_item_id := "", p_with_tooltip := true) -> void:
 	super("", "ItemSlot")
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
+	with_tooltip = p_with_tooltip
 	set_item(p_item_id)
 
 func set_item(p_item_id: String) -> void:
@@ -22,4 +25,4 @@ func set_item(p_item_id: String) -> void:
 	var it := DataRegistry.get_item(item_id)
 	var tag := DataRegistry.t("item.type." + String(it.get("tipo", "consumible")))
 	text = "%s   %s" % [it.get("nombre", item_id), tag]
-	UITooltip.attach(self, String(it.get("descripcion", "")))
+	UITooltip.attach(self, String(it.get("descripcion", "")) if with_tooltip else "")

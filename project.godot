@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Dungeon Grid Prototype"
-run/main_scene="res://scenes/Main.tscn"
+run/main_scene="res://scenes/Boot.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
@@ -27,6 +27,7 @@ SaveSystem="*res://autoload/SaveSystem.gd"
 GameState="*res://autoload/GameState.gd"
 Controls="*res://autoload/Controls.gd"
 SceneRouter="*res://autoload/SceneRouter.gd"
+DebugTools="*res://autoload/DebugTools.gd"
 psx_post_process="*uid://u3y0jxl0vtmg"
 
 [display]

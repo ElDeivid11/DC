@@ -23,6 +23,8 @@ signal item_picked(item_id: String)
 signal item_used(item_id: String)
 signal coins_changed(run_coins: int)
 signal unlock_earned(unlock_id: String)
+## Cambió algún ajuste en Opciones (p. ej. pixelado): quien dependa, se reajusta.
+signal settings_changed()
 ## Mensaje breve para el HUD de exploración (abajo al centro).
 signal hud_message(text: String)
 

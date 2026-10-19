@@ -22,6 +22,15 @@ const DISPLAY_ORDER: Array[String] = [
 	"open_status", "open_inventory", "open_map", "pause",
 ]
 
+## Nombres en pantalla de teclas que Godot devuelve en inglés.
+const KEY_NAMES := {
+	KEY_UP: "↑",
+	KEY_DOWN: "↓",
+	KEY_LEFT: "←",
+	KEY_RIGHT: "→",
+	KEY_ESCAPE: "Esc",
+}
+
 const BUTTON_NAMES := {
 	JOY_BUTTON_DPAD_UP: "Cruceta ↑",
 	JOY_BUTTON_DPAD_DOWN: "Cruceta ↓",
@@ -36,7 +45,7 @@ const BUTTON_NAMES := {
 func _ready() -> void:
 	ensure_actions()
 
-static func ensure_actions() -> void:
+func ensure_actions() -> void:
 	for action: String in ACTIONS.keys():
 		if InputMap.has_action(action):
 			continue
@@ -58,13 +67,13 @@ static func ensure_actions() -> void:
 			InputMap.action_add_event(action, jm)
 
 ## "↑ / W · Cruceta ↑" para mostrar en pantalla.
-static func bindings_text(action: String) -> String:
+func bindings_text(action: String) -> String:
 	if not ACTIONS.has(action):
 		return ""
 	var def: Dictionary = ACTIONS[action]
 	var keys: Array[String] = []
 	for key: Variant in def.keys:
-		keys.append(OS.get_keycode_string(int(key)))
+		keys.append(String(KEY_NAMES.get(int(key), OS.get_keycode_string(int(key)))))
 	var pads: Array[String] = []
 	for b: Variant in def.buttons:
 		pads.append(String(BUTTON_NAMES.get(int(b), "Botón %d" % int(b))))
