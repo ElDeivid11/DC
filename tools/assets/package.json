@@ -1,0 +1,11 @@
+{
+  "name": "dc-asset-pipeline",
+  "private": true,
+  "description": "Pipeline de assets (fuera de Godot): adapta modelos CC0 al estilo PSX. Ver tools/assets/README.md",
+  "type": "module",
+  "dependencies": {
+    "@gltf-transform/core": "4.2.1",
+    "@gltf-transform/functions": "4.2.1",
+    "meshoptimizer": "0.22.0"
+  }
+}

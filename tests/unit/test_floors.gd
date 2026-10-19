@@ -78,5 +78,47 @@ func test_sala_de_pruebas_igual_al_prototipo() -> void:
 	eq(fd.width, 15, "ancho 15")
 	eq(fd.height, 9, "alto 9")
 	eq(fd.start_cell, Vector2i(2, 4), "inicio del prototipo")
-	eq(fd.enemies.size(), 5, "los 5 enemigos conocidos")
+	eq(fd.enemies.size(), 6, "un ejemplar de cada enemigo + variantes")
 	eq(String(fd.enemy_at(Vector2i(9, 4)).get("species_id", "")), "esqueleto_guardian", "esqueleto en (9,4)")
+	var boss := fd.enemy_at(Vector2i(12, 4))
+	eq(String(boss.get("kind", "")), RunRules.BOSS, "el jefe está en la sala")
+	check(bool(fd.enemy_at(Vector2i(4, 2)).get("dormant", false)), "hay un esqueleto dormido")
+
+func test_sorteo_de_enemigos() -> void:
+	# Pool: solo especies activas que no son jefe y cuyo rank_range se cruza.
+	var pool := FloorGenerator.species_pool(8, 9)
+	check(pool.has("esqueleto_esbirro") and pool.has("esqueleto_picaro"), "las básicas en el piso 1: %s" % [pool])
+	check(not pool.has("esqueleto_guardian"), "la élite no baja hasta rango 8")
+	check(not pool.has("nigromante"), "el jefe nunca sale como enemigo común")
+	check(not pool.has("goblin"), "las inactivas no salen")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var deep := FloorGenerator.species_pool(2, 5)
+	var counts := {}
+	for i in 3000:
+		var r := FloorGenerator.roll_enemy(rng, deep, 2, 5)
+		var sp := DataRegistry.get_species(String(r.species_id))
+		var rr: Array = sp.rank_range
+		check(int(r.rank) >= maxi(2, int(rr[0])) and int(r.rank) <= mini(5, int(rr[1])), "rango dentro del cruce: %s" % [r])
+		if String(sp.tier) == "elite":
+			eq(String(r.kind), RunRules.ELITE, "una especie élite siempre es élite")
+		counts[r.species_id] = int(counts.get(r.species_id, 0)) + 1
+	# pesos 5 / 4 / 1.5 → el esbirro sale más que el guardián
+	check(int(counts.get("esqueleto_esbirro", 0)) > int(counts.get("esqueleto_guardian", 0)) * 2, "respeta los pesos: %s" % [counts])
+
+func test_dormidos_solo_si_la_especie_puede() -> void:
+	for n in range(1, DataRegistry.floor_count() + 1):
+		var fd := _gen(n, 70 + n)
+		for e: Dictionary in fd.enemies:
+			if bool(e.get("dormant", false)):
+				check(float(DataRegistry.get_species(String(e.species_id)).dormant_chance) > 0.0, "%s no debería dormir" % e.species_id)
+				check(e.kind != RunRules.BOSS, "el jefe nunca duerme")
+
+func test_elite_de_especie_sin_sufijo() -> void:
+	var g := FloorGenerator.make_enemy(Vector2i(1, 1), "esqueleto_guardian", RunRules.ELITE, 4)
+	eq(String(g.display_name), "Esqueleto guardián", "la élite por especie no lleva sufijo")
+	eq(float(g.scale_mult), 1.0, "ni escala extra")
+	eq(int(g.rank), 4, "rango pedido")
+	var b := FloorGenerator.make_enemy(Vector2i(1, 1), "esqueleto_esbirro", RunRules.ELITE)
+	check(String(b.display_name) != "Esqueleto esbirro", "la variante élite de una básica sí lleva sufijo")
+	eq(int(b.rank), 9, "sin rango pedido = el de la especie")

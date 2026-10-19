@@ -18,6 +18,7 @@ const PASSIVE_EFFECTS: Array[String] = [
 ]
 const ITEM_EFFECTS: Array[String] = ["curar", "antorcha", "sello_retiro", "ataque_run", "huida_garantizada", "capacidad_alma"]
 const ITEM_TYPES: Array[String] = ["consumible", "pasivo"]
+const SPECIES_TIERS: Array[String] = ["basico", "elite", "jefe"]
 const UPGRADE_EFFECTS: Array[String] = ["max_hp_flat", "atk_flat", "coin_bonus_pct", "start_item", "soul_chance_pct"]
 const UNLOCK_CONDITIONS: Array[String] = [
 	"kill_species_total", "reach_floor", "defeat_boss", "win_run",
@@ -98,11 +99,13 @@ func floor_count() -> int:
 	return floors.size()
 
 ## Especies ordenadas de más débil (rango 10) a más fuerte (rango 1), que es
-## el orden natural del bestiario y de aparición.
-func species_ids() -> Array[String]:
+## el orden natural del bestiario y de aparición. Las marcadas "activo": false
+## (prototipos sin licencia o sin modelo) quedan fuera salvo que se pidan.
+func species_ids(include_inactive := false) -> Array[String]:
 	var ids: Array[String] = []
 	for k: String in species.keys():
-		ids.append(k)
+		if include_inactive or bool(species[k].get("activo", true)):
+			ids.append(k)
 	ids.sort_custom(func(a: String, b: String) -> bool:
 		var ra: int = species[a].rank
 		var rb: int = species[b].rank
@@ -205,6 +208,8 @@ func _req(file: String, id: String, d: Dictionary, field: String, type: int, nul
 	return true
 
 func _to_color(v: Variant) -> Color:
+	if typeof(v) == TYPE_COLOR: # ya normalizado (validar dos veces no rompe nada)
+		return v
 	if typeof(v) == TYPE_ARRAY and (v as Array).size() >= 3:
 		var a: Array = v
 		return Color(float(a[0]), float(a[1]), float(a[2]))
@@ -225,7 +230,29 @@ func _validate_species() -> void:
 				_err("%s → '%s': rank debe estar entre 1 y 10" % [F, id])
 		if _req(F, id, s, "soul_id", TYPE_STRING) and not souls.has(s.soul_id):
 			_err("%s → '%s': soul_id '%s' no existe en souls.json" % [F, id, s.soul_id])
-		if s.has("model_path"):
+		s["activo"] = bool(s.get("activo", true))
+		s["family"] = String(s.get("family", id))
+		s["description"] = String(s.get("description", ""))
+		var tier := String(s.get("tier", "basico"))
+		if not SPECIES_TIERS.has(tier):
+			_err("%s → '%s': tier '%s' desconocido (usa %s)" % [F, id, tier, SPECIES_TIERS])
+		s["tier"] = tier
+		s["peso"] = float(s.get("peso", 1.0))
+		s["dormant_chance"] = clampf(float(s.get("dormant_chance", 0.0)), 0.0, 1.0)
+		# Rango en el que puede aparecer en un piso. Sin rank_range = solo su rank.
+		var rr: Variant = s.get("rank_range", [s.get("rank", 10), s.get("rank", 10)])
+		if typeof(rr) != TYPE_ARRAY or (rr as Array).size() != 2:
+			_err("%s → '%s': rank_range debe ser [min, max]" % [F, id])
+			rr = [s.get("rank", 10), s.get("rank", 10)]
+		var rr_a: Array = rr
+		var r_lo := mini(int(rr_a[0]), int(rr_a[1]))
+		var r_hi := maxi(int(rr_a[0]), int(rr_a[1]))
+		if r_lo < 1 or r_hi > 10:
+			_err("%s → '%s': rank_range debe estar entre 1 y 10" % [F, id])
+		s["rank_range"] = [r_lo, r_hi]
+		if s.has("visual"):
+			_validate_visual(F, id, s)
+		elif s.has("model_path"):
 			if not ResourceLoader.exists(String(s.model_path)):
 				_err("%s → '%s': el modelo '%s' no existe" % [F, id, s.model_path])
 			s["model_scale"] = float(s.get("model_scale", 1.0))
@@ -233,9 +260,42 @@ func _validate_species() -> void:
 			s["color_a"] = _to_color(s.color_a)
 			s["color_b"] = _to_color(s.color_b)
 		else:
-			_err("%s → '%s': necesita model_path o color_a/color_b" % [F, id])
-		s["family"] = String(s.get("family", id))
-		s["description"] = String(s.get("description", ""))
+			_err("%s → '%s': necesita visual, model_path o color_a/color_b" % [F, id])
+
+## Bloque "visual" de una especie animada (EnemyVisual): modelo con esqueleto,
+## armas en las manos, color de ojos y qué animación usar para cada papel.
+func _validate_visual(F: String, id: String, s: Dictionary) -> void:
+	if typeof(s.visual) != TYPE_DICTIONARY:
+		_err("%s → '%s': 'visual' debe ser un objeto" % [F, id])
+		return
+	var v: Dictionary = s.visual
+	if _req(F, id, v, "model_path", TYPE_STRING) and not ResourceLoader.exists(String(v.model_path)):
+		_err("%s → '%s': el modelo '%s' no existe" % [F, id, v.model_path])
+	for w: String in ["weapon_r", "weapon_l"]:
+		if v.has(w) and not ResourceLoader.exists(String(v[w])):
+			_err("%s → '%s': el arma '%s' no existe" % [F, id, v[w]])
+	v["scale"] = float(v.get("scale", 1.0))
+	v["head_scale"] = float(v.get("head_scale", 1.0))
+	v["anim_fps"] = maxi(1, int(v.get("anim_fps", 12)))
+	v["eye_color"] = _to_color(v.get("eye_color", "#ffffff"))
+	if v.has("light"):
+		if typeof(v.light) != TYPE_DICTIONARY:
+			_err("%s → '%s': visual.light debe ser un objeto" % [F, id])
+			v.erase("light")
+		else:
+			var l: Dictionary = v.light
+			l["color"] = _to_color(l.get("color", "#ffffff"))
+			l["energy"] = float(l.get("energy", 1.0))
+			l["range"] = float(l.get("range", 3.0))
+	if _req(F, id, v, "anims", TYPE_DICTIONARY):
+		var anims: Dictionary = v.anims
+		for role: String in ["idle", "death"]:
+			if not anims.has(role):
+				_err("%s → '%s': visual.anims necesita '%s'" % [F, id, role])
+		for role: String in anims.keys():
+			var a: Variant = anims[role]
+			if typeof(a) != TYPE_STRING and typeof(a) != TYPE_ARRAY:
+				_err("%s → '%s': visual.anims.%s debe ser texto o lista" % [F, id, role])
 
 func _validate_souls() -> void:
 	const F := "souls.json"
@@ -327,11 +387,14 @@ func _validate_floors() -> void:
 			_err("%s → %s: rank_min no puede ser mayor que rank_max" % [F, id])
 		var any_species := false
 		for sid: String in species.keys():
-			var r: int = int(species[sid].get("rank", 0))
-			if r >= int(fl.get("rank_min", 0)) and r <= int(fl.get("rank_max", 0)):
+			var sp: Dictionary = species[sid]
+			if not bool(sp.get("activo", true)) or String(sp.get("tier", "")) == "jefe" or float(sp.get("peso", 0.0)) <= 0.0:
+				continue
+			var rr: Array = sp.get("rank_range", [0, 0])
+			if int(rr[0]) <= int(fl.get("rank_max", 0)) and int(rr[1]) >= int(fl.get("rank_min", 0)):
 				any_species = true
 		if not any_species:
-			_err("%s → %s: ninguna especie tiene rango entre %s y %s" % [F, id, fl.get("rank_min"), fl.get("rank_max")])
+			_err("%s → %s: ninguna especie activa puede aparecer entre los rangos %s y %s" % [F, id, fl.get("rank_min"), fl.get("rank_max")])
 		if _req(F, id, fl, "boss", TYPE_DICTIONARY):
 			var b: Dictionary = fl.boss
 			_req(F, id, b, "display_name", TYPE_STRING)
@@ -343,6 +406,8 @@ func _validate_floors() -> void:
 				b["rank"] = int(b.rank)
 			b["scale_mult"] = float(b.get("scale_mult", 1.0))
 			b["tint"] = _to_color(b.get("tint", [1, 1, 1]))
+			if b.has("eye_color"):
+				b["eye_color"] = _to_color(b.eye_color)
 
 func _validate_balance() -> void:
 	const F := "balance.json"

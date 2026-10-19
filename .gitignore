@@ -2,3 +2,4 @@
 .godot/
 *.tmp
 override.cfg
+node_modules/

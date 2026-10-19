@@ -10,6 +10,7 @@ extends Node
 ##   --run                arranca una run de ejemplo (objetos y un alma)
 ##   --ui-scale=1.5       escala de UI (como en Opciones)
 ##   --summary            deja terminada una run de ejemplo (para RunSummary.tscn)
+##   --test-room          la run arranca en la sala de pruebas (un enemigo de cada)
 
 var _scene_path := "res://scenes/ui/UIGallery.tscn"
 var _out := "user://screenshot.png"
@@ -36,6 +37,8 @@ func _ready() -> void:
 			_demo_run()
 		elif arg == "--summary":
 			_demo_summary()
+		elif arg == "--test-room":
+			GameState.new_run(1, true)
 		elif arg.begins_with("--ui-scale="):
 			MetaState.settings["ui_scale"] = float(arg.substr(11))
 			GameSettings.apply(MetaState.settings, get_tree())
@@ -72,22 +75,22 @@ func _demo_meta() -> void:
 	MetaState.coins = 1240
 	MetaState.upgrades = {"vitalidad": 3, "fuerza": 1, "botin": 2}
 	MetaState.bestiary = {
-		"goblin": {"seen": true, "kills": 7, "first_kill_run": 1, "souls_taken": 1},
-		"rata_cripta": {"seen": true, "kills": 3, "first_kill_run": 2, "souls_taken": 0},
-		"goblin_archer": {"seen": true, "kills": 0, "first_kill_run": 0, "souls_taken": 0},
+		"esqueleto_esbirro": {"seen": true, "kills": 7, "first_kill_run": 1, "souls_taken": 1},
+		"esqueleto_picaro": {"seen": true, "kills": 3, "first_kill_run": 2, "souls_taken": 0},
+		"esqueleto_guardian": {"seen": true, "kills": 0, "first_kill_run": 0, "souls_taken": 0},
 	}
-	MetaState.progress["kills_by_species"] = {"goblin": 7, "rata_cripta": 3}
+	MetaState.progress["kills_by_species"] = {"esqueleto_esbirro": 7, "esqueleto_picaro": 3}
 	MetaState.progress["best_floor"] = 2
 	MetaState.progress["flee_total"] = 1
 	MetaState.unlocked = {}
 	MetaState.stats = MetaState.default_stats()
 	MetaState.stats.merge({"runs": 4, "deaths": 3, "retreats": 1, "total_kills": 10, "best_floor": 2, "total_time_sec": 3720.0, "coins_earned_total": 1600,
-		"last_run": {"outcome": "muerte", "floor": 2, "kills": 6, "coins": 86, "cause": "Goblin arquero", "time_sec": 912.0}}, true)
+		"last_run": {"outcome": "muerte", "floor": 2, "kills": 6, "coins": 86, "cause": "Esqueleto ballestero", "time_sec": 912.0}}, true)
 
 func _demo_run() -> void:
 	GameState.new_run(777, false)
-	GameState.inventory.append_array(["venda", "antorcha_vieja", "talisman_goblin"])
-	GameState.add_soul("bjorn", DataRegistry.make_soul("goblin", 9, "Goblin explorador"))
+	GameState.inventory.append_array(["venda", "antorcha_vieja", "talisman_hueso"])
+	GameState.add_soul("bjorn", DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto ballestero"))
 	GameState.party[1]["hp"] = 9
 	GameState.add_coins(37, "kills")
 
@@ -98,8 +101,8 @@ func _demo_summary() -> void:
 	GameState.max_floor = 3
 	GameState.floor_n = 3
 	GameState.elapsed_sec = 1452.0
-	GameState.kills_by_species = {"goblin": 4, "goblin_archer": 2, "goblin_warrior": 1}
+	GameState.kills_by_species = {"esqueleto_esbirro": 4, "esqueleto_picaro": 2, "esqueleto_guardian": 1}
 	GameState.kills_total = 7
 	GameState.coin_breakdown = {"kills": 42, "boss": 25, "chests": 18}
 	GameState.bosses_defeated = [1]
-	GameState.end_run("muerte", "Goblin guerrero")
+	GameState.end_run("muerte", "Esqueleto guardián")

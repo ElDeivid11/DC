@@ -31,14 +31,6 @@
 		"peso_aparicion": 2,
 		"unlock_id": "u_piso_3"
 	},
-	"talisman_goblin": {
-		"nombre": "Talismán de goblin",
-		"descripcion": "Mientras lo lleves: +1 ataque a todo el equipo durante la expedición.",
-		"tipo": "pasivo",
-		"efecto": {"tipo": "ataque_run", "valor": 1, "en_combate": false, "fuera_combate": false},
-		"peso_aparicion": 3,
-		"unlock_id": "u_goblins_10"
-	},
 	"bomba_humo": {
 		"nombre": "Bomba de humo",
 		"descripcion": "Huida garantizada de un combate. No funciona contra jefes.",
@@ -62,5 +54,13 @@
 		"efecto": {"tipo": "curar", "valor": 20, "en_combate": true, "fuera_combate": true},
 		"peso_aparicion": 4,
 		"unlock_id": "u_sin_pociones"
+	},
+	"talisman_hueso": {
+		"nombre": "Talismán de hueso",
+		"descripcion": "Mientras lo lleves: +1 ataque a todo el equipo durante la expedición.",
+		"tipo": "pasivo",
+		"efecto": {"tipo": "ataque_run", "valor": 1, "en_combate": false, "fuera_combate": false},
+		"peso_aparicion": 3,
+		"unlock_id": "u_esqueletos"
 	}
 }

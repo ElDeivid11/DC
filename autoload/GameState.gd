@@ -291,7 +291,7 @@ func consume_item_at(index: int) -> String:
 	EventBus.item_used.emit(id)
 	return id
 
-## +ataque de la run por objetos pasivos en el inventario (Talismán de goblin).
+## +ataque de la run por objetos pasivos en el inventario (Talismán de hueso).
 func run_atk_bonus() -> int:
 	var bonus := 0
 	for id in inventory:

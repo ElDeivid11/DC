@@ -29,6 +29,7 @@
 		"elite_scale": 1.15,
 		"elite_tint": [1.0, 0.8, 0.55],
 		"boss_stat_mult": 1.5,
+		"wake_radius": 2,
 		"aggro_radius": 5,
 		"wander_chance": 0.3
 	},
@@ -50,6 +51,7 @@
 		"boss_ability_every": 3,
 		"boss_ability_mult": 0.7,
 		"enemy_turn_delay": 0.35,
+		"enemy_attack_windup": 0.3,
 		"flee_stun_turns": 2
 	},
 	"flee": {

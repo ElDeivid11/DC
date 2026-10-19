@@ -68,11 +68,7 @@ func _simulate_run() -> int:
 	var floors := DataRegistry.bal_i("floors_per_run", 5)
 	for n in range(1, floors + 1):
 		var def := DataRegistry.get_floor(n)
-		var species_pool: Array[String] = []
-		for sid: String in DataRegistry.species.keys():
-			var r := int(DataRegistry.species[sid].rank)
-			if r >= int(def.rank_min) and r <= int(def.rank_max):
-				species_pool.append(sid)
+		var species_pool := FloorGenerator.species_pool(int(def.rank_min), int(def.rank_max))
 		# Botín del piso: cofres y objetos sueltos.
 		for c in int(def.chests) + int(def.floor_items):
 			var id := FloorGenerator.roll_item(rng, pool)
@@ -80,10 +76,10 @@ func _simulate_run() -> int:
 				GameState.add_item(id, false)
 		var fights := roundi(int(def.enemies) * ENCOUNTER_RATE)
 		for k in fights:
-			var sid := species_pool[rng.randi_range(0, species_pool.size() - 1)]
-			var kind := RunRules.ELITE if rng.randf() < DataRegistry.bal_f("enemies.elite_chance", 0.1) else RunRules.NORMAL
-			var sp := DataRegistry.get_species(sid)
-			if not _fight(int(sp.rank), kind, String(sp.soul_id), n):
+			# Mismo sorteo que el generador de pisos (especie, rango y tipo).
+			var roll := FloorGenerator.roll_enemy(rng, species_pool, int(def.rank_min), int(def.rank_max))
+			var sp := DataRegistry.get_species(String(roll.species_id))
+			if not _fight(int(roll.rank), String(roll.kind), String(sp.soul_id), n):
 				return n
 			_heal_between_fights()
 		var b: Dictionary = def.boss

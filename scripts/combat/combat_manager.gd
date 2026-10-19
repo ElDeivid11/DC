@@ -20,8 +20,14 @@ extends CanvasLayer
 ## si ese personaje está lleno: reemplazar una o descartar la nueva.
 
 signal combat_ended(outcome: String, result: Dictionary)
-## Para efectos en el mundo 3D (parpadeo del modelo del enemigo).
+## Para efectos en el mundo 3D (parpadeo y animaciones del modelo del enemigo).
 signal enemy_hit(damage: int)
+## El enemigo empieza su acción: "attack" | "ability" (habilidad de jefe).
+## El daño llega combat.enemy_attack_windup segundos después (el golpe de la
+## animación).
+signal enemy_acting(action: String)
+## El enemigo llegó a 0 HP (antes del resumen de victoria).
+signal enemy_defeated
 
 # --- Configuración (la pasa RunController antes de add_child) ---------------------
 ## {name, rank, hp, atk, ability_damage, ability_name, kind, species_id}
@@ -522,7 +528,14 @@ func _enemy_turn() -> void:
 		mult = _bal("ambush_damage_mult", 1.5)
 		ambush_pending = false
 	var every := int(_bal("boss_ability_every", 3))
-	if enemy.kind == RunRules.BOSS and every > 0 and enemy_turns % every == 0:
+	var boss_ability: bool = enemy.kind == RunRules.BOSS and every > 0 and enemy_turns % every == 0
+	enemy_acting.emit("ability" if boss_ability else "attack")
+	var windup := _bal("enemy_attack_windup", 0.3)
+	if windup > 0.0:
+		await get_tree().create_timer(windup).timeout
+		if finished:
+			return
+	if boss_ability:
 		# Habilidad de jefe: golpea a todo el equipo.
 		var aoe := maxi(roundi(int(enemy.atk) * _bal("boss_ability_mult", 0.7) * mult), 1)
 		_log(DataRegistry.t("combat.log_boss_ability", [enemy.name, String(enemy_data.ability_name)]))
@@ -607,6 +620,7 @@ func _finish(victory: bool) -> void:
 		_show_summary(DataRegistry.t("combat.defeat_title"), [DataRegistry.t("combat.defeat_text")], on_defeat, "DangerLabel")
 		return
 	_log(DataRegistry.t("combat.log_victory"))
+	enemy_defeated.emit()
 	var lines: Array[String] = [DataRegistry.t("combat.coins_gained", [UIFormat.coins(int(reward_preview.coins))])]
 	if reward_preview.get("first_kill", false):
 		lines.append(DataRegistry.t("combat.first_kill", [String(reward_preview.get("species_name", enemy.name)), UIFormat.coins(int(reward_preview.first_kill_bonus))]))

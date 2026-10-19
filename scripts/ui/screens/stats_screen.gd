@@ -36,7 +36,7 @@ func _ready() -> void:
 		["stats.time", UIFormat.time(float(s.total_time_sec))],
 		["stats.coins_total", UIFormat.coins(int(s.coins_earned_total))],
 		["stats.unlocks", "%d/%d" % [MetaState.unlocked.size(), DataRegistry.unlocks.size()]],
-		["stats.species", "%d/%d" % [seen, DataRegistry.species.size()]],
+		["stats.species", "%d/%d" % [seen, DataRegistry.species_ids().size()]],
 	]
 	for p: Array in pairs:
 		var k := Label.new()

@@ -92,6 +92,7 @@
 	"run.chest_item_left": "Dentro hay %s, pero no te cabe: queda en el suelo.",
 	"run.soul_taken": "%s absorbe el alma: %s.",
 	"run.fled": "Escapaste. El enemigo tardará en reaccionar.",
+	"run.enemy_wakes": "Unos huesos se levantan del suelo: %s.",
 	"run.boss_down": "¡El guardián cayó! La salida está abierta.",
 	"run.healed": "%s recupera %d HP.",
 	"run.torch": "La antorcha aleja la niebla.",

@@ -248,11 +248,23 @@ func build_props(fd: FloorData) -> void:
 
 # --- Entidades ----------------------------------------------------------------------------
 
+## Especies con bloque "visual" → EnemyVisual (modelo animado; arranca en
+## "idle" o tirado en el piso si está dormido). Las viejas (model_path o
+## color_a/color_b) siguen funcionando como modelo quieto o caja.
 func spawn_enemy(e: Dictionary) -> Node3D:
 	var species := DataRegistry.get_species(String(e.species_id))
 	var tint: Color = e.get("tint", Color.WHITE)
 	var scale_mult := float(e.get("scale_mult", 1.0))
 	var node: Node3D
+	if species.has("visual"):
+		var v := EnemyVisual.new()
+		v.setup(species.visual, tint, e.get("eye_color", Color.WHITE), int(e.get("variant_seed", 0)))
+		v.scale = Vector3.ONE * scale_mult
+		v.position = cell_to_world(e.cell)
+		v.rotation_degrees.y = 180.0 - int(e.get("facing", 2)) * 90.0
+		world.add_child(v)
+		v.play_role("dormant" if bool(e.get("dormant", false)) else "idle")
+		return v
 	if species.has("model_path"):
 		var packed: PackedScene = load(String(species.model_path))
 		var model: Node3D = packed.instantiate()

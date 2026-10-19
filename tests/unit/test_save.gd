@@ -18,7 +18,7 @@ func test_guardar_reiniciar_cargar() -> void:
 	MetaState.coins = 123
 	MetaState.upgrades = {"fuerza": 2}
 	MetaState.unlocked = {"u_piso_3": true}
-	MetaState.bestiary = {"goblin": {"seen": true, "kills": 4, "first_kill_run": 1, "souls_taken": 1}}
+	MetaState.bestiary = {"esqueleto_esbirro": {"seen": true, "kills": 4, "first_kill_run": 1, "souls_taken": 1}}
 	check(SaveSystem.save_meta(), "guardar debe funcionar: " + SaveSystem.last_error)
 	MetaState.reset()
 	eq(MetaState.coins, 0, "reset borra en memoria")
@@ -26,7 +26,7 @@ func test_guardar_reiniciar_cargar() -> void:
 	eq(MetaState.coins, 123, "monedas")
 	eq(MetaState.upgrade_level("fuerza"), 2, "nivel de mejora")
 	check(MetaState.is_unlocked("u_piso_3"), "desbloqueo")
-	eq(int(MetaState.bestiary_entry("goblin").kills), 4, "bestiario")
+	eq(int(MetaState.bestiary_entry("esqueleto_esbirro").kills), 4, "bestiario")
 	check(not FileAccess.file_exists(SaveSystem.save_path + ".tmp"), "no queda el .tmp")
 	_clean()
 

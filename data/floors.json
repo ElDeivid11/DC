@@ -17,12 +17,13 @@
 			"chests": 2,
 			"floor_items": 2,
 			"boss": {
-				"display_name": "Cabecilla goblin",
-				"species": "goblin",
+				"display_name": "Nigromante novicio",
+				"species": "nigromante",
 				"rank": 7,
-				"soul_id": "jefe_goblin",
-				"scale_mult": 1.5,
-				"tint": [1.0, 0.62, 0.55]
+				"soul_id": "jefe_novicio",
+				"scale_mult": 1.0,
+				"tint": [0.85, 0.95, 0.85],
+				"eye_color": "#7dffb0"
 			}
 		},
 		{
@@ -34,12 +35,13 @@
 			"chests": 2,
 			"floor_items": 2,
 			"boss": {
-				"display_name": "Rata reina",
-				"species": "rata_cripta",
+				"display_name": "Sacerdote del osario",
+				"species": "nigromante",
 				"rank": 5,
-				"soul_id": "jefe_rata",
-				"scale_mult": 1.6,
-				"tint": [0.8, 0.55, 0.9]
+				"soul_id": "jefe_osario",
+				"scale_mult": 1.1,
+				"tint": [0.95, 0.9, 0.78],
+				"eye_color": "#ffd27a"
 			}
 		},
 		{
@@ -51,12 +53,13 @@
 			"chests": 3,
 			"floor_items": 3,
 			"boss": {
-				"display_name": "Caudillo goblin",
-				"species": "goblin_warrior",
+				"display_name": "Vidente ahogado",
+				"species": "nigromante",
 				"rank": 4,
-				"soul_id": "jefe_caudillo",
-				"scale_mult": 1.35,
-				"tint": [0.7, 0.7, 0.75]
+				"soul_id": "jefe_ahogado",
+				"scale_mult": 1.15,
+				"tint": [0.7, 0.85, 1.0],
+				"eye_color": "#6ad8ff"
 			}
 		},
 		{
@@ -68,12 +71,13 @@
 			"chests": 3,
 			"floor_items": 3,
 			"boss": {
-				"display_name": "Capitán esqueleto",
-				"species": "esqueleto_guardian",
+				"display_name": "Archinigromante",
+				"species": "nigromante",
 				"rank": 2,
-				"soul_id": "jefe_capitan",
-				"scale_mult": 1.4,
-				"tint": [0.65, 0.8, 1.0]
+				"soul_id": "jefe_archi",
+				"scale_mult": 1.25,
+				"tint": [0.85, 0.6, 0.6],
+				"eye_color": "#ff4a3a"
 			}
 		},
 		{
@@ -86,11 +90,12 @@
 			"floor_items": 3,
 			"boss": {
 				"display_name": "Señor de la cripta",
-				"species": "esqueleto_guardian",
+				"species": "nigromante",
 				"rank": 1,
 				"soul_id": "jefe_senor",
-				"scale_mult": 1.8,
-				"tint": [0.75, 0.5, 0.95]
+				"scale_mult": 1.4,
+				"tint": [0.75, 0.6, 0.95],
+				"eye_color": "#c77dff"
 			}
 		}
 	]

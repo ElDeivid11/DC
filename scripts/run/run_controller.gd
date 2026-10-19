@@ -257,6 +257,7 @@ func _enemies_act() -> void:
 		blocked[c] = true
 	var dist := fd.distances_from(pc, blocked)
 	var aggro := DataRegistry.bal_i("enemies.aggro_radius", 5)
+	var wake := DataRegistry.bal_i("enemies.wake_radius", 2)
 	var wander := DataRegistry.bal_f("enemies.wander_chance", 0.3)
 	var occupied := {}
 	for e: Dictionary in fd.enemies:
@@ -271,6 +272,12 @@ func _enemies_act() -> void:
 			continue
 		var ec: Vector2i = e.cell
 		var d := int(dist.get(ec, 9999))
+		# Dormido: no se mueve hasta que el equipo pasa cerca; ese turno solo
+		# se levanta (el siguiente ya persigue).
+		if bool(e.get("dormant", false)):
+			if d <= wake:
+				_wake_enemy(e, dist)
+			continue
 		var target := ec
 		if d <= aggro:
 			for dir in DIRS:
@@ -298,8 +305,16 @@ func _enemies_act() -> void:
 		e["cell"] = target
 		_turn_enemy_towards(e, target)
 		var node: Node3D = e.node
+		_anim(e, "walk")
 		var tw := node.create_tween()
-		tw.tween_property(node, "position", FloorBuilder.cell_to_world(target), 0.15)
+		tw.tween_property(node, "position", FloorBuilder.cell_to_world(target), 0.2)
+		# Entre pasos vuelve a quedarse quieto (si nadie le cambió el papel).
+		tw.tween_interval(0.25)
+		tw.tween_callback(func() -> void:
+			var v := _visual(e)
+			if v and v.current_role == "walk":
+				v.play_role("idle")
+		)
 	_after_move()
 
 func _turn_enemy_towards(e: Dictionary, target: Vector2i) -> void:
@@ -308,6 +323,51 @@ func _turn_enemy_towards(e: Dictionary, target: Vector2i) -> void:
 	if idx >= 0:
 		e["facing"] = idx
 		(e.node as Node3D).rotation_degrees.y = -idx * 90.0 + 180.0
+
+## Un esqueleto dormido se levanta: animación de salir del suelo y mira hacia
+## el camino por el que viene el equipo.
+func _wake_enemy(e: Dictionary, dist: Dictionary) -> void:
+	e["dormant"] = false
+	var ec: Vector2i = e.cell
+	for dir in DIRS:
+		if int(dist.get(ec + dir, 9999)) < int(dist.get(ec, 9999)):
+			_turn_enemy_towards(e, ec + dir)
+			break
+	if _anim(e, "spawn", "idle") <= 0.0:
+		_anim(e, "idle")
+	EventBus.hud_message.emit(DataRegistry.t("run.enemy_wakes", [e.display_name]))
+
+## El modelo animado de un enemigo (null si es de los viejos, sin animación,
+## o si ya se liberó).
+func _visual(e: Dictionary) -> EnemyVisual:
+	var n: Variant = e.get("node")
+	if n == null or not is_instance_valid(n):
+		return null
+	return n as EnemyVisual
+
+## Reproduce un papel de animación del enemigo. Devuelve su duración (0 = no hay).
+func _anim(e: Dictionary, role: String, then := "idle") -> float:
+	var v := _visual(e)
+	return v.play_role(role, then) if v else 0.0
+
+## Cadáver: termina de caer y se hunde en el piso a pasos (no se deja: un
+## montón de huesos en el suelo es un esqueleto DORMIDO).
+func _dispose_corpse(e: Dictionary) -> void:
+	var v := _visual(e)
+	if v == null:
+		var n: Variant = e.get("node")
+		if n != null and is_instance_valid(n):
+			(n as Node).queue_free()
+		return
+	if not v.is_dead():
+		v.play_role("death", "")
+	if v.light:
+		v.light.create_tween().tween_property(v.light, "light_energy", 0.0, 0.6)
+	var tw := v.create_tween()
+	tw.tween_interval(0.5)
+	for i in 6:
+		tw.tween_property(v, "position:y", -0.12 * (i + 1), 0.0).set_delay(0.12)
+	tw.tween_callback(v.queue_free)
 
 # --- Combate ------------------------------------------------------------------------------
 
@@ -324,6 +384,15 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	player.call("set_input_locked", true)
 	player.call("face_towards", cell)
 	_turn_enemy_towards(e, player.get("grid_pos"))
+	# Pose de combate: el dormido se levanta de golpe; el jefe se burla antes.
+	var intro := ""
+	if bool(e.get("dormant", false)):
+		e["dormant"] = false
+		intro = "spawn"
+	elif e.kind == RunRules.BOSS:
+		intro = "taunt"
+	if intro == "" or _anim(e, intro, "combat") <= 0.0:
+		_anim(e, "combat")
 	GameState.register_seen(String(e.species_id))
 	EventBus.combat_started.emit(String(e.species_id), e.kind == RunRules.BOSS)
 
@@ -366,7 +435,15 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	hud.visible = false
 	_frame_combat_camera(true)
 	add_child(combat)
-	combat.connect("enemy_hit", func(_d: int) -> void: _blink(e.node))
+	combat.connect("enemy_hit", func(_d: int) -> void:
+		_blink(e.node)
+		_anim(e, "hit", "combat")
+	)
+	combat.connect("enemy_acting", func(action: String) -> void:
+		if action != "ability" or _anim(e, "ability", "combat") <= 0.0:
+			_anim(e, "attack", "combat")
+	)
+	combat.connect("enemy_defeated", func() -> void: _anim(e, "death", ""))
 	combat.connect("combat_ended", func(outcome: String, result: Dictionary) -> void: _on_combat_ended(e, outcome, result))
 
 ## En combate la cámara retrocede un poco (sin moverse de celda) para que el
@@ -407,13 +484,14 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 			if not pick.is_empty():
 				GameState.add_soul(String(pick.member_id), pick.soul, int(pick.replace_index))
 				EventBus.hud_message.emit(DataRegistry.t("run.soul_taken", [GameState.get_member(String(pick.member_id)).name, pick.soul.active.name]))
-			(e.node as Node3D).queue_free()
+			_dispose_corpse(e)
 			fd.enemies.erase(e)
 			if e.kind == RunRules.BOSS:
 				_on_boss_defeated()
 		"fled":
 			GameState.register_flee(true)
 			e["stunned"] = DataRegistry.bal_i("combat.flee_stun_turns", 2)
+			_anim(e, "idle")
 			EventBus.hud_message.emit(DataRegistry.t("run.fled"))
 		"defeat":
 			end_run("muerte", String(e.display_name))
@@ -578,7 +656,7 @@ func debug_kill_front() -> void:
 
 func _on_combat_ended_debug(e: Dictionary) -> void:
 	GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind))
-	(e.node as Node3D).queue_free()
+	_dispose_corpse(e)
 	fd.enemies.erase(e)
 	if e.kind == RunRules.BOSS:
 		_on_boss_defeated()
@@ -608,6 +686,14 @@ func debug_fight_nearest(include_boss := false) -> void:
 			_after_move()
 			start_combat(target_cell, player, "surprise")
 			return
+
+## Mueve al jugador a "x,y,facing" (capturas de pantalla / pruebas visuales).
+func debug_teleport(spec: String) -> void:
+	var p := spec.split(",")
+	if p.size() < 3:
+		return
+	player.call("teleport", Vector2i(int(p[0]), int(p[1])), int(p[2]))
+	_after_move()
 
 func debug_heal_party() -> void:
 	for m: Dictionary in GameState.party:

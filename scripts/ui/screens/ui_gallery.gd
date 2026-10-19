@@ -66,14 +66,14 @@ func _ready() -> void:
 	for r in range(10, 0, -1):
 		badges.add_child(UIRankBadge.new(r))
 	bars.body.add_child(badges)
-	bars.body.add_child(UIProgressUnlock.new(DataRegistry.get_unlock("u_goblins_10").get("descripcion", ""), 7, 10))
+	bars.body.add_child(UIProgressUnlock.new(DataRegistry.get_unlock("u_esqueletos").get("descripcion", ""), 9, 15))
 	bars.body.add_child(UIProgressUnlock.new(DataRegistry.get_unlock("u_piso_3").get("descripcion", ""), 3, 3))
 
 	# Almas
 	var souls := UIPanel.new(DataRegistry.t("gallery.souls"), "PanelAlt")
 	mid.add_child(souls)
-	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("goblin", 9, "Goblin explorador")))
-	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("goblin_warrior", 5, "Goblin guerrero"), true))
+	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto ballestero")))
+	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_guardian", 4, "Esqueleto guardián"), true))
 
 	# Objetos, tooltip, diálogo, toasts
 	var items := UIPanel.new(DataRegistry.t("gallery.items"), "PanelAlt")
@@ -81,7 +81,7 @@ func _ready() -> void:
 	var grid := GridContainer.new()
 	grid.columns = 1
 	items.body.add_child(grid)
-	for id: String in ["pocion_menor", "talisman_goblin", "bomba_humo", ""]:
+	for id: String in ["pocion_menor", "talisman_hueso", "bomba_humo", ""]:
 		var slot := UIItemSlot.new(id)
 		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(slot)

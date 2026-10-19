@@ -44,8 +44,9 @@ static func generate(floor_n: int, run_seed: int, item_pool: Array[String]) -> F
 	_place_decor(fd, rng, float(gen.get("props_per_room", 1.0)), blocked)
 	return fd
 
-## La sala 15x9 del prototipo con los 5 enemigos conocidos, columnas y
-## props en los mismos lugares: para validar combate y almas a mano.
+## La sala 15x9 del prototipo, con columnas y props en los mismos lugares y
+## un ejemplar de cada enemigo (incluido el jefe, quieto al fondo y sin
+## salida que abrir): para validar combate, almas y animaciones a mano.
 static func test_room() -> FloorData:
 	var fd := FloorData.new()
 	fd.is_test_room = true
@@ -57,15 +58,24 @@ static func test_room() -> FloorData:
 	fd.rooms = [Rect2i(1, 1, 13, 7)]
 	fd.start_cell = Vector2i(2, 4)
 	fd.start_facing = 1
-	var layout := {
-		Vector2i(12, 2): "goblin",
-		Vector2i(12, 6): "rata_cripta",
-		Vector2i(9, 4): "esqueleto_guardian",
-		Vector2i(4, 2): "goblin_archer",
-		Vector2i(4, 6): "goblin_warrior",
-	}
-	for cell: Vector2i in layout.keys():
-		fd.enemies.append(make_enemy(cell, String(layout[cell]), RunRules.NORMAL))
+	# [celda, especie, rango, tipo, dormido]. El orden importa: el Hub usa los
+	# tres primeros de fondo.
+	var layout: Array = [
+		[Vector2i(9, 4), "esqueleto_guardian", 5, RunRules.ELITE, false],
+		[Vector2i(12, 4), "nigromante", 7, RunRules.BOSS, false],
+		[Vector2i(12, 2), "esqueleto_esbirro", 9, RunRules.NORMAL, false],
+		[Vector2i(12, 6), "esqueleto_picaro", 8, RunRules.NORMAL, false],
+		[Vector2i(4, 2), "esqueleto_esbirro", 8, RunRules.NORMAL, true],
+		[Vector2i(4, 6), "esqueleto_picaro", 7, RunRules.NORMAL, false],
+	]
+	for i in layout.size():
+		var row: Array = layout[i]
+		var e := make_enemy(row[0], String(row[1]), String(row[3]), int(row[2]))
+		e["dormant"] = bool(row[4])
+		e["variant_seed"] = i * 7919
+		if e.kind == RunRules.BOSS:
+			_apply_boss_def(e, DataRegistry.get_floor(1).get("boss", {}))
+		fd.enemies.append(e)
 	fd.pillars = [Vector3(7 * 2.0 + 0.6, 0, 2 * 2.0 + 0.6), Vector3(7 * 2.0 + 0.6, 0, 6 * 2.0 + 0.6)]
 	fd.props = [
 		{"prop": "Crate_1", "pos": Vector3(3 * 2.0 + 0.5, 0, 2 * 2.0 + 0.5), "rot": 15.0},
@@ -75,26 +85,81 @@ static func test_room() -> FloorData:
 	fd.exit_cell = Vector2i(-1, -1)
 	return fd
 
-static func make_enemy(cell: Vector2i, species_id: String, kind: String) -> Dictionary:
+## rank < 0 = el rango base de la especie. Una especie de tier "elite" ya es
+## élite por sí misma (modelo propio): no lleva sufijo, tinte ni escala extra;
+## eso queda para las básicas que salen como variante élite.
+static func make_enemy(cell: Vector2i, species_id: String, kind: String, rank := -1) -> Dictionary:
 	var sp := DataRegistry.get_species(species_id)
+	var visual: Dictionary = sp.get("visual", {})
 	var e := {
 		"cell": cell,
 		"species_id": species_id,
-		"rank": int(sp.rank),
+		"rank": int(sp.rank) if rank < 0 else rank,
 		"kind": kind,
 		"display_name": String(sp.display_name),
 		"soul_id": String(sp.soul_id),
 		"scale_mult": 1.0,
 		"tint": Color.WHITE,
+		"eye_color": visual.get("eye_color", Color.WHITE),
 		"facing": 2,
 		"stunned": 0,
+		"dormant": false,
+		"variant_seed": cell.x * 31 + cell.y * 17,
 	}
-	if kind == RunRules.ELITE:
+	if kind == RunRules.ELITE and String(sp.get("tier", "basico")) != "elite":
 		e["display_name"] = DataRegistry.t("enemy.elite_name", [sp.display_name])
 		e["scale_mult"] = DataRegistry.bal_f("enemies.elite_scale", 1.15)
 		var tint: Array = DataRegistry.bal("enemies.elite_tint", [1.0, 0.8, 0.55])
 		e["tint"] = Color(float(tint[0]), float(tint[1]), float(tint[2]))
 	return e
+
+## Especies que pueden salir como enemigo común entre los rangos dados:
+## activas, que no sean jefe, con peso > 0 y cuyo rank_range se cruce.
+static func species_pool(rank_min: int, rank_max: int) -> Array[String]:
+	var pool: Array[String] = []
+	for sid in DataRegistry.species_ids():
+		var sp := DataRegistry.get_species(sid)
+		if String(sp.tier) == "jefe" or float(sp.peso) <= 0.0:
+			continue
+		var rr: Array = sp.rank_range
+		if int(rr[0]) <= rank_max and int(rr[1]) >= rank_min:
+			pool.append(sid)
+	return pool
+
+## Sorteo de un enemigo común: especie ponderada por "peso", rango al azar en
+## el cruce (rank_range de la especie ∩ rango del piso) y tipo: las especies
+## "elite" siempre lo son; las básicas, con enemies.elite_chance.
+## Devuelve {species_id, rank, kind}. Lo usan el generador y tools/balance_sim.
+static func roll_enemy(rng: RandomNumberGenerator, pool: Array[String], rank_min: int, rank_max: int) -> Dictionary:
+	var total := 0.0
+	for sid in pool:
+		total += float(DataRegistry.get_species(sid).peso)
+	var chosen := pool[pool.size() - 1]
+	var pick := rng.randf() * total
+	for sid in pool:
+		pick -= float(DataRegistry.get_species(sid).peso)
+		if pick < 0.0:
+			chosen = sid
+			break
+	var sp := DataRegistry.get_species(chosen)
+	var rr: Array = sp.rank_range
+	var rank := rng.randi_range(maxi(int(rr[0]), rank_min), mini(int(rr[1]), rank_max))
+	var kind := RunRules.NORMAL
+	if String(sp.tier) == "elite":
+		kind = RunRules.ELITE
+	elif rng.randf() < DataRegistry.bal_f("enemies.elite_chance", 0.1):
+		kind = RunRules.ELITE
+	return {"species_id": chosen, "rank": rank, "kind": kind}
+
+## Datos del jefe de floors.json sobre un enemigo ya armado.
+static func _apply_boss_def(boss: Dictionary, b: Dictionary) -> void:
+	boss["rank"] = int(b.get("rank", boss.rank))
+	boss["display_name"] = String(b.get("display_name", boss.display_name))
+	boss["soul_id"] = String(b.get("soul_id", boss.soul_id))
+	boss["scale_mult"] = float(b.get("scale_mult", 1.0))
+	boss["tint"] = b.get("tint", Color.WHITE)
+	if b.has("eye_color"):
+		boss["eye_color"] = b.eye_color
 
 # --- Pasos --------------------------------------------------------------------------
 
@@ -204,11 +269,12 @@ static func _place_boss_and_exit(fd: FloorData, dist: Dictionary, def: Dictionar
 			break
 	var b: Dictionary = def.get("boss", {})
 	var boss := make_enemy(boss_cell, String(b.species), RunRules.BOSS)
-	boss["rank"] = int(b.rank)
-	boss["display_name"] = String(b.display_name)
-	boss["soul_id"] = String(b.soul_id)
-	boss["scale_mult"] = float(b.scale_mult)
-	boss["tint"] = b.tint
+	_apply_boss_def(boss, b)
+	# Mira hacia el camino por el que llega el equipo.
+	for i in DIRS.size():
+		if int(dist.get(boss_cell + DIRS[i], -1)) == int(dist.get(boss_cell, 0)) - 1:
+			boss["facing"] = i
+			break
 	fd.enemies.append(boss)
 
 static func _is_connected(fd: FloorData, blocked: Dictionary) -> bool:
@@ -240,19 +306,15 @@ static func _place_chests(fd: FloorData, rng: RandomNumberGenerator, count: int,
 			test.erase(c)
 
 static func _place_enemies(fd: FloorData, rng: RandomNumberGenerator, def: Dictionary, dist: Dictionary, blocked: Dictionary, min_dist: int) -> void:
-	var pool: Array[String] = []
-	for sid: String in DataRegistry.species.keys():
-		var r := int(DataRegistry.species[sid].rank)
-		if r >= int(def.rank_min) and r <= int(def.rank_max):
-			pool.append(sid)
-	pool.sort()
+	var pool := species_pool(int(def.rank_min), int(def.rank_max))
+	if pool.is_empty():
+		return
 	var candidates: Array[Vector2i] = []
 	for c in fd.floor_cells():
 		if blocked.has(c) or fd.boss_room.has_point(c) or int(dist.get(c, 0)) < min_dist:
 			continue
 		candidates.append(c)
 	_shuffle(candidates, rng)
-	var elite_chance := DataRegistry.bal_f("enemies.elite_chance", 0.1)
 	var placed := 0
 	for c in candidates:
 		if placed >= int(def.get("enemies", 6)):
@@ -265,9 +327,13 @@ static func _place_enemies(fd: FloorData, rng: RandomNumberGenerator, def: Dicti
 				break
 		if near:
 			continue
-		var kind := RunRules.ELITE if rng.randf() < elite_chance else RunRules.NORMAL
-		var e := make_enemy(c, pool[rng.randi_range(0, pool.size() - 1)], kind)
+		var roll := roll_enemy(rng, pool, int(def.rank_min), int(def.rank_max))
+		var e := make_enemy(c, String(roll.species_id), String(roll.kind), int(roll.rank))
 		e["facing"] = rng.randi_range(0, 3)
+		# Dormido: tirado en el piso como un montón de huesos hasta que el
+		# equipo se acerca (o lo pisa).
+		e["dormant"] = rng.randf() < float(DataRegistry.get_species(String(roll.species_id)).dormant_chance)
+		e["variant_seed"] = rng.randi()
 		fd.enemies.append(e)
 		placed += 1
 

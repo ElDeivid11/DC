@@ -1,4 +1,124 @@
 {
+	"esqueleto_esbirro": {
+		"display_name": "Esqueleto esbirro",
+		"rank": 9,
+		"rank_range": [4, 9],
+		"tier": "basico",
+		"peso": 5,
+		"family": "esqueleto",
+		"description": "Huesos viejos que alguien obligó a seguir trabajando. Pega con lo que encontró en el camino.",
+		"soul_id": "esqueleto_esbirro",
+		"dormant_chance": 0.5,
+		"visual": {
+			"model_path": "res://assets/enemies/esqueleto_esbirro.glb",
+			"scale": 0.86,
+			"head_scale": 0.8,
+			"anim_fps": 12,
+			"weapon_r": "res://assets/enemies/weapons/hoja.glb",
+			"eye_color": "#9be05a",
+			"anims": {
+				"idle": "Idle",
+				"combat": "Idle_Combat",
+				"walk": "Walking_D_Skeletons",
+				"hit": ["Hit_A", "Hit_B"],
+				"death": "Death_C_Skeletons",
+				"spawn": "Spawn_Ground_Skeletons",
+				"dormant": "Skeletons_Inactive_Floor_Pose",
+				"attack": ["1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal"]
+			}
+		}
+	},
+	"esqueleto_picaro": {
+		"display_name": "Esqueleto ballestero",
+		"rank": 8,
+		"rank_range": [3, 8],
+		"tier": "basico",
+		"peso": 4,
+		"family": "esqueleto",
+		"description": "Todavía apunta con un ojo cerrado, aunque ya no tenga párpados.",
+		"soul_id": "esqueleto_picaro",
+		"dormant_chance": 0.3,
+		"visual": {
+			"model_path": "res://assets/enemies/esqueleto_picaro.glb",
+			"scale": 0.86,
+			"head_scale": 0.8,
+			"anim_fps": 12,
+			"weapon_r": "res://assets/enemies/weapons/ballesta.glb",
+			"eye_color": "#6ac8ff",
+			"anims": {
+				"idle": "Idle",
+				"combat": "Idle_Combat",
+				"walk": "Walking_D_Skeletons",
+				"hit": ["Hit_A", "Hit_B"],
+				"death": "Death_C_Skeletons",
+				"spawn": "Spawn_Ground_Skeletons",
+				"dormant": "Skeletons_Inactive_Floor_Pose",
+				"attack": ["1H_Ranged_Shoot"]
+			}
+		}
+	},
+	"esqueleto_guardian": {
+		"display_name": "Esqueleto guardián",
+		"rank": 4,
+		"family": "esqueleto",
+		"description": "Sigue cumpliendo una guardia que nadie recuerda haberle dado. El escudo no es de adorno.",
+		"soul_id": "esqueleto_guardian",
+		"rank_range": [2, 6],
+		"tier": "elite",
+		"peso": 1.5,
+		"dormant_chance": 0.0,
+		"visual": {
+			"model_path": "res://assets/enemies/esqueleto_guardian.glb",
+			"scale": 0.92,
+			"head_scale": 0.82,
+			"anim_fps": 12,
+			"weapon_r": "res://assets/enemies/weapons/hacha.glb",
+			"weapon_l": "res://assets/enemies/weapons/escudo.glb",
+			"eye_color": "#ff7a2a",
+			"anims": {
+				"idle": "Idle",
+				"combat": "Idle_Combat",
+				"walk": "Walking_D_Skeletons",
+				"hit": ["Hit_A", "Hit_B"],
+				"death": "Death_C_Skeletons",
+				"spawn": "Spawn_Ground_Skeletons",
+				"dormant": "Skeletons_Inactive_Floor_Pose",
+				"attack": ["1H_Melee_Attack_Slice_Horizontal", "Block_Attack"]
+			}
+		}
+	},
+	"nigromante": {
+		"display_name": "Nigromante",
+		"rank": 3,
+		"rank_range": [1, 3],
+		"tier": "jefe",
+		"peso": 0,
+		"family": "esqueleto",
+		"description": "Custodia cada escalera hacia abajo. Habla con los muertos y los muertos le contestan.",
+		"soul_id": "nigromante",
+		"dormant_chance": 0.0,
+		"visual": {
+			"model_path": "res://assets/enemies/nigromante.glb",
+			"scale": 1.0,
+			"head_scale": 0.85,
+			"anim_fps": 12,
+			"weapon_r": "res://assets/enemies/weapons/baculo.glb",
+			"eye_color": "#c77dff",
+			"light": {"color": "#9a5cff", "energy": 1.2, "range": 3.5},
+			"anims": {
+				"idle": "Spellcasting",
+				"combat": "Idle_Combat",
+				"walk": "Walking_D_Skeletons",
+				"hit": ["Hit_A", "Hit_B"],
+				"death": "Death_C_Skeletons",
+				"spawn": "Spawn_Ground_Skeletons",
+				"dormant": "Skeletons_Inactive_Floor_Pose",
+				"attack": ["Spellcast_Shoot"],
+				"ability": "Spellcast_Summon",
+				"taunt": "Taunt"
+			}
+		}
+	},
 	"goblin": {
 		"display_name": "Goblin explorador",
 		"rank": 9,
@@ -6,7 +126,9 @@
 		"description": "Explorador flaco y nervioso. Golpea primero y pregunta nunca.",
 		"model_path": "res://assets/goblin_pack/Basic_Goblin.glb",
 		"model_scale": 1.3,
-		"soul_id": "goblin"
+		"soul_id": "goblin",
+		"activo": false,
+		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	},
 	"goblin_archer": {
 		"display_name": "Goblin arquero",
@@ -15,7 +137,9 @@
 		"description": "Prefiere la distancia, pero en los pasillos estrechos no le queda otra.",
 		"model_path": "res://assets/goblin_pack/Goblin_Archer.glb",
 		"model_scale": 1.5,
-		"soul_id": "goblin_archer"
+		"soul_id": "goblin_archer",
+		"activo": false,
+		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	},
 	"goblin_warrior": {
 		"display_name": "Goblin guerrero",
@@ -24,7 +148,9 @@
 		"description": "El más fuerte de la familia goblin. Lleva la armadura de sus víctimas.",
 		"model_path": "res://assets/goblin_pack/Goblin_Warrior.glb",
 		"model_scale": 1.7,
-		"soul_id": "goblin_warrior"
+		"soul_id": "goblin_warrior",
+		"activo": false,
+		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	},
 	"rata_cripta": {
 		"display_name": "Rata de cripta",
@@ -33,15 +159,8 @@
 		"description": "Engordada con lo que se deja en las criptas. Su mordida infecta.",
 		"color_a": [0.35, 0.32, 0.15],
 		"color_b": [0.18, 0.16, 0.07],
-		"soul_id": "rata_cripta"
-	},
-	"esqueleto_guardian": {
-		"display_name": "Esqueleto guardián",
-		"rank": 4,
-		"family": "no_muerto",
-		"description": "Sigue cumpliendo una guardia que nadie recuerda haberle dado.",
-		"color_a": [0.55, 0.55, 0.5],
-		"color_b": [0.3, 0.3, 0.28],
-		"soul_id": "esqueleto_guardian"
+		"soul_id": "rata_cripta",
+		"activo": false,
+		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	}
 }
