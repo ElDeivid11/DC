@@ -170,13 +170,17 @@ func _load_dict(file: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		_err("%s: el archivo no existe" % path)
 		return {}
+	return parse_json_text(FileAccess.get_file_as_string(path), path)
+
+## Parsea texto JSON; si está roto, anota en `errors` dónde (archivo/línea).
+func parse_json_text(text: String, label: String) -> Dictionary:
 	var json := JSON.new()
-	var parse_err := json.parse(FileAccess.get_file_as_string(path))
+	var parse_err := json.parse(text)
 	if parse_err != OK:
-		_err("%s línea %d: %s" % [path, json.get_error_line(), json.get_error_message()])
+		_err("%s línea %d: %s" % [label, json.get_error_line() + 1, json.get_error_message()])
 		return {}
 	if typeof(json.data) != TYPE_DICTIONARY:
-		_err("%s: la raíz debería ser un objeto { }" % path)
+		_err("%s: la raíz debería ser un objeto { }" % label)
 		return {}
 	var d: Dictionary = json.data
 	return d
@@ -191,6 +195,9 @@ func _req(file: String, id: String, d: Dictionary, field: String, type: int, nul
 		return false
 	var v: Variant = d[field]
 	if nullable and v == null:
+		return true
+	# JSON trae números como float; tras normalizar pueden ser int. Ambos valen.
+	if type == TYPE_FLOAT and typeof(v) == TYPE_INT:
 		return true
 	if typeof(v) != type:
 		_err("%s → '%s': el campo '%s' debería ser %s y es %s" % [file, id, field, type_string(type), type_string(typeof(v))])

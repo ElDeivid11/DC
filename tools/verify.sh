@@ -25,7 +25,7 @@ failed=0
 step() {
 	local name="$1"; shift
 	local log="$LOG_DIR/$name.log"
-	timeout 900 "$GODOT" --headless --path . "$@" > "$log" 2>&1
+	timeout 300 "$GODOT" --headless --path . "$@" > "$log" 2>&1
 	local code=$?
 	local problems
 	problems=$(grep -nE 'SCRIPT ERROR|^ERROR|^WARNING|Parse Error|FAILED|TEST FAIL' "$log" | grep -vE "$IGNORE")

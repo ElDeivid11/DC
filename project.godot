@@ -20,8 +20,21 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
+EventBus="*res://autoload/EventBus.gd"
 DataRegistry="*res://autoload/DataRegistry.gd"
+MetaState="*res://autoload/MetaState.gd"
+SaveSystem="*res://autoload/SaveSystem.gd"
+GameState="*res://autoload/GameState.gd"
+Controls="*res://autoload/Controls.gd"
+SceneRouter="*res://autoload/SceneRouter.gd"
 psx_post_process="*uid://u3y0jxl0vtmg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [editor_plugins]
 
@@ -29,6 +42,7 @@ enabled=PackedStringArray("res://addons/dungeon_crawler_3d/plugin.cfg", "res://a
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 environment/defaults/default_clear_color=Color(0.02, 0.02, 0.03, 1)
 
 [shader_globals]

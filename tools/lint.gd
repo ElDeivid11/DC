@@ -10,6 +10,10 @@ const ROOTS: Array[String] = ["res://autoload", "res://scripts", "res://scenes",
 var failures := 0
 
 func _ready() -> void:
+	get_tree().create_timer(120.0).timeout.connect(func() -> void:
+		printerr("TEST FAIL: timeout del lint")
+		get_tree().quit(1)
+	)
 	var files: Array[String] = []
 	for root in ROOTS:
 		_collect(root, files)

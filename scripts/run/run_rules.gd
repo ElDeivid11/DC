@@ -1,0 +1,77 @@
+class_name RunRules
+extends RefCounted
+## Fórmulas de balance de la run. Todos los números salen de data/balance.json
+## (vía DataRegistry); acá solo está la forma de combinarlos. Sin estado, para
+## poder testearlas sueltas (tests/unit/test_rules.gd).
+
+const NORMAL := "normal"
+const ELITE := "elite"
+const BOSS := "boss"
+
+## Coste del siguiente nivel = coste_base × nivel siguiente. -1 = al tope.
+static func upgrade_cost(upgrade: Dictionary, current_level: int) -> int:
+	if upgrade.is_empty() or current_level >= int(upgrade.max_nivel):
+		return -1
+	return int(upgrade.coste_base) * (current_level + 1)
+
+## HP/ataque de un enemigo según rango y tipo (élite y jefe multiplican).
+static func enemy_stats(rank: int, kind: String) -> Dictionary:
+	var s := DataRegistry.stats_for_rank(rank)
+	var mult := 1.0
+	if kind == ELITE:
+		mult = DataRegistry.bal_f("enemies.elite_stat_mult", 1.25)
+	elif kind == BOSS:
+		mult = DataRegistry.bal_f("enemies.boss_stat_mult", 1.5)
+	return {
+		"hp": roundi(float(s.hp) * mult),
+		"atk": roundi(float(s.atk) * mult),
+		"ability_damage": int(s.ability_damage),
+	}
+
+## Monedas por matar: (kill_base − rango); élite ×elite_mult; jefe = 25 × piso.
+static func kill_coins(rank: int, kind: String, floor_n: int) -> int:
+	if kind == BOSS:
+		return DataRegistry.bal_i("coins.boss_per_floor", 25) * maxi(floor_n, 1)
+	var c := maxi(DataRegistry.bal_i("coins.kill_base", 11) - rank, 1)
+	if kind == ELITE:
+		c *= DataRegistry.bal_i("coins.elite_mult", 2)
+	return c
+
+## Bonus de primera kill de una especie (una sola vez en toda la partida).
+static func first_kill_bonus(rank: int) -> int:
+	return DataRegistry.bal_i("coins.first_kill_mult", 10) * (11 - rank)
+
+static func chest_coins(floor_n: int, rng: RandomNumberGenerator) -> int:
+	var base := DataRegistry.bal_i("coins.chest_per_floor", 6) * maxi(floor_n, 1)
+	return base + rng.randi_range(0, int(float(base) / 2.0))
+
+## Probabilidad de que suelte alma. Jefe 100%; élite fija; normal = base ×
+## factor de rango (más fuerte → más chance). Sabiduría suma puntos porcentuales.
+static func soul_drop_chance(rank: int, kind: String, wisdom_pct: float) -> float:
+	var extra := wisdom_pct / 100.0
+	var chance: float
+	match kind:
+		BOSS:
+			return clampf(DataRegistry.bal_f("soul_drop.boss", 1.0), 0.0, 1.0)
+		ELITE:
+			chance = DataRegistry.bal_f("soul_drop.elite", 0.25) + extra
+		_:
+			var factor := 1.0 + float(10 - rank) * DataRegistry.bal_f("soul_drop.rank_factor_per_rank", 0.1)
+			chance = DataRegistry.bal_f("soul_drop.normal_base", 0.08) * factor + extra
+	return clampf(chance, 0.0, 1.0)
+
+## Huir: base ± per_rank por cada rango de diferencia entre el enemigo y el
+## rango medio del piso (enemigo más débil que la media → más fácil huir).
+static func flee_chance(enemy_rank: int, floor_n: int) -> float:
+	var fl := DataRegistry.get_floor(floor_n)
+	var ref := 7.0
+	if not fl.is_empty():
+		ref = (float(fl.rank_min) + float(fl.rank_max)) / 2.0
+	var chance := DataRegistry.bal_f("flee.base", 0.5) + DataRegistry.bal_f("flee.per_rank", 0.1) * (float(enemy_rank) - ref)
+	return clampf(chance, DataRegistry.bal_f("flee.min", 0.1), DataRegistry.bal_f("flee.max", 0.9))
+
+## Fracción de monedas de la run que se conserva según cómo terminó.
+static func keep_fraction(outcome: String) -> float:
+	if outcome == "retiro" or outcome == "victoria":
+		return 1.0
+	return clampf(DataRegistry.bal_f("coins.coin_keep_on_death", 0.5), 0.0, 1.0)
