@@ -1,3 +1,71 @@
 {
-	"app.title": "Dungeon Grid"
+	"app.title": "Dungeon Grid",
+	"app.subtitle": "Una expedición. Una vida.",
+
+	"ui.accept": "Aceptar",
+	"ui.back": "Volver",
+	"ui.close": "Cerrar",
+	"ui.continue": "Continuar",
+	"ui.yes": "Sí",
+	"ui.no": "No",
+	"ui.cancel": "Cancelar",
+	"ui.danger_example": "Abandonar",
+	"ui.disabled_example": "Bloqueado",
+	"ui.rank_short": "R%d",
+	"ui.rank_tooltip": "Rango %d (10 = más débil, 1 = más fuerte)",
+	"ui.none": "—",
+
+	"soul.from": "De: %s",
+	"soul.active": "Activa: %s — %d de daño",
+	"soul.no_passive": "Sin pasiva",
+	"soul.passive": "Pasiva: %s %s",
+	"soul.modifiers": "Modificadores: %s",
+
+	"effect.damage_reduction_flat": "(-%d daño recibido)",
+	"effect.defend_bonus_multiplier": "(+%d%% de bloqueo al Defender)",
+	"effect.damage_bonus_flat": "(+%d de daño en cada golpe)",
+	"effect.lifesteal_pct": "(recupera el %d%% del daño que hace)",
+	"effect.crit_chance": "(%d%% de golpe crítico)",
+	"effect.coin_bonus_pct": "(+%d%% monedas por enemigo)",
+	"effect.thorns_flat": "(devuelve %d de daño al recibir un golpe)",
+
+	"stat.atk": "ATK",
+	"stat.max_hp": "HP máx.",
+	"stat.hp": "HP",
+
+	"item.empty_slot": "— vacío —",
+	"item.type.consumible": "consumible",
+	"item.type.pasivo": "pasivo",
+
+	"gallery.title": "Galería de UI",
+	"gallery.buttons": "Botones y menú",
+	"gallery.labels": "Tipografía",
+	"gallery.bars": "Barras, rangos y progreso",
+	"gallery.soul": "Alma",
+	"gallery.souls": "Almas",
+	"gallery.items": "Objetos",
+	"gallery.feedback": "Avisos y diálogos",
+	"gallery.inputs": "Entradas y pestañas",
+	"gallery.tooltip_button": "Enfócame (tooltip)",
+	"gallery.tooltip_text": "Los tooltips aparecen al enfocar con teclado/mando, no solo con el mouse.",
+	"gallery.confirm_button": "Diálogo de confirmación",
+	"gallery.confirm_title": "¿Abandonar la expedición?",
+	"gallery.confirm_text": "Se pierde todo lo de la run y solo conservas una parte de las monedas.",
+	"gallery.toast_text": "Aviso de tipo «%s»",
+
+	"hub.start": "Iniciar expedición",
+	"hub.upgrades": "Mejoras",
+	"hub.unlocks": "Objetos y desbloqueos",
+	"hub.bestiary": "Bestiario",
+	"hub.stats": "Estadísticas",
+	"hub.options": "Opciones",
+	"hub.quit": "Salir",
+
+	"options.fullscreen": "Pantalla completa",
+
+	"status.tab_party": "Equipo",
+	"status.tab_souls": "Almas",
+	"status.tab_items": "Objetos",
+
+	"debug.seed_placeholder": "Semilla (vacío = aleatoria)"
 }

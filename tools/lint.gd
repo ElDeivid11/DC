@@ -51,7 +51,7 @@ func _is_static_only(path: String) -> bool:
 ## data/texts.json, se ve "[clave]" en pantalla. Esto lo detecta antes.
 func _check_text_keys(files: Array[String]) -> void:
 	var regex := RegEx.new()
-	regex.compile("\\bt\\(\"([a-z][a-z0-9_.]*)\"")
+	regex.compile("\\bt\\(\"([a-z][a-z0-9_.]*)\"\\s*[,)]")
 	for path in files:
 		if not path.ends_with(".gd"):
 			continue

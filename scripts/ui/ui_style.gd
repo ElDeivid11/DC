@@ -23,7 +23,7 @@ const COIN := Color("#e8c85a")
 
 ## Fuente pixel (OFL). Si el archivo no existe, el Theme usa la fuente por
 ## defecto de Godot sin antialiasing.
-const FONT_PATH := "res://assets/fonts/PixelifySans.ttf"
+const FONT_PATH := "res://assets/fonts/PixelifySans-Regular.woff"
 
 const FONT_TITLE := 28
 const FONT_SUBTITLE := 20

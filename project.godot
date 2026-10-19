@@ -40,6 +40,10 @@ window/stretch/aspect="expand"
 
 enabled=PackedStringArray("res://addons/dungeon_crawler_3d/plugin.cfg", "res://addons/level_block/plugin.cfg", "res://addons/psx/plugin.cfg")
 
+[gui]
+
+theme/custom="res://ui/theme_main.tres"
+
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
