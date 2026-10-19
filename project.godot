@@ -1,0 +1,66 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name="Dungeon Grid Prototype"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[autoload]
+
+psx_post_process="*uid://u3y0jxl0vtmg"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/dungeon_crawler_3d/plugin.cfg", "res://addons/level_block/plugin.cfg", "res://addons/psx/plugin.cfg")
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(0.02, 0.02, 0.03, 1)
+
+[shader_globals]
+
+psx_affine_strength={
+"type": "float",
+"value": 1.0
+}
+psx_bit_depth={
+"type": "int",
+"value": 5
+}
+psx_fog_color={
+"type": "color",
+"value": Color(0.5, 0.5, 0.5, 0)
+}
+psx_fog_far={
+"type": "float",
+"value": 20.0
+}
+psx_fog_near={
+"type": "float",
+"value": 10.0
+}
+psx_precision_uv={
+"type": "float",
+"value": 128.0
+}
+psx_precision_xy={
+"type": "float",
+"value": 256.0
+}
+psx_precision_z={
+"type": "float",
+"value": 512.0
+}
