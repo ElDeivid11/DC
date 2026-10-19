@@ -38,11 +38,14 @@ Tienen un valor por defecto en `docs/GUIA_CLAUDE_CODE.md` §9, implementado en `
 
 ## Estado del código
 
-Ver `docs/ESTADO_TECNICO_PROTOTIPO.md` (arquitectura completa, actualizada por fase).
+Las fases 0–9 de la guía están hechas: el roguelike es **jugable de punta a punta** (Hub → run → muerte/retiro/victoria → resumen → Hub). Ver `docs/ESTADO_TECNICO_PROTOTIPO.md` (arquitectura, decisiones, gotchas, cómo extender) y `README.md` (controles y valores por defecto).
 
-- Datos de juego en `data/*.json`, cargados y validados por el autoload `DataRegistry` (falla ruidosamente con archivo/campo/línea).
-- Plugins: `addons/psx` (PSX Visuals), `addons/level_block` (parcheado), `addons/dungeon_crawler_3d` y `addons/kaykit_dungeon_remastered` (copiados, NO conectados).
-- Las carpetas `GoblinPack_Free/`, `Gothic Furniture/` y `PSX Dungeon Boxes and Barrels Pack/` son las descargas originales: llevan `.gdignore` (Godot no las importa). El juego usa las copias de `assets/`.
+- Autoloads: `EventBus`, `DataRegistry`, `MetaState` (persistente), `SaveSystem`, `GameState` (run), `Controls`, `SceneRouter`, `DebugTools`.
+- Escenas: `Boot` → `Hub` → `Run` (RunController) → `RunSummary`; `ui/UIGallery`.
+- Datos de juego en `data/*.json` (especies, almas, objetos, desbloqueos, mejoras, pisos, balance, textos), validados por `DataRegistry`.
+- UI: un solo Theme generado por `scripts/ui/theme_builder.gd` desde los tokens de `scripts/ui/ui_style.gd`; componentes en `scripts/ui/components/`.
+- Plugins: `addons/psx` (PSX Visuals), `addons/level_block` (parcheado; el juego usa su algoritmo en una malla combinada), `addons/dungeon_crawler_3d` (evaluado y descartado) y `addons/kaykit_dungeon_remastered` (sin usar).
+- Las carpetas `GoblinPack_Free/`, `Gothic Furniture/` y `PSX Dungeon Boxes and Barrels Pack/` son las descargas originales: llevan `.gdignore`.
 
 ## Verificación
 
@@ -54,6 +57,10 @@ tools/verify.sh       # todo: import + lint + arranque (--quit-after 120) + test
 
 - `tools/verify.sh` copia `tools/strict_warnings.cfg` como `override.cfg` mientras corre: Godot no imprime warnings de GDScript fuera del editor, así que se suben a error para detectarlos. `override.cfg` está en `.gitignore`; nunca se commitea.
 - `tools/lint.tscn` carga todos los scripts/escenas propios (no addons) y revisa que cada `DataRegistry.t("clave")` exista en `data/texts.json`.
+- Tests: `res://tests/TestRunner.tscn` (unitarios en `tests/unit/`) y `res://tests/SmokeTest.tscn` (de punta a punta, con guardado aparte).
+- Theme: después de tocar `ui_style.gd` o `theme_builder.gd`, regenerar con `godot --headless --path . res://tools/build_theme.tscn` y commitear `ui/theme_main.tres`.
+- Balance: `godot --headless --path . res://tools/balance_sim.tscn`.
+- Capturas reales (para revisar UI): `tools/screenshot.tscn` con `xvfb-run` y `--rendering-driver opengl3` (ver su encabezado).
 - Comandos sueltos: `godot --headless --path . --import` y `godot --headless --path . --quit-after 120`.
 
 ## Convenciones y gotchas (leer antes de editar)
@@ -65,6 +72,8 @@ tools/verify.sh       # todo: import + lint + arranque (--quit-after 120) + test
 - **UI fuera del SubViewport.** Lo 3D va en un SubViewport de baja resolución (filtro nearest); `CanvasLayer` de UI es hijo directo de la escena, a resolución nativa. Ojo: con `SubViewportContainer.stretch = true` el tamaño del SubViewport lo decide el contenedor (`stretch_shrink`), no `viewport.size`.
 - **Shader globals PSX**: `_ensure_psx_shader_globals()` debe correr antes de crear materiales PSX; sin eso, el Play sale negro. Solo registra los globals que falten (project.godot ya los declara).
 - **Parche en LevelBlock**: `level_block_node.gd` tiene `@export var material:Material` (antes `BaseMaterial3D`) para aceptar `PsxMaterial3D`. Reaplicar si se actualiza el addon. **Parche en PSX**: `PsxConversionDialog.gd` líneas 199/256 tipadas como `Variant`.
-- `CombatManager` y `StatusMenu`: pasar datos por propiedades ANTES de `add_child`; `party_roster` es `Array` (no `Array[Dictionary]`). `CombatManager` nunca muta el estado de la run; solo reporta por señal.
+- `CombatManager`: pasar datos por propiedades ANTES de `add_child`; `party_roster` es `Array` (no `Array[Dictionary]`). Trabaja sobre copias y nunca muta `GameState`: termina con `combat_ended(outcome, result)` (`victory|defeat|fled`, `{hp, items_used, soul_pick}`) y `RunController` lo aplica.
+- **GameState nunca escribe en MetaState.** La run solo toca lo persistente en `RunSummary`, con `RunRewards.compute()` + `MetaState.apply_run_result()` (una vez) + `SaveSystem.save_meta()`.
+- **UI**: nada de colores ni estilos sueltos. Usar las variaciones del Theme y los componentes `UI*`; los colores solo vienen de `UIStyle`. Cada pantalla extiende `UIScreen` y deja el foco inicial puesto.
 - **Licencia**: el pack de goblins no trae licencia; verificar antes de publicar.
 - **Cambios de diseño grandes: confirmar con el usuario**; él decide el rumbo.

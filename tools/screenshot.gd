@@ -9,6 +9,7 @@ extends Node
 ##   --demo               carga datos de ejemplo en MetaState (no se guardan)
 ##   --run                arranca una run de ejemplo (objetos y un alma)
 ##   --ui-scale=1.5       escala de UI (como en Opciones)
+##   --summary            deja terminada una run de ejemplo (para RunSummary.tscn)
 
 var _scene_path := "res://scenes/ui/UIGallery.tscn"
 var _out := "user://screenshot.png"
@@ -33,6 +34,8 @@ func _ready() -> void:
 			_demo_meta()
 		elif arg == "--run":
 			_demo_run()
+		elif arg == "--summary":
+			_demo_summary()
 		elif arg.begins_with("--ui-scale="):
 			MetaState.settings["ui_scale"] = float(arg.substr(11))
 			GameSettings.apply(MetaState.settings, get_tree())
@@ -87,3 +90,16 @@ func _demo_run() -> void:
 	GameState.add_soul("bjorn", DataRegistry.make_soul("goblin", 9, "Goblin explorador"))
 	GameState.party[1]["hp"] = 9
 	GameState.add_coins(37, "kills")
+
+func _demo_summary() -> void:
+	SaveSystem.save_path = "user://screenshot_save.json" # no tocar el guardado real
+	_demo_meta()
+	_demo_run()
+	GameState.max_floor = 3
+	GameState.floor_n = 3
+	GameState.elapsed_sec = 1452.0
+	GameState.kills_by_species = {"goblin": 4, "goblin_archer": 2, "goblin_warrior": 1}
+	GameState.kills_total = 7
+	GameState.coin_breakdown = {"kills": 42, "boss": 25, "chests": 18}
+	GameState.bosses_defeated = [1]
+	GameState.end_run("muerte", "Goblin guerrero")

@@ -4,6 +4,8 @@ Documento maestro de **qué hay que hacer, en qué orden y con qué criterio de
 "terminado"**. Complementa a `CLAUDE.md` (reglas), `docs/PLAN_DE_DISENO_ROGUELIKE.md`
 (diseño) y `docs/ESTADO_TECNICO_PROTOTIPO.md` (arquitectura actual).
 
+> **Estado (19-oct-2026):** fases 0–9 completas; todos los checkboxes están marcados. Las desviaciones y decisiones tomadas están anotadas con *Nota* en cada punto. El detalle técnico está en `docs/ESTADO_TECNICO_PROTOTIPO.md` y los valores por defecto en `README.md`.
+
 **Objetivo de esta etapa:** tener un roguelike **completo y probable de punta a
 punta** (hub → run → muerte/retiro → resumen → hub) con **todos los menús y
 sistemas implementados con un diseño visual decente y consistente**, para que
@@ -40,15 +42,15 @@ balance: es una versión *jugable, legible y ajustable*.
 
 ## 1. Fase 0 — Base verificable y limpieza
 
-- [ ] Ejecutar import y quit-after; listar y corregir **todos** los errores.
-- [ ] Resolver el error abierto "variable type is being inferred from a Variant
+- [x] Ejecutar import y quit-after; listar y corregir **todos** los errores.
+- [x] Resolver el error abierto "variable type is being inferred from a Variant
       value" (líneas 199/256 de un archivo sin identificar). Buscar con grep
       `:=` sobre valores de Dictionary/Array en `scripts/` y en addons propios.
-- [ ] Crear escena de arranque real: `scenes/Boot.tscn` → decide si ir a Hub o
+- [x] Crear escena de arranque real: `scenes/Boot.tscn` → decide si ir a Hub o
       a Run (por ahora al Hub). Configurar `run/main_scene`.
-- [ ] Crear `.gitignore` de Godot (`.godot/`, `*.import` no, builds, etc.) y
+- [x] Crear `.gitignore` de Godot (`.godot/`, `*.import` no, builds, etc.) y
       `git init` si no hay repo.
-- [ ] Mover el contenido de `SPECIES_DB` a `data/species.json` y cargarlo con un
+- [x] Mover el contenido de `SPECIES_DB` a `data/species.json` y cargarlo con un
       `DataRegistry` (ver Fase 1). El juego debe verse y jugarse **igual** que antes.
 
 **Hecho cuando:** el prototipo actual corre idéntico, sin warnings, con datos en JSON.
@@ -94,9 +96,9 @@ terminar la run, `RunSummary` calcula las recompensas y se aplican de una vez.
 
 ### 2.3 Hecho cuando
 
-- [ ] Autoloads registrados en `project.godot`, sin dependencias circulares.
-- [ ] `DataRegistry` valida y falla con mensaje útil ante JSON roto.
-- [ ] Guardar/cargar `MetaState` probado con un test (escribir, reiniciar, leer).
+- [x] Autoloads registrados en `project.godot`, sin dependencias circulares.
+- [x] `DataRegistry` valida y falla con mensaje útil ante JSON roto.
+- [x] Guardar/cargar `MetaState` probado con un test (escribir, reiniciar, leer).
 
 ---
 
@@ -112,16 +114,16 @@ Hub ──[Iniciar expedición]──▶ Run (piso 1) ──▶ … ──▶ Je
 
 ### 3.1 RunController
 
-- [ ] `start_run(seed)`: crea `GameState` limpio, aplica mejoras de `MetaState`
+- [x] `start_run(seed)`: crea `GameState` limpio, aplica mejoras de `MetaState`
       a los stats base del equipo, arma el pool de objetos disponible
       (solo los desbloqueados), genera el piso 1.
-- [ ] `advance_floor()`: escaleras/portal al final del piso (tras el jefe).
-- [ ] `retreat()`: permitido **solo** en puntos de retiro (tras jefe de piso)
+- [x] `advance_floor()`: escaleras/portal al final del piso (tras el jefe).
+- [x] `retreat()`: permitido **solo** en puntos de retiro (tras jefe de piso)
       o con el objeto "Sello de Retiro" (ver objetos). Retirarse = run "exitosa
       parcial": conserva monedas de la run.
-- [ ] `die()`: permadeath. Se pierde todo lo de la run; se conserva una fracción
+- [x] `die()`: permadeath. Se pierde todo lo de la run; se conserva una fracción
       de monedas (`balance.json: coin_keep_on_death`, defecto 0.5).
-- [ ] Al terminar, emitir `run_ended` y pasar a `RunSummary`.
+- [x] Al terminar, emitir `run_ended` y pasar a `RunSummary`.
 
 ### 3.2 Pantalla de resumen de run
 
@@ -132,9 +134,9 @@ animación de "revelar" al pulsar Continuar), almas obtenidas (solo informativo)
 
 ### 3.3 Hecho cuando
 
-- [ ] Se puede jugar: Hub → run → morir → resumen → Hub, con monedas persistentes
+- [x] Se puede jugar: Hub → run → morir → resumen → Hub, con monedas persistentes
       tras cerrar y reabrir el juego.
-- [ ] Retirarse tras el jefe del piso 1 funciona y conserva el 100% de monedas.
+- [x] Retirarse tras el jefe del piso 1 funciona y conserva el 100% de monedas.
 
 ---
 
@@ -147,49 +149,51 @@ mapa (`Array` de celdas) que ya consume `Main._build_rooms_with_levelblock()`.
 Algoritmo sugerido: BSP o salas + pasillos sobre grilla, con semilla
 (`RandomNumberGenerator`) para reproducir bugs.
 
-- [ ] Evaluar `addons/dungeon_crawler_3d` máx. 1 hora; si exige rehacer demasiado,
+- [x] Evaluar `addons/dungeon_crawler_3d` máx. 1 hora; si exige rehacer demasiado,
       descartarlo y documentarlo en `ESTADO_TECNICO_PROTOTIPO.md`.
-- [ ] `FloorGenerator.generate(floor_index, seed) -> FloorData` con: grilla,
+      *Nota: descartado (salas 3D prearmadas + grafo propio); generador propio con semilla.*
+- [x] `FloorGenerator.generate(floor_index, seed) -> FloorData` con: grilla,
       posición de inicio, spawns de enemigos (por especie/rango según piso),
       cofres/objetos, sala del jefe, salida.
-- [ ] `FloorBuilder` construye la geometría (LevelBlock + PSX) y cajas/barriles
+- [x] `FloorBuilder` construye la geometría (LevelBlock + PSX) y cajas/barriles
       como decoración.
-- [ ] **Minimapa** simple (celdas visitadas) — ver UI.
-- [ ] Tamaño por defecto: piso 1 ≈ 25×25, crece ~+5 por piso (parametrizado).
-- [ ] Rangos por piso (defecto): piso 1 → rangos 9–8; piso 2 → 8–6; piso 3 → 7–5;
+- [x] **Minimapa** simple (celdas visitadas) — ver UI.
+- [x] Tamaño por defecto: piso 1 ≈ 25×25, crece ~+5 por piso (parametrizado).
+- [x] Rangos por piso (defecto): piso 1 → rangos 9–8; piso 2 → 8–6; piso 3 → 7–5;
       piso 4 → 6–3; piso 5 → 5–2; jefe = rango del piso − 1 (más fuerte).
 
 ### 4.2 Combate (completar)
 
 Ya existe: ataque, habilidad (activa del alma), defender, flujo de alma.
 
-- [ ] **Ataque sorpresa**: si el jugador inicia el contacto (bump) → primer turno
+- [x] **Ataque sorpresa**: si el jugador inicia el contacto (bump) → primer turno
       gratis + daño ×1.5 en ese turno (`balance.json`). Si el enemigo te alcanza
       por la espalda/alerta → penalización simétrica (opcional).
-- [ ] Menú de combate con: Atacar · Habilidad · Defender · **Objeto** · (Huir, 🟡
+- [x] Menú de combate con: Atacar · Habilidad · Defender · **Objeto** · (Huir, 🟡
       con probabilidad según rangos).
-- [ ] **Uso de objetos** en combate (ver 4.4).
-- [ ] Orden de turnos mostrado visualmente (cola de turnos).
-- [ ] Números de daño flotantes, barras de HP, parpadeo al recibir golpe.
-- [ ] **Derrota** del equipo completo → `die()`.
-- [ ] Pantalla de resumen post-combate **separada**: XP/monedas, bonus de primera
+- [x] **Uso de objetos** en combate (ver 4.4).
+- [x] Orden de turnos mostrado visualmente (cola de turnos).
+- [x] Números de daño flotantes, barras de HP, parpadeo al recibir golpe.
+- [x] **Derrota** del equipo completo → `die()`.
+- [x] Pantalla de resumen post-combate **separada**: XP/monedas, bonus de primera
       kill, y la **revelación del alma al pulsar Continuar** (el tiempo de carga
       de volver a exploración debe ser el mismo para no hacer esperar).
 
 ### 4.3 Almas
 
-- [ ] Datos en `data/souls.json` (activa, pasiva opcional con `effect`,
+- [x] Datos en `data/souls.json` (activa, pasiva opcional con `effect`,
       `stat_modifiers`, rango, especie).
-- [ ] Capacidad de almas por personaje **parametrizada** (defecto 1; subible por
+- [x] Capacidad de almas por personaje **parametrizada** (defecto 1; subible por
       mejora de meta o por objeto de run).
-- [ ] Curva de drop (defecto): normales 8% × factor de rango; élite 25%; **jefe
+      *Nota: la sube el objeto Amuleto de hueso; no hay mejora de meta para esto (no estaba en la tabla de 4.6).*
+- [x] Curva de drop (defecto): normales 8% × factor de rango; élite 25%; **jefe
       100%**. Flag de debug para forzar.
-- [ ] Más tipos de efecto de pasiva (mínimo 3 nuevos, p. ej. `lifesteal_pct`,
+- [x] Más tipos de efecto de pasiva (mínimo 3 nuevos, p. ej. `lifesteal_pct`,
       `crit_chance`, `coin_bonus_pct`, `thorns_flat`). Agregar solo con `case` +
       texto de hint, sin tocar datos viejos.
-- [ ] Reemplazo de alma cuando el personaje está lleno: diálogo "Reemplazar /
+- [x] Reemplazo de alma cuando el personaje está lleno: diálogo "Reemplazar /
       Descartar".
-- [ ] Las almas **no** pasan al `MetaState`.
+- [x] Las almas **no** pasan al `MetaState`.
 
 ### 4.4 Objetos de run (con desbloqueo por condiciones)
 
@@ -208,29 +212,30 @@ disponible de inicio). Lista inicial sugerida (8):
 | Amuleto de hueso | +1 capacidad de alma de un personaje | Condición: derrotar al esqueleto guardián |
 | Poción mayor | Cura 20 HP | Condición: completar una run sin usar pociones menores |
 
-- [ ] Inventario de run con capacidad (defecto 8) y UI.
-- [ ] Objetos en el suelo / cofres con tabla de aparición ponderada que **solo
+- [x] Inventario de run con capacidad (defecto 8) y UI.
+- [x] Objetos en el suelo / cofres con tabla de aparición ponderada que **solo
       incluye desbloqueados**.
-- [ ] Los objetos de run **se pierden al terminar la run** (no se guardan).
+- [x] Los objetos de run **se pierden al terminar la run** (no se guardan).
 
 ### 4.5 Desbloqueos por condición
 
-- [ ] `data/unlocks.json`: `id`, `nombre`, `descripcion` (texto de condición),
+- [x] `data/unlocks.json`: `id`, `nombre`, `descripcion` (texto de condición),
       `condicion` (`tipo` + `parametros`), `recompensa` (id de objeto).
-- [ ] Tipos de condición mínimos: `kill_species_total {species, n}`,
+- [x] Tipos de condición mínimos: `kill_species_total {species, n}`,
       `reach_floor {n}`, `defeat_boss {floor|id}`, `win_run`, `flee_count {n}`,
       `no_item_use_run {item}`, `coins_total {n}`.
-- [ ] `UnlockEvaluator` escucha `EventBus`, lleva progreso (p. ej. 7/10) en
+- [x] `UnlockEvaluator` escucha `EventBus`, lleva progreso (p. ej. 7/10) en
       `MetaState` y emite `unlock_earned`. Los desbloqueos se **anuncian en
       el resumen de run**, no en pleno juego.
-- [ ] Hub muestra todos los desbloqueos: obtenidos, en progreso (barra) y
+      *Nota: GameState acumula los hechos de la run; UnlockEvaluator (puro) los evalúa al terminar junto con `MetaState.progress`, y RunSummary emite `unlock_earned`. Así se respeta "GameState nunca escribe en MetaState".*
+- [x] Hub muestra todos los desbloqueos: obtenidos, en progreso (barra) y
       bloqueados (condición visible; las ocultas pueden mostrarse como "???").
 
 ### 4.6 Monedas y mejoras (meta)
 
-- [ ] Monedas: por kill `= (11 - rango)`; jefe `= 25 × piso`; cofres según piso;
+- [x] Monedas: por kill `= (11 - rango)`; jefe `= 25 × piso`; cofres según piso;
       bonus de primera kill de especie `= 10 × (11 - rango)` (una sola vez).
-- [ ] `data/upgrades.json`, con **tope por mejora** (defecto 5 niveles) y coste
+- [x] `data/upgrades.json`, con **tope por mejora** (defecto 5 niveles) y coste
       creciente (`base × nivel`):
 
 | Mejora | Efecto por nivel | Coste base |
@@ -241,23 +246,24 @@ disponible de inicio). Lista inicial sugerida (8):
 | Provisiones | +1 Poción menor al inicio | 40 |
 | Sabiduría | +2% prob. de alma | 50 |
 
-- [ ] Comprar es instantáneo y autoguardado; mostrar coste, nivel y efecto actual
+- [x] Comprar es instantáneo y autoguardado; mostrar coste, nivel y efecto actual
       vs. siguiente.
-- [ ] Verificar que **todas las mejoras maxeadas** no vuelvan trivial el piso 1
+- [x] Verificar que **todas las mejoras maxeadas** no vuelvan trivial el piso 1
       (ver balance en sección 9).
+      *Nota: `tools/balance_sim.tscn`. Fuerza bajó a +0,6 ATK/nivel y Vitalidad a +1,6 HP/nivel (redondeo del total).*
 
 ### 4.7 Bestiario (persistente)
 
-- [ ] `MetaState.bestiary[species_id] = {kills, first_kill_run, souls_taken}`.
-- [ ] Pantalla de bestiario en el Hub: lista de especies (vistas/no vistas),
+- [x] `MetaState.bestiary[species_id] = {kills, first_kill_run, souls_taken}`.
+- [x] Pantalla de bestiario en el Hub: lista de especies (vistas/no vistas),
       rango, stats, alma que da (revelada solo si se obtuvo alguna vez).
-- [ ] Bonus de primera kill se otorga una vez por especie (en el resumen).
+- [x] Bonus de primera kill se otorga una vez por especie (en el resumen).
 
 ### 4.8 Jefes de piso
 
-- [ ] Un jefe por piso (5), reutilizando modelos con escala/color distinto si no
+- [x] Un jefe por piso (5), reutilizando modelos con escala/color distinto si no
       hay arte propio. Stats = `stats_for_rank(rango_jefe) × 1.5`.
-- [ ] Siempre sueltan alma (100%) y abren **punto de retiro** + salida.
+- [x] Siempre sueltan alma (100%) y abren **punto de retiro** + salida.
 
 ---
 
@@ -280,9 +286,9 @@ Menús en run: **Pausa** (Esc: continuar, estado, inventario, opciones, abandona
 run con confirmación), **Estado** (Tab, ya existe: mejorarlo con pestañas Equipo /
 Almas / Objetos), **Inventario**, **Minimapa**.
 
-- [ ] Todo navegable con **teclado y mando** (focus ring visible, orden lógico,
+- [x] Todo navegable con **teclado y mando** (focus ring visible, orden lógico,
       Esc/B = atrás).
-- [ ] Cada pantalla tiene estado vacío legible (p. ej. "Aún no has encontrado
+- [x] Cada pantalla tiene estado vacío legible (p. ej. "Aún no has encontrado
       esta criatura").
 
 ---
@@ -340,6 +346,7 @@ Paleta base (ajustable, definida como constantes en un solo lugar):
 `RankBadge` (10→1, color por rango) · `Tooltip` (al foco/hover) ·
 `ConfirmDialog` · `Toast` (avisos breves) · `ProgressBar` de desbloqueo ·
 `TabBar`. Cada pantalla se arma **solo** con estos componentes.
+*Nota: son clases (`class_name`) en `scripts/ui/components/` armadas por código, como el resto de la UI del proyecto; la "UI Gallery" sí es una escena (`scenes/ui/UIGallery.tscn`).*
 
 ### 6.4 Wireframes (referencia; adaptar proporciones a 16:9)
 
@@ -402,11 +409,11 @@ der. monedas de la run y piso. Mantener el HUD **fuera del SubViewport** (nítid
 
 ### 6.5 Usabilidad mínima
 
-- [ ] Foco inicial correcto en cada pantalla; nunca queda sin foco.
-- [ ] Textos largos con `autowrap`; nada se corta a 1280×720 ni a 1920×1080.
-- [ ] Escalado de UI configurable (80–150%) en Opciones.
-- [ ] Transiciones cortas (≤ 200 ms) y sonidos placeholder opcionales (clic, hover).
-- [ ] Texto del juego centralizado en un solo lugar (diccionario/CSV) para poder
+- [x] Foco inicial correcto en cada pantalla; nunca queda sin foco.
+- [x] Textos largos con `autowrap`; nada se corta a 1280×720 ni a 1920×1080.
+- [x] Escalado de UI configurable (80–150%) en Opciones.
+- [x] Transiciones cortas (≤ 200 ms) y sonidos placeholder opcionales (clic, hover).
+- [x] Texto del juego centralizado en un solo lugar (diccionario/CSV) para poder
       pulirlo después.
 
 ---
@@ -424,25 +431,25 @@ Panel de debug (F1, solo en debug) con botones:
 - Reiniciar guardado (con confirmación)
 - Mostrar FPS, celda actual y estado de `GameState`
 
-- [ ] Un **modo "Sala de pruebas"** accesible desde Opciones/debug que cargue la
+- [x] Un **modo "Sala de pruebas"** accesible desde Opciones/debug que cargue la
       sala 15×9 original con los 5 enemigos conocidos, para validar combate y almas.
-- [ ] Log a archivo `user://debug.log` con eventos de `EventBus`.
+- [x] Log a archivo `user://debug.log` con eventos de `EventBus`.
 
 ---
 
 ## 8. Pruebas automáticas
 
-- [ ] `tests/smoke_test.gd`: escena headless que recorre Boot → Hub → inicia run
+- [x] `tests/smoke_test.gd`: escena headless que recorre Boot → Hub → inicia run
       → avanza un piso con la semilla fija → fuerza un combate ganado → fuerza
       muerte → resumen → vuelve al Hub, y sale con código 0 si todo pasó.
       Ejecutar con `godot --headless --path . --script tests/smoke_test.gd` (o
       escena equivalente con `--quit-after`).
-- [ ] Tests unitarios (script simple con asserts) para: `stats_for_rank`, curva de
+- [x] Tests unitarios (script simple con asserts) para: `stats_for_rank`, curva de
       drop de almas, evaluador de desbloqueos, costes de mejoras con tope,
       guardado/carga/migración de versión, cálculo de recompensas de run.
-- [ ] Carga de **todas** las escenas de UI en headless para detectar errores de
+- [x] Carga de **todas** las escenas de UI en headless para detectar errores de
       parseo/recursos faltantes.
-- [ ] Documentar cómo correr todo en `CLAUDE.md` (sección "Verificación").
+- [x] Documentar cómo correr todo en `CLAUDE.md` (sección "Verificación").
 
 ---
 
