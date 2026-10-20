@@ -10,7 +10,7 @@ Complemento técnico de `CLAUDE.md` (reglas) y `docs/GUIA_CLAUDE_CODE.md` (plan 
 tools/verify.sh
 ```
 
-Corre import, lint, arranque (`--quit-after 120`), 45 tests unitarios y el smoke test. Todo pasa con **cero errores y cero warnings**: los warnings de GDScript se suben a error con un `override.cfg` temporal, porque fuera del editor Godot no los imprime. Godot 4.7.2 headless; en este entorno el comando es `godot`.
+Corre import, lint, arranque (`--quit-after 120`), 52 tests unitarios y el smoke test. Todo pasa con **cero errores y cero warnings**: los warnings de GDScript se suben a error con un `override.cfg` temporal, porque fuera del editor Godot no los imprime. Godot 4.7.2 headless; en este entorno el comando es `godot`.
 
 Capturas de pantalla reales (OpenGL por software sobre Xvfb):
 
@@ -86,7 +86,7 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 - Enemigos: tras cada paso del jugador, los que están a ≤ 5 pasos **de camino** se acercan por BFS y el resto deambula. Los dormidos no se mueven hasta que el equipo está a ≤ 2 pasos (ese turno solo se levantan); chocarlos los despierta en un ataque sorpresa. Si uno llega a tu celda: de frente es combate normal; por la espalda o un costado, **emboscada**. Después de huir, el enemigo queda aturdido 2 turnos. El jefe no se mueve.
 - Cofres: se abren chocándolos y dan monedas más un objeto de la tabla. Si el inventario está lleno, el objeto queda en el suelo. Los objetos sueltos se recogen al pisarlos.
 - La salida está sellada hasta matar al jefe. Pisarla abre el **punto de retiro**: bajar / retirarse / quedarse. En el último piso, salir es la victoria.
-- Menús: Pausa (el árbol queda en pausa y el reloj de la run también), Estado, Inventario (`use_item_field()`) y Mapa. Tab/I/M/Esc abren y cierran.
+- Menús: Pausa (el árbol queda en pausa y el reloj de la run también), Estado, Inventario (`use_item_field()`; Enter sobre una casilla usa el objeto, y las curas solo se ofrecen a los heridos) y Mapa. Tab/I/M/Esc abren y cierran.
 
 ### Combate — `CombatManager`
 
@@ -98,6 +98,15 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 - UI: enemigo con rango y HP, cola de turnos, tarjetas del equipo, registro compacto y menú de acciones. Hay números flotantes, parpadeo del panel y del modelo 3D al recibir golpes, y la cámara retrocede un poco para encuadrar al enemigo.
 - Al ganar: resumen post-combate (monedas y bonus de primera kill) → Continuar → **revelación del alma**, si soltó una → recogerla o dejarla → a quién → si ese personaje está lleno, reemplazar una de sus almas o descartar la nueva.
 
+### Niveles y atributos (por expedición)
+
+- Todo vive en el personaje de `GameState.party`: `level`, `xp`, `points` y `stats {vit, atq, def, esp, agi, sue}`. Se pierde al terminar la run (como las almas); **no toca `MetaState`**.
+- EXP: `RunRules.kill_xp(rango, tipo)` = `xp_kill_base + (10 − rango) × xp_per_rank`, élite y jefe multiplican. `GameState.add_xp()` se la da entera a **cada personaje en pie** (los caídos no suben), sube los niveles que alcance (`leveling.xp_to_next`, tope `max_level`), da `points_per_level` puntos, cura `heal_on_level_pct` y emite `EventBus.level_up`. RunController (`_grant_xp`) avisa con un toast.
+- Almas: `member_soul_capacity()` = capacidad base (+ Amuleto) + `RunRules.level_soul_slots(nivel)` (= nivel / `soul_slot_every`). La capacidad nunca baja dentro de una run.
+- Puntos: `GameState.apply_points(m, {stat: n})` valida todo antes de tocar nada; lo que sube VIT también sube el HP actual.
+- Efectos (`RunRules.stat_*`, valores en `balance.json → stats`; los totales se redondean): VIT → HP máx.; ATQ → ataque; DEF → daño que se resta a cada golpe recibido, **después** de las pasivas y sin dejarlo en menos de 1; ESP → daño de las habilidades de alma; AGI → crítico (del personaje) y huida (promedio del equipo vivo); SUE → probabilidad de alma y monedas (suma del equipo vivo). CombatManager recibe `def`, `ability_bonus` y `crit_bonus` en el roster.
+- UI: **Estado → Atributos** (`AttributesPage`): lista de personajes, retrato, nivel, EXP, `UIStatRadar` (hexágono; el reparto pendiente se dibuja en verde) y −/+ por estadística. El reparto queda pendiente hasta Confirmar; al cerrar Estado con algo pendiente, `StatusScreen.close()` pregunta si aplicarlo. Estado abre directo en Atributos si alguien tiene puntos. El HUD muestra retrato, `Nv N` y `▲N` (puntos sin repartir).
+
 ### Almas, objetos, desbloqueos y monedas
 
 - Curva de drop (`RunRules.soul_drop_chance`): normal `8% × (1 + 0,1 × (10 − rango))`, élite 25%, jefe 100%. Sabiduría suma puntos porcentuales. El flag de debug la fuerza.
@@ -106,9 +115,10 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 
 ## UI — design system
 
+- **Retratos**: `UIPortrait` (marco `PortraitFrame`, filtro nearest). Las rutas van en los datos: `items.json → retrato` y `balance.json → party[].retrato` (opcionales; si están, `DataRegistry` valida que el archivo exista). Los PNG los hornea `tools/portraits/` (render 3D con los materiales PSX del juego); ver su README. Se ven en las casillas de objetos (como ícono, a 32 px), el detalle del inventario, Objetos y desbloqueos (silueta si es secreto), Estado, el HUD y las tarjetas del combate.
 - `scripts/ui/ui_style.gd` (**UIStyle**) es el único lugar con colores, tamaños de fuente y espaciados. `ThemeBuilder` arma con eso `ui/theme_main.tres`, el tema del proyecto. **Regenerarlo** después de tocar cualquiera de los dos: `godot --headless --path . res://tools/build_theme.tscn`.
-- Variaciones de theme: `HeroLabel/TitleLabel/SubtitleLabel/DimLabel/DetailLabel/AccentLabel/CoinLabel/SoulLabel/GoodLabel/DangerLabel`, `MenuItem/DangerButton/ItemSlot`, `PanelAlt/Card/HudPanel/ScreenBg/DimOverlay` y `HpGood/HpWarn/HpLow/SoulBar/CoinBar/AccentBar`.
-- Componentes (`scripts/ui/components/`, `class_name` que se arman por código, igual que el resto del proyecto): UIButton, UIMenuItem, UIPanel, UIStatBar, UIRankBadge, UISoulCard, UIItemSlot, UITooltip (aparece al enfocar y con el mouse), UIConfirmDialog, UIChoiceDialog, UIToast, UIProgressUnlock, UITabs, UIMinimap y UIScreen (base de todas las pantallas: fondo atenuado, panel, título y monedas, cuerpo desplazable siguiendo al foco, pie con botones, Esc para atrás).
+- Variaciones de theme: `HeroLabel/TitleLabel/SubtitleLabel/DimLabel/DetailLabel/AccentLabel/CoinLabel/SoulLabel/GoodLabel/DangerLabel`, `MenuItem/DangerButton/ItemSlot`, `PanelAlt/Card/HudPanel/ScreenBg/DimOverlay/PortraitFrame` y `HpGood/HpWarn/HpLow/SoulBar/CoinBar/AccentBar`.
+- Componentes (`scripts/ui/components/`, `class_name` que se arman por código, igual que el resto del proyecto): UIButton, UIMenuItem, UIPanel, UIStatBar, UIRankBadge, UISoulCard, UIItemSlot, UITooltip (aparece al enfocar y con el mouse), UIConfirmDialog, UIChoiceDialog, UIToast, UIProgressUnlock, UITabs, UIMinimap, UIPortrait, UIStatRadar y UIScreen (base de todas las pantallas: fondo atenuado, panel, título y monedas, cuerpo desplazable siguiendo al foco, pie con botones, Esc para atrás).
 - Fuentes: Pixelify Sans, más Noto Sans Symbols 1 y 2 de respaldo para ◈ ✦ ▶ ★ ← ↑… Todas sin antialiasing desde el `.import`. **Gotcha**: Godot calcula la altura de línea con la fuente más alta de la cadena de respaldo. Por eso las Noto están recortadas y con ascent/descent igualados a Pixelify; si no, el interlineado se duplica.
 - Ventana base 1280×720 con `stretch canvas_items`: se ve igual a 1080p. La escala de UI (80–150%) es `content_scale_factor`. A 150% en 1280×720 todo cabe, porque los cuerpos se desplazan.
 
@@ -143,16 +153,18 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 - **Pasiva nueva**: el tipo en `DataRegistry.PASSIVE_EFFECTS`, su `case` en `CombatManager` (o donde se aplique) y su texto `effect.<tipo>` en `texts.json`.
 - **Objeto nuevo**: `items.json`. Si tiene un efecto nuevo: `DataRegistry.ITEM_EFFECTS`, `RunController.use_item_field()` y/o `CombatManager._on_item()`.
 - **Condición de desbloqueo nueva**: `DataRegistry.UNLOCK_CONDITIONS` y su caso en `UnlockEvaluator.progress_of()`; si depende de un dato nuevo de la run, sumarlo a `GameState.snapshot()`.
+- **Personaje nuevo**: una entrada en `balance.json → party` (con `retrato`) y su retrato en `tools/portraits/bake_portraits.gd`.
+- **Estadística nueva**: sumarla a `RunRules.STATS` (el orden es el del hexágono, empezando arriba), su `stat_*` y dónde se aplica, sus valores en `balance.json → stats`, los textos `stats.<id>.short/name/desc/effect` y su caso en `AttributesPage._desc/_effect`.
 - **Pantalla nueva**: extender `UIScreen` (o `ListDetailScreen`), armarla solo con componentes y poner sus textos en `texts.json`.
 
 ## Tests
 
-- `tests/unit/`: datos (validación, JSON roto, `stats_for_rank`, `make_soul`), guardado (ida y vuelta, `.bak`, migración v0, versión futura), reglas (costes con tope, curva de almas, huida, monedas), recompensas, desbloqueos y generador (semilla, conectividad, jefe/salida, rangos, pesos).
-- `tests/SmokeTest.tscn`: Boot → Hub → run con semilla fija → combate ganado con alma → combate jugado atacando turno a turno → caminar → jefe → piso 2 → muerte → resumen → Hub (monedas persistentes al recargar), después una run con retiro (100%), y abre todas las pantallas de UI.
-- `tools/balance_sim.tscn`: simulación de balance (ver el README).
+- `tests/unit/`: datos (validación, JSON roto, `stats_for_rank`, `make_soul`), guardado (ida y vuelta, `.bak`, migración v0, versión futura), reglas (costes con tope, curva de almas, huida, monedas), niveles (EXP, subidas dobles, tope, caídos, almas extra, reparto de puntos), recompensas, desbloqueos y generador (semilla, conectividad, jefe/salida, rangos, pesos).
+- `tests/SmokeTest.tscn`: Boot → Hub → run con semilla fija → combate ganado con alma → combate jugado atacando turno a turno → EXP → poción usada desde el inventario → puntos repartidos y confirmados en Atributos (y la pregunta al cerrar con puntos pendientes) → caminar → jefe → piso 2 → muerte → resumen → Hub (monedas persistentes al recargar), después una run con retiro (100%), y abre todas las pantallas de UI.
+- `tools/balance_sim.tscn`: simulación de balance, con niveles y dos políticas de reparto (ver el README). `-- --set=ruta=valor` pisa `balance.json` en memoria, así se pueden correr varias pruebas a la vez.
 
 ## Pendiente
 
 - Modelos de enemigos de proporciones más realistas (los de KayKit son estilizados); integrar Gothic Furniture; sonidos reales.
 - Licencias: el pack de goblins no tiene (sus especies están inactivas); el pack PSX de cajas/barriles prohíbe redistribuirlo (revisar si el repo es público).
-- Diferido: razas, árbol de habilidades, crafting, eventos mensuales, niveles/XP.
+- Diferido: razas, árbol de habilidades, crafting, eventos mensuales.

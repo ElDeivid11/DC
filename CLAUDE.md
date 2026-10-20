@@ -23,6 +23,7 @@ La visión original (mazmorra mensual, impuesto anual con pena de muerte, 10 pis
 - Se mantiene: movimiento en grilla, combate por turnos en primera persona, estética PSX, sistema de almas por personaje, sistema de rangos (10 = más débil, 1 = más fuerte; monstruo rango N → alma rango N de esa especie).
 - Almas: cada alma = 1 activa (siempre) + 1 pasiva opcional + `stat_modifiers`. Son por personaje (no del grupo); recogerla es opcional y el jugador elige a quién.
 - Primera kill de una especie = bonus (bestiario persistente, ver abajo).
+- **Niveles y EXP por expedición** (20-oct-2026): EXP por kill para cada personaje en pie; 3 puntos libres por nivel para repartir entre **VIT ATQ DEF ESP AGI SUE** (Estado → Atributos, con hexágono); **+1 espacio de alma cada 2 niveles**. Se pierde al terminar la run. **Retratos** de héroes y objetos: render 3D con filtro PS1 (`tools/portraits/`).
 
 ### Propuestas NO confirmadas (preguntar antes de asumir)
 
@@ -42,6 +43,7 @@ Las fases 0–9 de la guía están hechas: el roguelike es **jugable de punta a 
 
 - Autoloads: `EventBus`, `DataRegistry`, `MetaState` (persistente), `SaveSystem`, `GameState` (run), `Controls`, `SceneRouter`, `DebugTools`.
 - Escenas: `Boot` → `Hub` → `Run` (RunController) → `RunSummary`; `ui/UIGallery`.
+- Niveles: `GameState.add_xp/apply_points`, fórmulas en `RunRules.stat_*`, valores en `balance.json → leveling/stats`; UI en `scripts/ui/screens/attributes_page.gd`.
 - Datos de juego en `data/*.json` (especies, almas, objetos, desbloqueos, mejoras, pisos, balance, textos), validados por `DataRegistry`.
 - UI: un solo Theme generado por `scripts/ui/theme_builder.gd` desde los tokens de `scripts/ui/ui_style.gd`; componentes en `scripts/ui/components/`.
 - Plugins: `addons/psx` (PSX Visuals, **parcheado**: ver abajo), `addons/level_block` (parcheado; el juego usa su algoritmo en mallas propias), `addons/dungeon_crawler_3d` (evaluado y descartado) y `addons/kaykit_dungeon_remastered` (CC0; de ahí salen las antorchas).
@@ -61,7 +63,7 @@ tools/verify.sh       # todo: import + lint + arranque (--quit-after 120) + test
 - `tools/lint.tscn` carga todos los scripts/escenas propios (no addons) y revisa que cada `DataRegistry.t("clave")` exista en `data/texts.json`.
 - Tests: `res://tests/TestRunner.tscn` (unitarios en `tests/unit/`) y `res://tests/SmokeTest.tscn` (de punta a punta, con guardado aparte).
 - Theme: después de tocar `ui_style.gd` o `theme_builder.gd`, regenerar con `godot --headless --path . res://tools/build_theme.tscn` y commitear `ui/theme_main.tres`.
-- Balance: `godot --headless --path . res://tools/balance_sim.tscn`.
+- Balance: `godot --headless --path . res://tools/balance_sim.tscn` (con niveles; `-- --set=ruta=valor` prueba valores sin tocar `balance.json`).
 - Capturas reales (para revisar UI): `tools/screenshot.tscn` con `xvfb-run` y `--rendering-driver opengl3` (ver su encabezado; `--floor=N`, `--test-room`). Enemigos: `tools/enemy_preview.tscn`.
 - Assets libres: pipeline en `tools/assets/` (Node + Python, ver su README). Solo CC0/CC-BY verificados leyendo el LICENSE.
 - Comandos sueltos: `godot --headless --path . --import` y `godot --headless --path . --quit-after 120`.

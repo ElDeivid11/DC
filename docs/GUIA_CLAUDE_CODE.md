@@ -31,7 +31,8 @@ balance: es una versión *jugable, legible y ajustable*.
    impleméntalo parametrizado (fácil de cambiar) y avísale a David en el resumen
    final, no lo bloquees preguntando.
 6. **Diferido = no tocar:** razas, árbol de habilidades, crafting, eventos
-   mensuales, niveles/XP, 100 objetos numerados.
+   mensuales, 100 objetos numerados. (Niveles/EXP **por expedición** los pidió
+   David el 20-oct-2026 y ya están: ver `docs/ESTADO_TECNICO_PROTOTIPO.md`.)
 7. **Al terminar cada fase:** corre el *smoke test* (sección 8), actualiza
    `docs/ESTADO_TECNICO_PROTOTIPO.md` y marca los checkboxes de esta guía.
 8. Si algo del prototipo estorba (p. ej. `Main.gd` de ~485 líneas), refactoriza,
@@ -505,7 +506,8 @@ y de decisiones que David debe revisar. Actualizar `CLAUDE.md` y
 
 - No reescribir desde cero lo que David ya validó (movimiento, look PSX, flujo de
   almas por personaje).
-- No introducir razas, crafting, niveles/XP ni eventos mensuales.
+- No introducir razas, crafting ni eventos mensuales. Niveles/EXP: solo por
+  expedición, como están (nada que persista entre runs sin preguntarle a David).
 - No persistir almas entre runs.
 - No desbloquear objetos con monedas (solo condiciones).
 - No dejar estilos sueltos fuera del `Theme` ni textos duros dispersos.

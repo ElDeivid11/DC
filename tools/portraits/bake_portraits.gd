@@ -31,7 +31,7 @@ const ITEM_SIZE := 64
 const SUPERSAMPLE := 4
 const OUT_HEROES := "res://assets/portraits/heroes/"
 const OUT_ITEMS := "res://assets/portraits/items/"
-const DEFAULT_PREVIEW := "/tmp/claude-0/-home-user-DC/16ab3e8c-7fbe-5ed9-a90a-389d1a69a175/scratchpad/portraits_preview.png"
+const DEFAULT_PREVIEW := "user://portraits_preview.png"
 const PREVIEW_ZOOM := 3
 
 # Permutaciones de PsxMaterial3D ya horneadas en addons/psx/shaders/cache.
@@ -635,9 +635,9 @@ func _save_contact_sheet() -> void:
 			var hero := _hero_images[i].duplicate() as Image
 			hero.convert(Image.FORMAT_RGBA8)
 			sheet.blit_rect(hero, Rect2i(Vector2i.ZERO, hero.get_size()), pos)
-	DirAccess.make_dir_recursive_absolute(_preview_path.get_base_dir())
-	var err := sheet.save_png(_preview_path)
-	print("hoja de contacto: %s (%s)" % [_preview_path, "ok" if err == OK else "ERROR"])
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_preview_path).get_base_dir())
+	var err := sheet.save_png(ProjectSettings.globalize_path(_preview_path))
+	print("hoja de contacto: %s (%s)" % [ProjectSettings.globalize_path(_preview_path), "ok" if err == OK else "ERROR"])
 
 func _zoomed(img: Image) -> Image:
 	var big := img.duplicate() as Image

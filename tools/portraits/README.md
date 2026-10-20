@@ -34,9 +34,9 @@ xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3
 `prepare_models.mjs --candidatos` exporta además Rogue, Mage y Knight para
 comparar opciones. `bake_portraits.tscn` escribe una hoja de contacto (todo
 x3 con nearest y, abajo, los objetos a tamaño real sobre una ranura oscura) en
-la ruta de `--preview` (por defecto, la del scratchpad de la sesión que la
-creó: pasar `--preview=` en otra máquina). `--debug` imprime las franjas del
-atlas que usa cada malla.
+la ruta de `--preview` (por defecto `user://portraits_preview.png`; la ruta
+completa sale en la consola). `--debug` imprime las franjas del atlas que usa
+cada malla.
 
 ## Cómo se hornea (`bake_portraits.gd`)
 

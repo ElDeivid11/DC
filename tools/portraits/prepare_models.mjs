@@ -37,9 +37,13 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   const [k, ...v] = a.replace(/^--/, '').split('=');
   return [k, v.length ? v.join('=') : true];
 }));
-const SCOUT = '/tmp/claude-0/asset_scout';
-const ADVENTURES = args.adventures ?? path.join(SCOUT, 'KayKit-Game-Assets__KayKit-Character-Pack-Adventures-1.0', 'addons', 'kaykit_character_pack_adventures');
-const HALLOWEEN = args.halloween ?? path.join(SCOUT, 'KayKit-Game-Assets__KayKit-Halloween-Bits-1.0', 'addons', 'kaykit_halloween_bits');
+// Rutas a los packs bajados (ver tools/portraits/README.md → Regenerar).
+if (!args.adventures || !args.halloween) {
+  console.error('uso: node tools/portraits/prepare_models.mjs --adventures=<.../kaykit_character_pack_adventures> --halloween=<.../kaykit_halloween_bits> [--out=DIR] [--candidatos]');
+  process.exit(1);
+}
+const ADVENTURES = path.resolve(String(args.adventures));
+const HALLOWEEN = path.resolve(String(args.halloween));
 const OUT = path.resolve(args.out ?? path.join(HERE, 'models'));
 
 // Nodos que se borran (armas, escudos, jarras: el retrato es de cabeza y hombros).
