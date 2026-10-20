@@ -5,9 +5,9 @@
 	],
 	"stats_for_rank": {
 		"hp_base": 10,
-		"hp_per_rank": 2,
+		"hp_per_rank": 2.25,
 		"atk_base": 1,
-		"atk_per_rank": 1,
+		"atk_per_rank": 1.1,
 		"ability_per_rank": 1.5
 	},
 	"floors_per_run": 5,
@@ -16,18 +16,18 @@
 	"soul_capacity": 1,
 	"leveling": {
 		"max_level": 10,
-		"xp_to_next": [12, 22, 34, 48, 64, 82, 102, 124, 148],
+		"xp_to_next": [24, 44, 68, 96, 128, 164, 204, 248, 296],
 		"xp_kill_base": 3,
 		"xp_per_rank": 1.0,
 		"xp_elite_mult": 1.5,
 		"xp_boss_mult": 4.0,
 		"points_per_level": 3,
 		"soul_slot_every": 2,
-		"heal_on_level_pct": 0.25
+		"heal_on_level_pct": 0.1
 	},
 	"stats": {
 		"vit_hp": 1.0,
-		"atq_atk": 0.34,
+		"atq_atk": 0.25,
 		"def_reduction": 0.25,
 		"esp_ability": 0.5,
 		"agi_crit": 0.015,

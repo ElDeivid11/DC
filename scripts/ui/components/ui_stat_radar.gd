@@ -4,11 +4,12 @@ extends Control
 ## sentido horario, el orden de RunRules.STATS). `values` son los puntos ya
 ## asignados; `preview`, los que se están repartiendo y todavía no se
 ## confirmaron: se dibujan encima con el color de "bueno". La escala crece
-## con el valor más alto (mínimo SCALE_MIN), y un valor 0 igual deja un
-## hexágono chico en el centro, para que la forma siempre se lea.
+## con el valor más alto (mínimo SCALE_MIN: con pocos puntos la forma ya se
+## ve), y un valor 0 igual deja un hexágono chico en el centro, para que la
+## forma siempre se lea.
 
 const RINGS := 4
-const SCALE_MIN := 10
+const SCALE_MIN := 6
 const CORE := 0.08 # fracción del radio que ocupa un valor 0
 
 var values: Dictionary = {}

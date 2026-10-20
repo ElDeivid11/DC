@@ -46,6 +46,10 @@ func test_monedas_por_kill() -> void:
 	eq(RunRules.first_kill_bonus(4), 70, "primera kill = 10 × (11 − rango)")
 
 func test_stats_de_jefe() -> void:
+	# Stats del rango × boss_stat_mult, redondeado.
 	var boss := RunRules.enemy_stats(7, RunRules.BOSS)
-	eq(int(boss.hp), 27, "18 × 1.5")
-	eq(int(boss.atk), 8, "5 × 1.5 redondeado")
+	var base := DataRegistry.stats_for_rank(7)
+	var mult := DataRegistry.bal_f("enemies.boss_stat_mult", 1.5)
+	eq(int(boss.hp), roundi(int(base.hp) * mult), "hp × boss_stat_mult")
+	eq(int(boss.atk), roundi(int(base.atk) * mult), "atk × boss_stat_mult")
+	check(int(boss.hp) > int(base.hp), "el jefe tiene más HP que un normal del mismo rango")

@@ -4,11 +4,19 @@ extends TestCase
 func test_datos_sin_errores() -> void:
 	eq(DataRegistry.errors.size(), 0, "errores de datos: %s" % [DataRegistry.errors])
 
-func test_stats_for_rank_igual_al_prototipo() -> void:
-	# Mismos números que Main.stats_for_rank() del prototipo.
-	eq(DataRegistry.stats_for_rank(9), {"hp": 14, "atk": 3, "ability_damage": 3}, "rango 9")
-	eq(DataRegistry.stats_for_rank(4), {"hp": 24, "atk": 8, "ability_damage": 10}, "rango 4")
-	eq(DataRegistry.stats_for_rank(10), {"hp": 12, "atk": 2, "ability_damage": 1}, "rango 10")
+func test_stats_for_rank_formula() -> void:
+	# Fórmula del prototipo (Main.stats_for_rank): base + pasos × por_rango, con
+	# pasos = 11 − rango. Los valores por rango pueden ser fraccionarios desde
+	# que hay niveles (balance.json → stats_for_rank), así que se redondea.
+	for rank in range(1, 11):
+		var steps := 11 - rank
+		var s := DataRegistry.stats_for_rank(rank)
+		eq(int(s.hp), roundi(DataRegistry.bal_f("stats_for_rank.hp_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.hp_per_rank", 0.0)), "hp rango %d" % rank)
+		eq(int(s.atk), roundi(DataRegistry.bal_f("stats_for_rank.atk_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.atk_per_rank", 0.0)), "atk rango %d" % rank)
+		eq(int(s.ability_damage), int(steps * DataRegistry.bal_f("stats_for_rank.ability_per_rank", 0.0)), "habilidad rango %d" % rank)
+		if rank < 10:
+			var weaker := DataRegistry.stats_for_rank(rank + 1)
+			check(int(s.hp) > int(weaker.hp) and int(s.atk) >= int(weaker.atk), "rango %d más fuerte que %d" % [rank, rank + 1])
 
 func test_json_roto_dice_la_linea() -> void:
 	var reg: Node = (load("res://autoload/DataRegistry.gd") as GDScript).new()

@@ -144,8 +144,8 @@ func bal_i(path: String, default: int = 0) -> int:
 func stats_for_rank(rank: int) -> Dictionary:
 	var steps := 11 - rank
 	return {
-		"hp": bal_i("stats_for_rank.hp_base", 10) + steps * bal_i("stats_for_rank.hp_per_rank", 2),
-		"atk": bal_i("stats_for_rank.atk_base", 1) + steps * bal_i("stats_for_rank.atk_per_rank", 1),
+		"hp": roundi(bal_f("stats_for_rank.hp_base", 10) + steps * bal_f("stats_for_rank.hp_per_rank", 2)),
+		"atk": roundi(bal_f("stats_for_rank.atk_base", 1) + steps * bal_f("stats_for_rank.atk_per_rank", 1)),
 		"ability_damage": int(steps * bal_f("stats_for_rank.ability_per_rank", 1.5)),
 	}
 

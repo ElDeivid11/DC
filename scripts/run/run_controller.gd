@@ -589,17 +589,13 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 	var it := DataRegistry.get_item(id)
 	match String(it.efecto.tipo):
 		"curar":
-			# Solo se ofrece a los vivos que no tienen el HP completo: así no se
-			# gasta una poción en nada.
+			# Solo se ofrece a los vivos heridos: así no se gasta una poción en nada.
 			var hurt := GameState.alive_members().filter(func(pm: Dictionary) -> bool: return int(pm.hp) < GameState.member_max_hp(pm))
 			if hurt.is_empty():
 				UIToast.show(get_tree(), DataRegistry.t("run.nobody_hurt"))
 				return false
-			var m := await _ask_member(ui_parent, String(it.nombre), true)
+			var m := await _ask_member(ui_parent, String(it.nombre), true, true)
 			if m.is_empty():
-				return false
-			if int(m.hp) >= GameState.member_max_hp(m):
-				UIToast.show(get_tree(), DataRegistry.t("run.member_full", [m.name]))
 				return false
 			var healed := GameState.heal_member(m, int(it.efecto.valor))
 			GameState.consume_item_at(index)
@@ -627,11 +623,15 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 	_after_move()
 	return true
 
-func _ask_member(ui_parent: Node, title: String, alive_only: bool) -> Dictionary:
+## Pregunta a qué personaje usarle un objeto. hurt_only: solo los que no
+## tienen el HP completo (curas).
+func _ask_member(ui_parent: Node, title: String, alive_only: bool, hurt_only := false) -> Dictionary:
 	var options: Array = []
 	var members: Array = []
 	for m: Dictionary in GameState.party:
 		if alive_only and int(m.hp) <= 0:
+			continue
+		if hurt_only and int(m.hp) >= GameState.member_max_hp(m):
 			continue
 		members.append(m)
 		options.append(DataRegistry.t("run.member_option", [m.name, m.hp, GameState.member_max_hp(m), (m.souls as Array).size(), GameState.member_soul_capacity(m)]))

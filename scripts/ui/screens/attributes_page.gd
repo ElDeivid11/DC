@@ -5,6 +5,7 @@ extends HBoxContainer
 ## (− / + por estadística). Lo repartido queda pendiente (contorno verde en el
 ## hexágono) hasta Confirmar, que lo aplica con GameState.apply_points().
 ## Cada personaje guarda su reparto pendiente aunque se cambie de personaje.
+## Confirmar / Deshacer quedan bajo la lista de personajes.
 
 signal applied
 
@@ -43,7 +44,7 @@ func _init() -> void:
 		b.pressed.connect(func() -> void: _focus_stats())
 		list.add_child(b)
 		member_buttons.append(b)
-	UIFocus.chain_vertical(member_buttons)
+	UIFocus.chain_vertical(member_buttons, false)
 
 	detail = UIPanel.new("", "PanelAlt")
 	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -107,20 +108,20 @@ func _init() -> void:
 		minus_buttons[id] = minus
 		plus_buttons[id] = plus
 
-	var actions := HBoxContainer.new()
-	actions.add_theme_constant_override("separation", UIStyle.SPACE * 3)
-	detail.body.add_child(actions)
+	# Confirmar / Deshacer y la nota van abajo de la lista de personajes: ahí
+	# sobra lugar y el detalle entra entero sin desplazarse.
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.add_child(spacer)
 	confirm_btn = UIButton.make(DataRegistry.t("attr.confirm"), _confirm)
 	undo_btn = UIButton.make(DataRegistry.t("attr.undo"), _undo)
-	actions.add_child(confirm_btn)
-	actions.add_child(undo_btn)
+	list.add_child(confirm_btn)
+	list.add_child(undo_btn)
 	var note := Label.new()
 	note.theme_type_variation = "DetailLabel"
 	note.text = DataRegistry.t("attr.party_note")
-	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	actions.add_child(note)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	list.add_child(note)
 	_select(_first_with_points())
 
 ## Primer personaje con puntos sin repartir (o el primero).

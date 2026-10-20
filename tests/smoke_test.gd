@@ -2,6 +2,7 @@ extends Node
 ## Smoke test de punta a punta (headless):
 ##   godot --headless --path . res://tests/SmokeTest.tscn
 ## Boot → Hub → iniciar run (semilla fija) → combate ganado con alma →
+## EXP, objeto usado desde el inventario, puntos repartidos en Atributos →
 ## jefe → bajar al piso 2 → muerte → resumen → Hub; después una run con
 ## retiro tras el jefe (conserva el 100%), y abre TODAS las pantallas de UI.
 ## Usa un guardado aparte (user://smoke_save.json). Sale con 0 si todo pasó.
@@ -113,6 +114,10 @@ func _run() -> void:
 			await _wait_frames(2)
 		check(GameState.kills_total == kills_before + 1, "kill del combate jugado")
 	DebugTools.god_mode = false
+	check(int(GameState.get_member("bjorn").xp) > 0 or int(GameState.get_member("bjorn").level) > 1, "las kills dan EXP")
+
+	await _check_field_items(run)
+	await _check_attributes()
 
 	# Caminar: los enemigos reaccionan y nada se rompe.
 	for step in 6:
@@ -197,6 +202,72 @@ func _run() -> void:
 	# --- Todas las pantallas de UI se abren sin errores ---
 	await _open_all_screens()
 	_finish()
+
+## Inventario fuera de combate: Enter sobre la casilla usa el objeto, se elige
+## a quién en el diálogo, cura y se gasta. Con todos sanos no se gasta.
+func _check_field_items(run: RunController) -> void:
+	var elena := GameState.get_member("elena")
+	GameState.inventory.clear()
+	GameState.inventory.append("pocion_menor")
+	elena["hp"] = 1
+	var inv := InventoryScreen.new(run)
+	run.add_child(inv)
+	await _wait_frames(2)
+	var slot := inv.grid.get_child(0) as UIItemSlot
+	slot.emit_signal("pressed")
+	await _wait_frames(2)
+	var dialog: UIChoiceDialog = null
+	for c in inv.get_children():
+		if c is UIChoiceDialog:
+			dialog = c
+	check(dialog != null, "usar un objeto pregunta a quién")
+	if dialog != null:
+		# Solo los heridos: Elena es la única opción.
+		dialog.call("_answer", 0)
+		await _wait_frames(2)
+		check(int(elena.hp) > 1, "la poción cura fuera de combate")
+		check(GameState.inventory.is_empty(), "la poción se gasta")
+	for m: Dictionary in GameState.party:
+		m["hp"] = GameState.member_max_hp(m)
+	GameState.inventory.append("venda")
+	var used: bool = await run.use_item_field(0, inv)
+	check(not used and GameState.inventory.size() == 1, "con todos sanos la venda no se gasta")
+	GameState.inventory.clear()
+	inv.queue_free()
+	await _wait_frames(1)
+
+## Estado → Atributos: repartir un punto, confirmar, y al cerrar con algo
+## pendiente se pregunta y se aplica.
+func _check_attributes() -> void:
+	var bjorn := GameState.get_member("bjorn")
+	GameState.add_xp(RunRules.xp_to_next(int(bjorn.level)))
+	var points := int(bjorn.points)
+	var vit := GameState.member_stat(bjorn, "vit")
+	check(points >= 3, "subir de nivel da puntos")
+	var status := StatusScreen.new()
+	get_tree().root.add_child(status)
+	await _wait_frames(2)
+	var attr := status.attributes
+	attr.call("_select", 0)
+	attr.call("_change", "vit", 1)
+	attr.call("_confirm")
+	check(GameState.member_stat(bjorn, "vit") == vit + 1 and int(bjorn.points) == points - 1, "confirmar aplica el punto")
+	attr.call("_change", "agi", 1)
+	check(attr.has_pending(), "queda un punto pendiente")
+	status.close()
+	await _wait_frames(2)
+	var dialog: UIConfirmDialog = null
+	for c in status.get_children():
+		if c is UIConfirmDialog:
+			dialog = c
+	check(dialog != null, "cerrar con puntos pendientes pregunta")
+	if dialog != null:
+		dialog.call("_answer", true)
+		await _wait_frames(2)
+		check(GameState.member_stat(bjorn, "agi") == 1, "al cerrar se aplica lo pendiente")
+	if is_instance_valid(status):
+		status.queue_free()
+	await _wait_frames(1)
 
 func _open_all_screens() -> void:
 	var screens: Array = [

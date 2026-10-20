@@ -105,7 +105,6 @@
 	"run.member_option": "%s   HP %d/%d   almas %d/%d",
 	"run.who": "¿A quién?",
 	"run.nobody_hurt": "Nadie necesita curarse.",
-	"run.member_full": "%s ya tiene el HP completo.",
 	"exit.title": "Punto de retiro",
 	"exit.text": "El guardián cayó y la escalera se abre. Llevas %s en esta expedición.",
 	"exit.descend": "Descender al piso %d",
