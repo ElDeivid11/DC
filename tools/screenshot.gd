@@ -101,8 +101,8 @@ func _demo_run() -> void:
 	GameState.add_soul("bjorn", DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto ballestero"))
 	GameState.party[1]["hp"] = 9
 	GameState.add_coins(37, "kills")
-	# Nivel 3 para los dos; Bjorn ya repartió algunos puntos.
-	GameState.add_xp(40)
+	# Nivel 3 para los dos (y algo de EXP); Bjorn ya repartió algunos puntos.
+	GameState.add_xp(RunRules.xp_to_next(1) + RunRules.xp_to_next(2) + 10)
 	GameState.apply_points(GameState.party[0], {"vit": 2, "atq": 2, "def": 1})
 
 func _demo_summary() -> void:
