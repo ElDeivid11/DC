@@ -266,8 +266,11 @@ func _enemies_act() -> void:
 			continue
 		var ec: Vector2i = e.cell
 		var d := int(dist.get(ec, 9999))
+		# Levantándose del suelo: no hace nada hasta terminar la animación.
+		if bool(e.get("rising", false)):
+			continue
 		# Dormido: no se mueve hasta que el equipo pasa cerca; ese turno solo
-		# se levanta (el siguiente ya persigue).
+		# se levanta (después persigue).
 		if bool(e.get("dormant", false)):
 			if d <= wake:
 				_wake_enemy(e, dist)
@@ -327,7 +330,14 @@ func _wake_enemy(e: Dictionary, dist: Dictionary) -> void:
 		if int(dist.get(ec + dir, 9999)) < int(dist.get(ec, 9999)):
 			_turn_enemy_towards(e, ec + dir)
 			break
-	if _anim(e, "spawn", "idle") <= 0.0:
+	var v := _visual(e)
+	if v and v.play_role("spawn", "idle") > 0.0:
+		e["rising"] = true
+		v.finished_role.connect(func(role: String) -> void:
+			if role == "spawn":
+				e.erase("rising")
+		)
+	else:
 		_anim(e, "idle")
 	EventBus.hud_message.emit(DataRegistry.t("run.enemy_wakes", [e.display_name]))
 
@@ -356,7 +366,7 @@ func _dispose_corpse(e: Dictionary) -> void:
 	if not v.is_dead():
 		v.play_role("death", "")
 	if v.light:
-		v.light.create_tween().tween_property(v.light, "light_energy", 0.0, 0.6)
+		v.light.create_tween().tween_property(v.light, "base_energy", 0.0, 0.6)
 	var tw := v.create_tween()
 	tw.tween_interval(0.5)
 	for i in 6:
@@ -379,14 +389,22 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	player.call("face_towards", cell)
 	_turn_enemy_towards(e, player.get("grid_pos"))
 	# Pose de combate: el dormido se levanta de golpe; el jefe se burla antes.
-	var intro := ""
-	if bool(e.get("dormant", false)):
-		e["dormant"] = false
-		intro = "spawn"
-	elif e.kind == RunRules.BOSS:
-		intro = "taunt"
-	if intro == "" or _anim(e, intro, "combat") <= 0.0:
-		_anim(e, "combat")
+	var v := _visual(e)
+	if bool(e.get("rising", false)) and v and v.current_role == "spawn":
+		# Ya se está levantando: que termine y después quede en guardia.
+		v.set_then("combat")
+	else:
+		var intro := ""
+		if bool(e.get("dormant", false)):
+			e["dormant"] = false
+			intro = "spawn"
+		elif e.kind == RunRules.BOSS:
+			intro = "taunt"
+		if intro == "" or _anim(e, intro, "combat") <= 0.0:
+			_anim(e, "combat")
+	# En combate ya no importa: si un golpe corta el "levantarse", que no quede
+	# trabado para siempre (después de huir tiene que volver a moverse).
+	e.erase("rising")
 	GameState.register_seen(String(e.species_id))
 	EventBus.combat_started.emit(String(e.species_id), e.kind == RunRules.BOSS)
 
@@ -426,9 +444,8 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	combat.set("rng", GameState.rng)
 	combat.set("god_mode", DebugTools.god_mode)
 	combat.set("one_hit", DebugTools.one_hit)
-	hud.visible = false
-	_frame_combat_camera(true)
-	add_child(combat)
+	# Señales conectadas ANTES de add_child: en una emboscada el enemigo actúa
+	# dentro de _ready (si no, su primer ataque no se anima).
 	combat.connect("enemy_hit", func(_d: int) -> void:
 		_blink(e.node)
 		_anim(e, "hit", "combat")
@@ -439,6 +456,9 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	)
 	combat.connect("enemy_defeated", func() -> void: _anim(e, "death", ""))
 	combat.connect("combat_ended", func(outcome: String, result: Dictionary) -> void: _on_combat_ended(e, outcome, result))
+	hud.visible = false
+	_frame_combat_camera(true)
+	add_child(combat)
 
 ## En combate la cámara retrocede un poco (sin moverse de celda) para que el
 ## enemigo de la celda de enfrente entre entero en cuadro.

@@ -79,7 +79,7 @@ func from_dict(d: Dictionary) -> void:
 	reset()
 	coins = int(d.get("coins", 0))
 	upgrades = _int_values(d.get("upgrades", {}))
-	unlocked = _dict_or_empty(d.get("unlocked", {}))
+	unlocked = _migrate_unlocks(_dict_or_empty(d.get("unlocked", {})))
 	bestiary = _dict_or_empty(d.get("bestiary", {}))
 	progress = _merge(default_progress(), _dict_or_empty(d.get("progress", {})))
 	stats = _merge(default_stats(), _dict_or_empty(d.get("stats", {})))
@@ -90,6 +90,19 @@ func from_dict(d: Dictionary) -> void:
 	saved.erase("pixelated")
 	settings = _merge(settings, saved)
 	changed.emit()
+
+## Desbloqueos renombrados entre versiones (los goblins quedaron inactivos y
+## su talismán pasó a ser el de hueso) y limpieza de ids que ya no existen en
+## unlocks.json (si no, Estadísticas los contaría).
+const RENAMED_UNLOCKS := {"u_goblins_10": "u_esqueletos"}
+
+func _migrate_unlocks(saved: Dictionary) -> Dictionary:
+	var out := {}
+	for id: Variant in saved.keys():
+		var key := String(RENAMED_UNLOCKS.get(String(id), String(id)))
+		if DataRegistry.unlocks.has(key):
+			out[key] = true
+	return out
 
 static func _dict_or_empty(v: Variant) -> Dictionary:
 	if typeof(v) == TYPE_DICTIONARY:

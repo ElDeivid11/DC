@@ -86,7 +86,7 @@ Esto coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3, y
 - **F1 — panel de debug**: monedas, mejoras ±1, desbloquear o bloquear todo, saltar de piso, pelear con el más cercano o con el jefe, curar, ganar el combate, forzar alma o ataque sorpresa, god mode, matar de un golpe, semilla fija, reiniciar guardado, sala de pruebas y galería de UI. Muestra FPS, celda y estado de la run. Registra los eventos en `user://debug.log`.
 - **Sala de pruebas**: la sala 15×9 del prototipo (con techo alto) con un enemigo de cada tipo, uno dormido y el jefe. Se abre desde Opciones (en debug) o con F1. No guarda progreso.
 - **Galería de UI**: todos los componentes del design system en una pantalla.
-- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, 43 tests unitarios y smoke test de punta a punta).
+- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, 45 tests unitarios y smoke test de punta a punta).
 - `tools/screenshot.tscn`: capturas con Xvfb (ver el encabezado del script; `--floor=N` y `--test-room` para revisar biomas y enemigos).
 - `tools/enemy_preview.tscn`: todos los enemigos en fila, de frente y de perfil, con líneas de referencia del techo (2 m y 3 m).
 - `tools/assets/`: pipeline que adapta los assets libres al estilo (modelos de enemigos y texturas de cada bioma). Ver su `README.md`.

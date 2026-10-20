@@ -504,6 +504,10 @@ func _consume(index: int) -> void:
 	inventory.remove_at(index)
 
 func _use_heal(index: int, target_i: int) -> void:
+	# El menú de objetivos sigue en pantalla durante la espera del turno
+	# enemigo: una segunda pulsación no debe gastar otra poción.
+	if busy or index >= inventory.size():
+		return
 	var it := DataRegistry.get_item(inventory[index])
 	var m: Dictionary = party[target_i]
 	var heal := mini(int(it.efecto.valor), int(m.max_hp) - int(m.hp))

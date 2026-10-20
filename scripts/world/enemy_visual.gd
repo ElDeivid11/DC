@@ -23,11 +23,14 @@ const LOOPING: Array[String] = ["idle", "combat", "walk", "dormant"]
 var anim: AnimationPlayer
 var skeleton: Skeleton3D
 ## Luz propia (solo si visual.light existe; p. ej. el aura del nigromante).
-var light: OmniLight3D = null
+var light: FlickerLight = null
 var anims: Dictionary = {}
 var fps := 12.0
 var head_scale := 1.0
 var current_role := ""
+## Velocidad por papel (visual.anim_speed), p. ej. levantarse más rápido.
+var anim_speed: Dictionary = {}
+var _speed := 1.0
 var _then := "idle"
 var _acc := 0.0
 ## Índice de hueso -> escala (cabeza, manos...), aplicada en cada cuadro.
@@ -44,6 +47,7 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 	add_child(model)
 	model.scale = Vector3.ONE * float(def.get("scale", 1.0))
 	anims = def.get("anims", {})
+	anim_speed = def.get("anim_speed", {})
 	fps = float(def.get("anim_fps", 12.0))
 	head_scale = float(def.get("head_scale", 1.0))
 	anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
@@ -154,16 +158,23 @@ func play_role(role: String, then := "idle") -> float:
 		return 0.0
 	current_role = role
 	_then = then
+	_speed = float(anim_speed.get(role, 1.0))
 	anim.play(n, 0.0)
 	var length := anim.get_animation(n).length
 	if role in LOOPING:
 		anim.seek(floorf(_rng.randf() * length * fps) / fps, true)
 	else:
-		anim.advance(0.0)
+		# play() del mismo clip que ya suena no lo reinicia: dos golpes
+		# seguidos tienen que verse los dos.
+		anim.seek(0.0, true)
 	_apply_bone_overrides()
 	if role == "death":
 		_dead = true
 	return length
+
+## Cambia a qué papel vuelve el clip en curso cuando termina.
+func set_then(role: String) -> void:
+	_then = role
 
 func is_dead() -> bool:
 	return _dead
@@ -178,7 +189,7 @@ func _process(delta: float) -> void:
 	# A pasos: se avanza de a cuadros enteros de 1/fps (sin interpolación visible).
 	var frames := floorf(_acc / step)
 	_acc -= frames * step
-	anim.advance(frames * step)
+	anim.advance(frames * step * _speed)
 	_apply_bone_overrides()
 
 func _apply_bone_overrides() -> void:

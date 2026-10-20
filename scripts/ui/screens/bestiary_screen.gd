@@ -57,7 +57,23 @@ func _show_detail(index: int) -> void:
 	else:
 		detail_line(DataRegistry.t("bestiary.first_kill_done", [int(e.first_kill_run)]), "DetailLabel")
 	detail_line(DataRegistry.t("bestiary.soul"), "SoulLabel")
-	if int(e.souls_taken) > 0:
+	if String(sp.get("tier", "")) == "jefe":
+		_show_boss_souls(id)
+	elif int(e.souls_taken) > 0:
 		detail_box.add_child(UISoulCard.new(DataRegistry.make_soul(String(sp.soul_id), int(sp.rank), String(sp.display_name))))
 	else:
 		detail_line(DataRegistry.t("bestiary.soul_unknown"), "DimLabel")
+
+## Los jefes cambian piso a piso (nombre, rango y alma propios, ver
+## floors.json): se muestra el alma de cada jefe de esta especie ya vencido.
+func _show_boss_souls(species_id: String) -> void:
+	var defeated: Dictionary = MetaState.progress.get("bosses_defeated", {})
+	for n in range(1, DataRegistry.floor_count() + 1):
+		var b: Dictionary = DataRegistry.get_floor(n).get("boss", {})
+		if String(b.get("species", "")) != species_id:
+			continue
+		if defeated.has(str(n)):
+			detail_line(DataRegistry.t("bestiary.boss_soul", [n, b.display_name]), "DetailLabel")
+			detail_box.add_child(UISoulCard.new(DataRegistry.make_soul(String(b.soul_id), int(b.rank), String(b.display_name))))
+		else:
+			detail_line(DataRegistry.t("bestiary.boss_soul_unknown", [n]), "DimLabel")

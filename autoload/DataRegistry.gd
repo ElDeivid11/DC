@@ -218,6 +218,17 @@ func _req(file: String, id: String, d: Dictionary, field: String, type: int, nul
 		return false
 	return true
 
+## Color en texto "#rrggbb" o [r, g, b] (o ya convertido, si se valida dos veces).
+func _req_color(file: String, id: String, d: Dictionary, field: String) -> bool:
+	if not d.has(field):
+		_err("%s → '%s': falta el campo '%s'" % [file, id, field])
+		return false
+	var kind := typeof(d[field])
+	if kind != TYPE_STRING and kind != TYPE_ARRAY and kind != TYPE_COLOR:
+		_err("%s → '%s': el campo '%s' debería ser un color (\"#rrggbb\")" % [file, id, field])
+		return false
+	return true
+
 func _to_color(v: Variant) -> Color:
 	if typeof(v) == TYPE_COLOR: # ya normalizado (validar dos veces no rompe nada)
 		return v
@@ -290,6 +301,13 @@ func _validate_visual(F: String, id: String, s: Dictionary) -> void:
 	v["anim_fps"] = maxi(1, int(v.get("anim_fps", 12)))
 	v["eye_color"] = _to_color(v.get("eye_color", "#ffffff"))
 	v["shadow"] = float(v.get("shadow", 0.9))
+	if typeof(v.get("anim_speed", {})) != TYPE_DICTIONARY:
+		_err("%s → '%s': visual.anim_speed debe ser un objeto {papel: velocidad}" % [F, id])
+		v.erase("anim_speed")
+	elif v.has("anim_speed"):
+		var sp: Dictionary = v.anim_speed
+		for role: String in sp.keys():
+			sp[role] = clampf(float(sp[role]), 0.1, 10.0)
 	if v.has("bone_scale"):
 		if typeof(v.bone_scale) != TYPE_DICTIONARY:
 			_err("%s → '%s': visual.bone_scale debe ser un objeto {hueso: escala}" % [F, id])
@@ -436,10 +454,18 @@ func _validate_themes(F: String) -> void:
 	for id: String in floor_themes.keys():
 		var th: Dictionary = floor_themes[id]
 		_req(F, id, th, "nombre", TYPE_STRING)
-		if _req(F, id, th, "texturas", TYPE_STRING) and not DirAccess.dir_exists_absolute(String(th.texturas)):
-			_err("%s → tema '%s': la carpeta de texturas '%s' no existe" % [F, id, th.texturas])
+		if _req(F, id, th, "texturas", TYPE_STRING):
+			# Carpeta con "/" final (FloorBuilder le pega el nombre del archivo)
+			# y las 5 texturas presentes: si falta una, el piso sale gris.
+			var dir := String(th.texturas)
+			if not dir.ends_with("/"):
+				dir += "/"
+			th["texturas"] = dir
+			for slot in FloorBuilder.TEXTURE_SLOTS:
+				if not ResourceLoader.exists(dir + slot + ".png"):
+					_err("%s → tema '%s': falta la textura '%s%s.png'" % [F, id, dir, slot])
 		for c: String in ["niebla", "ambiente", "antorcha"]:
-			if _req(F, id, th, c, TYPE_STRING):
+			if _req_color(F, id, th, c):
 				th[c] = _to_color(th[c])
 		for n: String in ["niebla_cerca", "niebla_lejos", "ambiente_energia", "variante_pared", "variante_piso"]:
 			if _req(F, id, th, n, TYPE_FLOAT):

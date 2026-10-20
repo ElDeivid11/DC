@@ -15,6 +15,7 @@
 			"head_scale": 0.58,
 			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
+			"anim_speed": {"spawn": 2.5},
 			"weapon_r": "res://assets/enemies/weapons/hoja.glb",
 			"eye_color": "#9be05a",
 			"anims": {
@@ -45,6 +46,7 @@
 			"head_scale": 0.58,
 			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
+			"anim_speed": {"spawn": 2.5},
 			"weapon_r": "res://assets/enemies/weapons/ballesta.glb",
 			"eye_color": "#6ac8ff",
 			"anims": {
@@ -75,6 +77,7 @@
 			"head_scale": 0.62,
 			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
+			"anim_speed": {"spawn": 2.5},
 			"weapon_r": "res://assets/enemies/weapons/hacha.glb",
 			"weapon_l": "res://assets/enemies/weapons/escudo.glb",
 			"eye_color": "#ff7a2a",
@@ -98,7 +101,7 @@
 		"peso": 0,
 		"family": "esqueleto",
 		"description": "Custodia cada escalera hacia abajo. Habla con los muertos y los muertos le contestan.",
-		"soul_id": "nigromante",
+		"soul_id": "jefe_novicio",
 		"dormant_chance": 0.0,
 		"visual": {
 			"model_path": "res://assets/enemies/nigromante.glb",
@@ -106,6 +109,7 @@
 			"head_scale": 0.66,
 			"bone_scale": {"hand.l": 0.8, "hand.r": 0.8},
 			"anim_fps": 12,
+			"anim_speed": {"spawn": 2.5},
 			"weapon_r": "res://assets/enemies/weapons/baculo.glb",
 			"eye_color": "#c77dff",
 			"light": {"color": "#9a5cff", "energy": 1.2, "range": 3.5},

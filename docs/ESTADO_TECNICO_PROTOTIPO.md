@@ -10,7 +10,7 @@ Complemento técnico de `CLAUDE.md` (reglas) y `docs/GUIA_CLAUDE_CODE.md` (plan 
 tools/verify.sh
 ```
 
-Corre import, lint, arranque (`--quit-after 120`), 43 tests unitarios y el smoke test. Todo pasa con **cero errores y cero warnings**: los warnings de GDScript se suben a error con un `override.cfg` temporal, porque fuera del editor Godot no los imprime. Godot 4.7.2 headless; en este entorno el comando es `godot`.
+Corre import, lint, arranque (`--quit-after 120`), 45 tests unitarios y el smoke test. Todo pasa con **cero errores y cero warnings**: los warnings de GDScript se suben a error con un `override.cfg` temporal, porque fuera del editor Godot no los imprime. Godot 4.7.2 headless; en este entorno el comando es `godot`.
 
 Capturas de pantalla reales (OpenGL por software sobre Xvfb):
 

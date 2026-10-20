@@ -63,3 +63,16 @@ func test_visual_de_especie() -> void:
 	var errs: PackedStringArray = reg.get("errors")
 	check(errs.size() == 1 and errs[0].contains("no/existe.glb"), "modelo inexistente se reporta: %s" % [errs])
 	reg.free()
+
+func test_tema_valida_texturas() -> void:
+	var reg: Node = (load("res://autoload/DataRegistry.gd") as GDScript).new()
+	reg.call("reload")
+	var themes: Dictionary = reg.get("floor_themes")
+	(themes["luna"] as Dictionary)["texturas"] = "res://assets/textures/luna"
+	(themes["abismo"] as Dictionary)["texturas"] = "res://assets/textures/no_existe/"
+	reg.set("errors", PackedStringArray())
+	reg.call("_validate_themes", "floors.json")
+	var errs: PackedStringArray = reg.get("errors")
+	eq(String((themes["luna"] as Dictionary).texturas), "res://assets/textures/luna/", "se agrega la barra final")
+	check(errs.size() == FloorBuilder.TEXTURE_SLOTS.size() and errs[0].contains("no_existe/wall_a.png"), "cada textura faltante se reporta: %s" % [errs])
+	reg.free()

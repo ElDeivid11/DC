@@ -70,3 +70,10 @@ func test_sin_guardado_valores_por_defecto() -> void:
 	MetaState.coins = 999
 	check(not SaveSystem.load_meta(), "no hay guardado")
 	eq(MetaState.coins, 0, "valores por defecto")
+
+func test_desbloqueos_viejos_se_migran() -> void:
+	MetaState.from_dict({"unlocked": {"u_goblins_10": true, "u_piso_3": true, "u_que_no_existe": true}})
+	check(MetaState.is_unlocked("u_esqueletos"), "el talismán de goblin pasa a ser el de hueso")
+	check(MetaState.is_unlocked("u_piso_3"), "los que siguen existiendo se conservan")
+	check(not MetaState.unlocked.has("u_goblins_10") and not MetaState.unlocked.has("u_que_no_existe"), "los ids muertos se limpian: %s" % [MetaState.unlocked])
+	MetaState.reset()

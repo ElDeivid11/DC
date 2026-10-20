@@ -85,6 +85,8 @@ DEFAULTS = {
     "aplanar": 0.5,     # 0..1: cuánto de la luz de baja frecuencia se quita
     "radio_aplanar": 16,  # sigma (px) de esa "baja frecuencia"; menor = iguala piezas vecinas
     "nitidez": 0.2,     # fuerza del unsharp mask
+    "juntas": 0.0,      # 0..1: oscurece las líneas finas MÁS claras que su entorno (mortero)
+    "radio_juntas": 1.5,  # sigma (px) del entorno con el que se comparan las juntas
     "rango": 1.0,       # parte de la rampa que se usa (techo: < 1, se queda en lo oscuro)
     "mezcla": None,     # None = la del tema
     "dither": 0.05,     # amplitud de la trama Bayer (0..1)
@@ -109,8 +111,8 @@ THEMES = {
                        "capas": [{"tipo": "hollin", "cantidad": 0.6, "escala": 12, "umbral": 0.0, "semilla": 11},
                                  {"tipo": "grietas", "cantidad": 0.8, "escala": 9, "ancho": 0.1, "semilla": 12}]},
             # Losas gastadas (radio_aplanar chico: iguala el brillo de losas vecinas).
-            "floor_a": {"src": "bricks4", "lum": 0.27, "contraste": 1.0, "aplanar": 0.8, "radio_aplanar": 6},
-            "floor_b": {"src": "bricks4", "lum": 0.25, "contraste": 1.0, "aplanar": 0.8, "radio_aplanar": 6,
+            "floor_a": {"src": "bricks4", "lum": 0.27, "contraste": 1.0, "aplanar": 0.8, "radio_aplanar": 6, "juntas": 1.0, "radio_juntas": 3.5},
+            "floor_b": {"src": "bricks4", "lum": 0.25, "contraste": 1.0, "aplanar": 0.8, "radio_aplanar": 6, "juntas": 1.0, "radio_juntas": 3.5,
                         "capas": [{"tipo": "manchas", "color": "#5a4630", "cantidad": 0.8, "escala": 10, "umbral": 0.2, "semilla": 13},
                                   {"tipo": "grietas", "cantidad": 0.9, "escala": 8, "ancho": 0.14, "semilla": 14}]},
             "ceiling": {"src": "stone2", "lum": 0.16, "rango": 0.55},
@@ -121,18 +123,18 @@ THEMES = {
         "rampa": ["#0b1512", "#1f3a33", "#3f6b58", "#7fa37a", "#c9d68f"],
         "mezcla": 0.75,
         "slots": {
-            "wall_a": {"src": "bricks3", "lum": 0.29},
+            "wall_a": {"src": "bricks3", "lum": 0.29, "juntas": 1.0, "radio_juntas": 3.0},
             # Ladrillo con manchones de musgo (más en las juntas) y chorretes de humedad.
-            "wall_b": {"src": "bricks3", "lum": 0.27,
+            "wall_b": {"src": "bricks3", "lum": 0.27, "juntas": 1.0, "radio_juntas": 3.0,
                        "capas": [{"tipo": "musgo", "color": "#5a7a2a", "cantidad": 0.75, "escala": 12, "umbral": 0.55, "juntas": 0.3, "semilla": 21},
                                  {"tipo": "chorretes", "cantidad": 0.7, "escala": 1.5, "umbral": 0.8, "largo": 0.7, "semilla": 22}]},
             # Losa húmeda con charcos oscuros.
-            "floor_a": {"src": "concrete3", "lum": 0.26,
+            "floor_a": {"src": "concrete3", "lum": 0.26, "juntas": 1.0, "radio_juntas": 3.0,
                         "capas": [{"tipo": "hollin", "cantidad": 0.4, "escala": 12, "umbral": 0.3, "semilla": 23}]},
-            "floor_b": {"src": "concrete3", "lum": 0.25,
+            "floor_b": {"src": "concrete3", "lum": 0.25, "juntas": 1.0, "radio_juntas": 3.0,
                         "capas": [{"tipo": "musgo", "color": "#55722a", "cantidad": 0.75, "escala": 9, "umbral": 0.5, "juntas": 0.6, "semilla": 24},
                                   {"tipo": "grietas", "cantidad": 0.8, "escala": 8, "ancho": 0.12, "semilla": 25}]},
-            "ceiling": {"src": "bricks2", "lum": 0.15, "rango": 0.55},
+            "ceiling": {"src": "bricks2", "lum": 0.15, "rango": 0.55, "juntas": 1.0, "radio_juntas": 3.0},
         },
     },
     "luna": {
@@ -161,9 +163,9 @@ THEMES = {
         "mezcla": 0.75,
         "slots": {
             # Ladrillo granate con juntas de oro viejo.
-            "wall_a": {"src": "bricks1", "lum": 0.25, "sat": 0.35, "contraste": 1.0, "rango": 0.9,
+            "wall_a": {"src": "bricks1", "lum": 0.25, "sat": 0.35, "contraste": 1.0, "rango": 0.9, "juntas": 1.0, "radio_juntas": 3.0,
                        "capas": [{"tipo": "hollin", "cantidad": 0.2, "escala": 14, "umbral": 0.5, "semilla": 40}]},
-            "wall_b": {"src": "bricks1", "lum": 0.23, "sat": 0.35, "contraste": 1.0, "rango": 0.9,
+            "wall_b": {"src": "bricks1", "lum": 0.23, "sat": 0.35, "contraste": 1.0, "rango": 0.9, "juntas": 1.0, "radio_juntas": 3.0,
                        "capas": [{"tipo": "hollin", "cantidad": 0.35, "escala": 10, "umbral": 0.5, "semilla": 41},
                                  {"tipo": "grietas", "cantidad": 0.85, "escala": 9, "ancho": 0.12, "semilla": 43},
                                  {"tipo": "chorretes", "color": "#2a0508", "cantidad": 0.75, "escala": 1.2, "umbral": 1.0, "largo": 0.5, "semilla": 42}]},
@@ -338,6 +340,14 @@ def graduar(rgb: np.ndarray, p: dict) -> np.ndarray:
     y = luma(rgb)
     baja = desenfocar(y, p["radio_aplanar"])
     rgb = rgb - (p["aplanar"] * (baja - baja.mean()))[..., None]
+    # Juntas: en las fotos el mortero es más claro que la piedra y, reducido a
+    # 128 px, se ve como una grilla clara. Las líneas finas más claras que su
+    # entorno se invierten (quedan más oscuras que la piedra, como una junta
+    # en sombra).
+    if p["juntas"] > 0:
+        y = luma(rgb)
+        claro = np.maximum(y - desenfocar(y, p["radio_juntas"]), 0.0)
+        rgb = rgb - (p["juntas"] * 2.0 * claro)[..., None]
     # Nitidez: unsharp mask sobre la luminancia.
     y = luma(rgb)
     rgb = rgb + (p["nitidez"] * (y - desenfocar(y, 1.0)))[..., None]

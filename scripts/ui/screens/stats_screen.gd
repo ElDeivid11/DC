@@ -35,7 +35,7 @@ func _ready() -> void:
 		["stats.kills", UIFormat.number(int(s.total_kills))],
 		["stats.time", UIFormat.time(float(s.total_time_sec))],
 		["stats.coins_total", UIFormat.coins(int(s.coins_earned_total))],
-		["stats.unlocks", "%d/%d" % [MetaState.unlocked.size(), DataRegistry.unlocks.size()]],
+		["stats.unlocks", "%d/%d" % [DataRegistry.unlocks.keys().filter(func(id: String) -> bool: return MetaState.is_unlocked(id)).size(), DataRegistry.unlocks.size()]],
 		["stats.species", "%d/%d" % [seen, DataRegistry.species_ids().size()]],
 	]
 	for p: Array in pairs:

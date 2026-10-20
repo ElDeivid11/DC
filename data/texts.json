@@ -270,6 +270,8 @@
 	"bestiary.first_kill_done": "Primera muerte en la expedición n.º %d.",
 	"bestiary.soul": "Alma que otorga",
 	"bestiary.soul_unknown": "??? — recoge un alma de esta especie para conocerla.",
+	"bestiary.boss_soul": "Piso %d · %s",
+	"bestiary.boss_soul_unknown": "Piso %d · ??? — vence a su jefe para conocerla.",
 	"stats.title": "Estadísticas",
 	"stats.general": "General",
 	"stats.runs": "Expediciones",

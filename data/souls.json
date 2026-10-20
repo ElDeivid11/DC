@@ -106,15 +106,5 @@
 			"effect": {"type": "crit_chance", "value": 0.1}
 		},
 		"stat_modifiers": {}
-	},
-	"nigromante": {
-		"species": "nigromante",
-		"active": {"name": "Toque Necrótico"},
-		"passive": {
-			"name": "Hambre de Almas",
-			"description": "Recupera parte del daño que inflige",
-			"effect": {"type": "lifesteal_pct", "value": 0.2}
-		},
-		"stat_modifiers": {"max_hp": 2}
 	}
 }
