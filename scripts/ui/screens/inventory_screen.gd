@@ -1,17 +1,22 @@
 class_name InventoryScreen
 extends UIScreen
 ## Inventario de la run (I / X): casillas a la izquierda, detalle del objeto
-## enfocado a la derecha, y acciones Usar / Descartar. Los objetos se pierden
-## al terminar la run. El uso real lo resuelve RunController.use_item_field().
+## enfocado a la derecha (con su retrato), y acciones Usar / Descartar.
+## Enter / A sobre una casilla usa el objeto directamente. Los objetos se
+## pierden al terminar la run. El uso real lo resuelve
+## RunController.use_item_field().
 
 var run: Node
 var grid: GridContainer
 var slots_panel: UIPanel
 var detail: UIPanel
+var detail_portrait: UIPortrait
+var detail_tag: Label
 var detail_text: Label
 var use_btn: UIButton
 var drop_btn: UIButton
 var selected := -1
+var _busy := false
 
 func _init(p_run: Node = null) -> void:
 	super(DataRegistry.t("inventory.title"))
@@ -34,6 +39,17 @@ func _ready() -> void:
 	detail = UIPanel.new("", "PanelAlt")
 	detail.custom_minimum_size.x = 420
 	row.add_child(detail)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	detail.body.add_child(head)
+	detail_portrait = UIPortrait.new(null, 96)
+	head.add_child(detail_portrait)
+	detail_tag = Label.new()
+	detail_tag.theme_type_variation = "DetailLabel"
+	detail_tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_tag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(detail_tag)
 	detail_text = Label.new()
 	detail_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -44,6 +60,10 @@ func _ready() -> void:
 	drop_btn = UIButton.make(DataRegistry.t("inventory.drop"), _drop, "DangerButton")
 	actions.add_child(use_btn)
 	actions.add_child(drop_btn)
+	var hint := Label.new()
+	hint.theme_type_variation = "DetailLabel"
+	hint.text = DataRegistry.t("inventory.press_hint")
+	footer.add_child(hint)
 	add_footer_button(DataRegistry.t("ui.close"), close)
 	_rebuild()
 
@@ -59,8 +79,9 @@ func _rebuild() -> void:
 		var idx := i
 		slot.focus_entered.connect(func() -> void: _select(idx))
 		slot.pressed.connect(func() -> void:
+			_select(idx)
 			if not use_btn.disabled:
-				use_btn.grab_focus()
+				_use()
 		)
 		grid.add_child(slot)
 		if first == null and id != "":
@@ -77,26 +98,32 @@ func _select(index: int) -> void:
 	selected = index
 	if index < 0 or index >= GameState.inventory.size():
 		detail.set_title(DataRegistry.t("inventory.empty_title"))
+		detail_portrait.set_texture(null)
+		detail_tag.text = ""
 		detail_text.text = DataRegistry.t("inventory.empty")
 		use_btn.disabled = true
 		drop_btn.disabled = true
 		return
 	var it := DataRegistry.get_item(GameState.inventory[index])
 	detail.set_title(String(it.nombre))
+	detail_portrait.set_texture(UIPortrait.item_texture(GameState.inventory[index]))
 	var where: Array[String] = []
 	if it.efecto.fuera_combate:
 		where.append(DataRegistry.t("inventory.where_field"))
 	if it.efecto.en_combate:
 		where.append(DataRegistry.t("inventory.where_combat"))
 	var usage := DataRegistry.t("inventory.passive_note") if it.tipo == "pasivo" else DataRegistry.t("inventory.usable_in", [" / ".join(where)])
-	detail_text.text = "%s\n\n%s" % [it.descripcion, usage]
+	detail_tag.text = "%s\n%s" % [DataRegistry.t("item.type." + String(it.tipo)), usage]
+	detail_text.text = String(it.descripcion)
 	use_btn.disabled = not bool(it.efecto.fuera_combate) or run == null
 	drop_btn.disabled = false
 
 func _use() -> void:
-	if selected < 0 or run == null:
+	if selected < 0 or run == null or _busy:
 		return
+	_busy = true
 	var used: bool = await (run as RunController).use_item_field(selected, self)
+	_busy = false
 	if used and is_inside_tree():
 		_rebuild()
 

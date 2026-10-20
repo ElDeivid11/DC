@@ -1,7 +1,7 @@
 class_name RunHud
 extends CanvasLayer
 ## HUD de exploración (fuera del SubViewport: nítido a resolución nativa).
-##   sup. izq.: HP del equipo (barras compactas)
+##   sup. izq.: equipo (retrato, HP, nivel, almas y ▲ puntos sin repartir)
 ##   sup. der.: minimapa 7×7 + brújula N/E/S/O
 ##   inf. centro: mensajes breves
 ##   inf. der.: monedas de la run y piso
@@ -11,6 +11,9 @@ extends CanvasLayer
 var party_box: VBoxContainer
 var bars: Array[UIStatBar] = []
 var soul_labels: Array[Label] = []
+var level_labels: Array[Label] = []
+var point_labels: Array[Label] = []
+var portraits: Array[UIPortrait] = []
 var minimap: UIMinimap
 var compass_label: Label
 var floor_label: Label
@@ -36,15 +39,31 @@ func _ready() -> void:
 	party_panel.add_child(party_box)
 	for m: Dictionary in GameState.party:
 		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", UIStyle.SPACE * 2)
 		party_box.add_child(row)
+		var pic := UIPortrait.for_hero(String(m.id), 28)
+		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(pic)
 		var bar := UIStatBar.new(String(m.name), "hp", 110)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(bar)
+		var ll := Label.new()
+		ll.theme_type_variation = "DetailLabel"
+		ll.custom_minimum_size.x = 34
+		row.add_child(ll)
 		var sl := Label.new()
 		sl.theme_type_variation = "SoulLabel"
-		sl.custom_minimum_size.x = 36
+		sl.custom_minimum_size.x = 30
 		row.add_child(sl)
+		var pl := Label.new()
+		pl.theme_type_variation = "GoodLabel"
+		pl.custom_minimum_size.x = 30
+		row.add_child(pl)
+		portraits.append(pic)
 		bars.append(bar)
+		level_labels.append(ll)
 		soul_labels.append(sl)
+		point_labels.append(pl)
 
 	# Minimapa + brújula (sup. der.)
 	var map_panel := PanelContainer.new()
@@ -124,6 +143,10 @@ func refresh() -> void:
 		bars[i].set_values(int(m.hp), GameState.member_max_hp(m))
 		var n := (m.souls as Array).size()
 		soul_labels[i].text = ("%s%d" % [UIStyle.SOUL_SYMBOL, n]) if n > 0 else ""
+		level_labels[i].text = DataRegistry.t("hud.level", [int(m.level)])
+		# ▲N = puntos sin repartir (Tab → Atributos).
+		point_labels[i].text = DataRegistry.t("hud.points", [int(m.points)]) if int(m.points) > 0 else ""
+		portraits[i].set_dimmed(int(m.hp) <= 0)
 	if GameState.test_room:
 		floor_label.text = DataRegistry.t("hud.test_room")
 	else:

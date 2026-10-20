@@ -189,8 +189,13 @@ func _build_ui() -> void:
 		var card := UIPanel.new("", "HudPanel")
 		party_col.add_child(card)
 		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", UIStyle.SPACE * 2)
 		card.body.add_child(head)
+		var pic := UIPortrait.for_hero(String(m.get("id", "")), 36)
+		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(pic)
 		var bar := UIStatBar.new(String(m.name), "hp", 140)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(bar)
 		var st := Label.new()
@@ -317,6 +322,9 @@ func _show_menu(title: String, items: Array, with_back := false) -> void:
 		b.disabled = it.size() > 2 and bool(it[2])
 		if it.size() > 3:
 			UITooltip.attach(b, String(it[3]))
+		if it.size() > 4 and it[4] is Texture2D:
+			b.icon = it[4]
+			b.add_theme_constant_override("icon_max_width", 24)
 		menu_box.add_child(b)
 		buttons.append(b)
 	if with_back:
@@ -372,7 +380,7 @@ func _show_items() -> void:
 		var it := DataRegistry.get_item(inventory[i])
 		var idx := i
 		var disabled: bool = it.efecto.tipo == "huida_garantizada" and enemy.kind == RunRules.BOSS
-		items.append([String(it.nombre), func() -> void: _on_item(idx), disabled, String(it.descripcion)])
+		items.append([String(it.nombre), func() -> void: _on_item(idx), disabled, String(it.descripcion), UIPortrait.item_texture(inventory[i])])
 	_show_menu(DataRegistry.t("combat.item"), items, true)
 
 # --- Turnos --------------------------------------------------------------------------------

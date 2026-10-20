@@ -58,6 +58,13 @@ func _fill_list() -> void:
 func _show_detail(index: int) -> void:
 	var id := ids[index]
 	var it := DataRegistry.get_item(id)
+	# Retrato: en silueta si el objeto todavía es secreto, apagado si está bloqueado.
+	var pic := UIPortrait.for_item(id, 96)
+	detail_box.add_child(pic)
+	if _hidden(id):
+		pic.set_silhouette(true)
+	elif _rank(id) == 2:
+		pic.set_dimmed(true)
 	if _hidden(id):
 		detail.set_title("???")
 		detail_line(DataRegistry.t("unlocks.hidden_text"), "DimLabel")

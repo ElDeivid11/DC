@@ -12,7 +12,7 @@ extends RefCounted
 ##   Label:          HeroLabel, TitleLabel, SubtitleLabel, DimLabel, DetailLabel,
 ##                   AccentLabel, CoinLabel, SoulLabel, GoodLabel, DangerLabel
 ##   Button:         MenuItem (ítem de menú en lista), DangerButton, ItemSlot
-##   PanelContainer: PanelAlt, ScreenBg, HudPanel, DimOverlay, Card
+##   PanelContainer: PanelAlt, ScreenBg, HudPanel, DimOverlay, Card, PortraitFrame
 ##   ProgressBar:    HpGood, HpWarn, HpLow, SoulBar, CoinBar, AccentBar
 
 const THEME_PATH := "res://ui/theme_main.tres"
@@ -194,6 +194,9 @@ static func _buttons(t: Theme) -> void:
 		_box(UIStyle.BG_DEEP, UIStyle.BORDER.darkened(0.4), UIStyle.BORDER_W, 12, 8),
 		focus)
 	_button_colors(t, "ItemSlot", UIStyle.TEXT, UIStyle.ACCENT)
+	# El retrato del objeto va como ícono, achicado a la mitad (64 → 32 px).
+	t.set_constant("icon_max_width", "ItemSlot", 32)
+	t.set_constant("h_separation", "ItemSlot", 10)
 
 	# CheckBox: iconos pixel.
 	var off := _pixel_icon(["######", "#....#", "#....#", "#....#", "#....#", "######"], UIStyle.BORDER.lightened(0.3), 3)
@@ -225,6 +228,10 @@ static func _panels(t: Theme) -> void:
 
 	t.set_type_variation("Card", "PanelContainer")
 	t.set_stylebox("panel", "Card", _box(UIStyle.PANEL_ALT, UIStyle.BORDER, UIStyle.BORDER_W, 12, 8))
+
+	# Marco de retrato: fondo hundido y borde fino, casi sin relleno.
+	t.set_type_variation("PortraitFrame", "PanelContainer")
+	t.set_stylebox("panel", "PortraitFrame", _box(UIStyle.BG_DEEP, UIStyle.BORDER, UIStyle.BORDER_W, 2, 2))
 
 	t.set_type_variation("ScreenBg", "PanelContainer")
 	t.set_stylebox("panel", "ScreenBg", _box(UIStyle.BG_DEEP, UIStyle.BG_DEEP, 0, 0, 0))

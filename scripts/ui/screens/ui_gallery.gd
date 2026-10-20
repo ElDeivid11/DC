@@ -74,6 +74,19 @@ func _ready() -> void:
 	mid.add_child(souls)
 	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto ballestero")))
 	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_guardian", 4, "Esqueleto guardián"), true))
+	# Retratos y hexágono de estadísticas (contorno verde = reparto pendiente).
+	var hero_row := HBoxContainer.new()
+	hero_row.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	souls.body.add_child(hero_row)
+	var pics := VBoxContainer.new()
+	hero_row.add_child(pics)
+	pics.add_child(UIPortrait.for_hero("bjorn", 56))
+	var fallen := UIPortrait.for_hero("elena", 56)
+	fallen.set_dimmed(true)
+	pics.add_child(fallen)
+	var radar := UIStatRadar.new(170)
+	radar.set_values({"vit": 4, "atq": 3, "def": 1, "esp": 0, "agi": 2, "sue": 1}, {"esp": 2, "def": 1})
+	hero_row.add_child(radar)
 
 	# Objetos, tooltip, diálogo, toasts
 	var items := UIPanel.new(DataRegistry.t("gallery.items"), "PanelAlt")

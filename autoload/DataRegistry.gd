@@ -372,7 +372,18 @@ func _validate_items() -> void:
 			it["peso_aparicion"] = int(it.peso_aparicion)
 		if _req(F, id, it, "unlock_id", TYPE_STRING, true) and it.unlock_id != null and not unlocks.has(it.unlock_id):
 			_err("%s → '%s': unlock_id '%s' no existe en unlocks.json" % [F, id, it.unlock_id])
+		_check_portrait(F, id, it)
 		it["id"] = id
+
+## "retrato" es opcional (sin él, el marco sale vacío), pero si está tiene
+## que apuntar a una imagen que exista.
+func _check_portrait(file: String, id: String, d: Dictionary) -> void:
+	if not d.has("retrato"):
+		return
+	if typeof(d.retrato) != TYPE_STRING:
+		_err("%s → '%s': 'retrato' debe ser una ruta res://" % [file, id])
+	elif not ResourceLoader.exists(String(d.retrato)):
+		_err("%s → '%s': retrato '%s' no existe" % [file, id, d.retrato])
 
 func _validate_unlocks() -> void:
 	const F := "unlocks.json"
@@ -498,6 +509,7 @@ func _validate_balance() -> void:
 				md["base_hp"] = int(md.base_hp)
 			if _req(F, mid, md, "base_atk", TYPE_FLOAT):
 				md["base_atk"] = int(md.base_atk)
+			_check_portrait(F, mid, md)
 	for path: String in ["floors_per_run", "inventory_capacity", "soul_capacity", "coins.kill_base", "coins.coin_keep_on_death", "soul_drop.normal_base"]:
 		if bal(path) == null:
 			_err("%s: falta '%s'" % [F, path])

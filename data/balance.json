@@ -1,7 +1,7 @@
 {
 	"party": [
-		{"id": "bjorn", "name": "Bjorn", "base_hp": 20, "base_atk": 5},
-		{"id": "elena", "name": "Elena", "base_hp": 16, "base_atk": 4}
+		{"id": "bjorn", "name": "Bjorn", "base_hp": 20, "base_atk": 5, "retrato": "res://assets/portraits/heroes/bjorn.png"},
+		{"id": "elena", "name": "Elena", "base_hp": 16, "base_atk": 4, "retrato": "res://assets/portraits/heroes/elena.png"}
 	],
 	"stats_for_rank": {
 		"hp_base": 10,

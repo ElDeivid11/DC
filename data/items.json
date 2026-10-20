@@ -3,6 +3,7 @@
 		"nombre": "Poción menor",
 		"descripcion": "Cura 8 HP a un personaje. Se puede usar en combate o fuera.",
 		"tipo": "consumible",
+		"retrato": "res://assets/portraits/items/pocion_menor.png",
 		"efecto": {"tipo": "curar", "valor": 8, "en_combate": true, "fuera_combate": true},
 		"peso_aparicion": 10,
 		"unlock_id": null
@@ -11,6 +12,7 @@
 		"nombre": "Venda",
 		"descripcion": "Cura 4 HP a un personaje. Solo fuera de combate.",
 		"tipo": "consumible",
+		"retrato": "res://assets/portraits/items/venda.png",
 		"efecto": {"tipo": "curar", "valor": 4, "en_combate": false, "fuera_combate": true},
 		"peso_aparicion": 8,
 		"unlock_id": null
@@ -19,6 +21,7 @@
 		"nombre": "Antorcha vieja",
 		"descripcion": "Aleja la niebla durante el resto del piso.",
 		"tipo": "consumible",
+		"retrato": "res://assets/portraits/items/antorcha_vieja.png",
 		"efecto": {"tipo": "antorcha", "valor": 1, "en_combate": false, "fuera_combate": true},
 		"peso_aparicion": 5,
 		"unlock_id": null
@@ -27,6 +30,7 @@
 		"nombre": "Sello de Retiro",
 		"descripcion": "Permite retirarse de la expedición en cualquier momento. Se rompe al usarlo.",
 		"tipo": "consumible",
+		"retrato": "res://assets/portraits/items/sello_retiro.png",
 		"efecto": {"tipo": "sello_retiro", "valor": 1, "en_combate": false, "fuera_combate": true},
 		"peso_aparicion": 2,
 		"unlock_id": "u_piso_3"
@@ -35,6 +39,7 @@
 		"nombre": "Bomba de humo",
 		"descripcion": "Huida garantizada de un combate. No funciona contra jefes.",
 		"tipo": "consumible",
+		"retrato": "res://assets/portraits/items/bomba_humo.png",
 		"efecto": {"tipo": "huida_garantizada", "valor": 1, "en_combate": true, "fuera_combate": false},
 		"peso_aparicion": 4,
 		"unlock_id": "u_huir_3"
@@ -43,6 +48,7 @@
 		"nombre": "Amuleto de hueso",
 		"descripcion": "+1 capacidad de alma para un personaje durante la expedición.",
 		"tipo": "consumible",
+		"retrato": "res://assets/portraits/items/amuleto_hueso.png",
 		"efecto": {"tipo": "capacidad_alma", "valor": 1, "en_combate": false, "fuera_combate": true},
 		"peso_aparicion": 2,
 		"unlock_id": "u_esqueleto"
@@ -51,6 +57,7 @@
 		"nombre": "Poción mayor",
 		"descripcion": "Cura 20 HP a un personaje. Se puede usar en combate o fuera.",
 		"tipo": "consumible",
+		"retrato": "res://assets/portraits/items/pocion_mayor.png",
 		"efecto": {"tipo": "curar", "valor": 20, "en_combate": true, "fuera_combate": true},
 		"peso_aparicion": 4,
 		"unlock_id": "u_sin_pociones"
@@ -59,6 +66,7 @@
 		"nombre": "Talismán de hueso",
 		"descripcion": "Mientras lo lleves: +1 ataque a todo el equipo durante la expedición.",
 		"tipo": "pasivo",
+		"retrato": "res://assets/portraits/items/talisman_hueso.png",
 		"efecto": {"tipo": "ataque_run", "valor": 1, "en_combate": false, "fuera_combate": false},
 		"peso_aparicion": 3,
 		"unlock_id": "u_esqueletos"

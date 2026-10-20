@@ -589,8 +589,17 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 	var it := DataRegistry.get_item(id)
 	match String(it.efecto.tipo):
 		"curar":
+			# Solo se ofrece a los vivos que no tienen el HP completo: así no se
+			# gasta una poción en nada.
+			var hurt := GameState.alive_members().filter(func(pm: Dictionary) -> bool: return int(pm.hp) < GameState.member_max_hp(pm))
+			if hurt.is_empty():
+				UIToast.show(get_tree(), DataRegistry.t("run.nobody_hurt"))
+				return false
 			var m := await _ask_member(ui_parent, String(it.nombre), true)
 			if m.is_empty():
+				return false
+			if int(m.hp) >= GameState.member_max_hp(m):
+				UIToast.show(get_tree(), DataRegistry.t("run.member_full", [m.name]))
 				return false
 			var healed := GameState.heal_member(m, int(it.efecto.valor))
 			GameState.consume_item_at(index)
