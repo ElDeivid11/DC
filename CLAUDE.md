@@ -2,7 +2,7 @@
 
 Idioma de trabajo con el usuario (David): **español**. Código y nombres de identificadores: como ya están en el proyecto (mezcla; los datos de juego en español).
 
-**Empieza por `docs/GUIA_CLAUDE_CODE.md`**: lista completa y ordenada de todo lo que hay que hacer (incluye el mandato de dar a TODOS los menús y sistemas un diseño decente y consistente para poder hacer pruebas de juego).
+**Etapa actual: `docs/GUIA_ETAPA_2_PROGRESION.md`** (bug de giro de enemigos, XP/niveles, atributos con radar, espacios de alma por nivel, retratos e íconos, objetos fuera de combate). La etapa 1 (`docs/GUIA_CLAUDE_CODE.md`) está terminada; sirve de referencia. Antes, la guía decía: **Empieza por `docs/GUIA_CLAUDE_CODE.md`**: lista completa y ordenada de todo lo que hay que hacer (incluye el mandato de dar a TODOS los menús y sistemas un diseño decente y consistente para poder hacer pruebas de juego).
 
 ## Qué es el proyecto
 
@@ -23,6 +23,8 @@ La visión original (mazmorra mensual, impuesto anual con pena de muerte, 10 pis
 - Se mantiene: movimiento en grilla, combate por turnos en primera persona, estética PSX, sistema de almas por personaje, sistema de rangos (10 = más débil, 1 = más fuerte; monstruo rango N → alma rango N de esa especie).
 - Almas: cada alma = 1 activa (siempre) + 1 pasiva opcional + `stat_modifiers`. Son por personaje (no del grupo); recogerla es opcional y el jugador elige a quién.
 - Primera kill de una especie = bonus (bestiario persistente, ver abajo).
+- (20-oct-2026) **Experiencia y niveles por personaje**, con **6 atributos** (VIT, ATQ, HAB, RES, VEL, SUE) que se suben con puntos al subir de nivel y se muestran en un **radar hexagonal**. **+1 espacio de alma cada 2 niveles.** Primera kill de una especie = ×2 XP. Por defecto el nivel es de la run (no persiste); confirmar con David antes de cambiarlo.
+- (20-oct-2026) **Retratos** para personajes e **íconos** para objetos; **objetos usables fuera de combate** de forma visible.
 
 ### Propuestas NO confirmadas (preguntar antes de asumir)
 
@@ -32,7 +34,7 @@ Tienen un valor por defecto en `docs/GUIA_CLAUDE_CODE.md` §9, implementado en `
 - Alma garantizada en jefes; drop normal bajo (el 0,2% original no sirve en roguelike corto).
 - "Impuesto": % de monedas al volver al hub, o tributo por piso.
 - Equipo de 1–3 personajes.
-- Razas, crafting, eventos mensuales: diferidos, no implementar.
+- Razas, crafting, eventos mensuales: diferidos, no implementar. (Niveles/XP ya NO están diferidos.)
 - Alcance de persistencia del bestiario / bonus de primera kill.
 - Si se adopta `addons/dungeon_crawler_3d` para generación procedural.
 
