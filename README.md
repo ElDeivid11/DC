@@ -72,9 +72,9 @@ Todos se cambian en `data/balance.json` (y en los otros JSON de `data/`) sin toc
 | Curación entre pisos | 30% del HP máximo al bajar (`heal_between_floors_pct`) |
 | Élites | El esqueleto guardián (especie élite, desde el piso 2) y un 5% de variantes élite de los básicos (`enemies.elite_chance`): stats ×1,25, monedas ×2, ojos ámbar |
 | Enemigos dormidos | Esbirro 50%, ballestero 30% (`dormant_chance` en `species.json`); se levantan a 2 pasos (`enemies.wake_radius`) |
-| Jefes | Stats × 1,5; cada 3 turnos usan una habilidad que golpea a todo el equipo |
-| Enemigos por rango | HP 10 + 2,25 × (11 − rango), ATK 1 + 1,1 × (11 − rango), redondeado (`stats_for_rank`; algo más duros que en el prototipo para compensar los niveles) |
-| Niveles | Por expedición; tope 10. EXP por kill = 3 + (10 − rango), élite ×1,5, jefe ×4, para cada personaje en pie. Curva `leveling.xp_to_next` (24, 44, 68…). Al subir: 3 puntos, cura 10% y +1 alma cada 2 niveles |
+| Jefes | Stats × 1,5; cada 3 turnos usan una habilidad que golpea a todo el equipo. No se mueven: siempre se los pelea chocándolos (ataque sorpresa) |
+| Enemigos por rango | HP 7 + 3,3 × (11 − rango), ATK 0,4 + 1,35 × (11 − rango), redondeado (`stats_for_rank`). En los pisos 1–2 queda casi igual que en el prototipo; en los profundos, un ~30% más duro para compensar los niveles |
+| Niveles | Por expedición; tope 10. EXP por kill = 3 + (10 − rango), élite ×1,5, jefe ×4, para cada personaje en pie. Curva `leveling.xp_to_next` (24, 44, 76, 120…: los primeros niveles llegan rápido y los altos cuestan). Al subir: 3 puntos, cura 10% y +1 alma cada 2 niveles |
 | Atributos (por punto) | VIT +1 HP máx. · ATQ +1 ataque cada 4 · DEF −1 daño recibido cada 4 (un golpe nunca baja de 1) · ESP +1 a las habilidades de alma cada 2 · AGI +1,5% crítico y +1,5% huida (promedio del equipo) · SUE +0,5% almas y +2% monedas (suma del equipo) |
 | "Completar una run sin pociones" | Cuenta retirarse o ganar (no morir) |
 
@@ -84,11 +84,11 @@ Todos se cambian en `data/balance.json` (y en los otros JSON de `data/`) sin toc
 
 | Configuración | Piso medio | Victorias | Nivel al final |
 |---|---|---|---|
-| Sin mejoras | 2,5 | 2–5% | 3 |
-| Todo al máximo (reparto parejo) | 4,0 | ~22% | 5 |
-| Todo al máximo (solo VIT/ATQ) | 4,3 | ~43% | 5 |
+| Sin mejoras | 2,4–2,6 | 0–2% | 3 |
+| Todo al máximo (reparto parejo) | 4,5 | ~26% | 5 |
+| Todo al máximo (solo VIT/ATQ) | 4,7 | ~38% | 5 |
 
-Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 (lo mismo que antes de los niveles; un 14% muere en el piso 1), y con todo al máximo al 4–5 con riesgo real.
+Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 (lo mismo que antes de los niveles; el muro es el jefe del piso 2), y con todo al máximo al 4–5 con riesgo real. El simulador reproduce que a los jefes siempre se los pelea con ataque sorpresa (antes sorteaba cómo empezaba, y el juego real resultaba más fácil de lo que decía la tabla).
 
 ## Herramientas
 

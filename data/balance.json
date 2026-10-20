@@ -4,10 +4,10 @@
 		{"id": "elena", "name": "Elena", "base_hp": 16, "base_atk": 4, "retrato": "res://assets/portraits/heroes/elena.png"}
 	],
 	"stats_for_rank": {
-		"hp_base": 10,
-		"hp_per_rank": 2.25,
-		"atk_base": 1,
-		"atk_per_rank": 1.1,
+		"hp_base": 7,
+		"hp_per_rank": 3.3,
+		"atk_base": 0.4,
+		"atk_per_rank": 1.35,
 		"ability_per_rank": 1.5
 	},
 	"floors_per_run": 5,
@@ -16,7 +16,7 @@
 	"soul_capacity": 1,
 	"leveling": {
 		"max_level": 10,
-		"xp_to_next": [24, 44, 68, 96, 128, 164, 204, 248, 296],
+		"xp_to_next": [24, 44, 76, 120, 176, 244, 324, 416, 520],
 		"xp_kill_base": 3,
 		"xp_per_rank": 1.0,
 		"xp_elite_mult": 1.5,

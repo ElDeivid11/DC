@@ -5,7 +5,8 @@ extends HBoxContainer
 ## (− / + por estadística). Lo repartido queda pendiente (contorno verde en el
 ## hexágono) hasta Confirmar, que lo aplica con GameState.apply_points().
 ## Cada personaje guarda su reparto pendiente aunque se cambie de personaje.
-## Confirmar / Deshacer quedan bajo la lista de personajes.
+## Confirmar / Deshacer quedan bajo la lista de personajes. Con poco ancho
+## (escala de UI alta) el hexágono va arriba de las filas en vez de al lado.
 
 signal applied
 
@@ -23,6 +24,7 @@ var minus_buttons: Dictionary = {} # stat → UIButton
 var plus_buttons: Dictionary = {} # stat → UIButton
 var confirm_btn: UIButton
 var undo_btn: UIButton
+var mid: BoxContainer
 var current := 0
 ## Reparto sin confirmar: {member_id: {stat: puntos}}.
 var pending: Dictionary = {}
@@ -66,9 +68,10 @@ func _init() -> void:
 	souls_label.theme_type_variation = "SoulLabel"
 	info.add_child(souls_label)
 	points_label = Label.new()
+	points_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(points_label)
 
-	var mid := HBoxContainer.new()
+	mid = BoxContainer.new()
 	mid.add_theme_constant_override("separation", UIStyle.SPACE * 4)
 	detail.body.add_child(mid)
 	radar = UIStatRadar.new(236)
@@ -117,12 +120,23 @@ func _init() -> void:
 	undo_btn = UIButton.make(DataRegistry.t("attr.undo"), _undo)
 	list.add_child(confirm_btn)
 	list.add_child(undo_btn)
+	# Con teclado/mando, ↓ desde la última fila llega a Confirmar y ↑ vuelve a
+	# la grilla (pasar por la lista cambiaría de personaje al enfocarlo).
+	var last_stat := RunRules.STATS[RunRules.STATS.size() - 1]
+	for b: UIButton in [minus_buttons[last_stat], plus_buttons[last_stat]]:
+		b.focus_neighbor_bottom = b.get_path_to(confirm_btn)
+	confirm_btn.focus_neighbor_top = confirm_btn.get_path_to(plus_buttons[last_stat])
 	var note := Label.new()
 	note.theme_type_variation = "DetailLabel"
 	note.text = DataRegistry.t("attr.party_note")
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	list.add_child(note)
 	_select(_first_with_points())
+
+func _ready() -> void:
+	# Las filas necesitan unos 1000 px al lado del hexágono: con la escala de UI
+	# al 150% (853 px de ancho útil) se apilan.
+	mid.vertical = get_viewport_rect().size.x < 1150.0
 
 ## Primer personaje con puntos sin repartir (o el primero).
 func _first_with_points() -> int:
@@ -168,6 +182,10 @@ func _select(index: int) -> void:
 	detail.set_title(String(m.name))
 	portrait.set_texture(UIPortrait.hero_texture(String(m.id)))
 	portrait.set_dimmed(int(m.hp) <= 0)
+	# ← desde la grilla vuelve al personaje elegido (sin cambiar de personaje).
+	for id in RunRules.STATS:
+		var minus: UIButton = minus_buttons[id]
+		minus.focus_neighbor_left = minus.get_path_to(member_buttons[current])
 	_refresh()
 
 func _refresh() -> void:
@@ -300,7 +318,7 @@ func _effect(id: String, v: int) -> String:
 		"esp":
 			return DataRegistry.t("stats.esp.effect", [RunRules.stat_esp(v)])
 		"agi":
-			return DataRegistry.t("stats.agi.effect", [roundi(RunRules.stat_crit(v) * 100.0)])
+			return DataRegistry.t("stats.agi.effect", [_num(RunRules.stat_crit(v) * 100.0)])
 		"sue":
 			return DataRegistry.t("stats.sue.effect", [RunRules.stat_soul(v) * 100.0, roundi(RunRules.stat_coins(v) * 100.0)])
 	return ""

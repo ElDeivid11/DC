@@ -430,7 +430,12 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	if DebugTools.force_soul_drop or GameState.rng.randf() < chance:
 		soul = DataRegistry.make_soul(String(e.soul_id), rank, String(e.display_name))
 
-	var coin_preview := roundi(RunRules.kill_coins(rank, kind, GameState.floor_n) * (1.0 + GameState.party_coin_bonus()))
+	# El bonus de monedas (pasivas + SUE) se fija al empezar: si alguien con SUE
+	# cae en el combate, el resumen y lo que se cobra siguen siendo lo mismo.
+	var coin_bonus := GameState.party_coin_bonus()
+	e["coin_bonus"] = coin_bonus
+	var coin_preview := roundi(RunRules.kill_coins(rank, kind, GameState.floor_n) * (1.0 + coin_bonus))
+	var xp := RunRules.kill_xp(rank, kind)
 	var first_kill := not MetaState.has_killed(String(e.species_id)) and not GameState.kills_by_species.has(e.species_id)
 
 	var roster: Array = []
@@ -439,6 +444,10 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 			"id": m.id, "name": m.name, "hp": int(m.hp), "max_hp": GameState.member_max_hp(m),
 			"atk": GameState.member_atk(m), "souls": (m.souls as Array).duplicate(true),
 			"soul_capacity": GameState.member_soul_capacity(m),
+			# Si gana y sigue en pie, recibe la EXP de esta kill: nivel y almas con
+			# los que queda (para no marcarlo "lleno" si la victoria le abre lugar).
+			"level": int(m.level), "level_win": RunRules.level_after_xp(int(m.level), int(m.xp), xp),
+			"soul_capacity_win": int(m.soul_capacity) + RunRules.level_soul_slots(RunRules.level_after_xp(int(m.level), int(m.xp), xp)),
 			"def": GameState.member_def(m), "ability_bonus": GameState.member_ability_bonus(m),
 			"crit_bonus": GameState.member_crit_bonus(m),
 		})
@@ -456,7 +465,7 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	var flee := RunRules.flee_chance(rank, GameState.floor_n) + RunRules.stat_flee(roundi(GameState.party_stat_average("agi")))
 	combat.set("flee_chance", clampf(flee, DataRegistry.bal_f("flee.min", 0.1), DataRegistry.bal_f("flee.max", 0.9)))
 	combat.set("soul_drop", soul)
-	combat.set("reward_preview", {"coins": coin_preview, "xp": RunRules.kill_xp(rank, kind), "first_kill": first_kill, "first_kill_bonus": RunRules.first_kill_bonus(int(species.get("rank", rank))), "species_name": String(species.get("display_name", e.display_name))})
+	combat.set("reward_preview", {"coins": coin_preview, "xp": xp, "first_kill": first_kill, "first_kill_bonus": RunRules.first_kill_bonus(int(species.get("rank", rank))), "species_name": String(species.get("display_name", e.display_name))})
 	combat.set("rng", GameState.rng)
 	combat.set("god_mode", DebugTools.god_mode)
 	combat.set("one_hit", DebugTools.one_hit)
@@ -511,11 +520,17 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 	_frame_combat_camera(false)
 	match outcome:
 		"victory":
-			GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind))
+			GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind), float(e.get("coin_bonus", -1.0)))
 			_grant_xp(RunRules.kill_xp(int(e.rank), String(e.kind)))
 			var pick: Dictionary = result.soul_pick
 			if not pick.is_empty():
-				GameState.add_soul(String(pick.member_id), pick.soul, int(pick.replace_index))
+				# Si después de la EXP le quedó lugar, el alma se suma en vez de
+				# pisar otra (red de seguridad por si cayó y no subió lo previsto).
+				var picked := GameState.get_member(String(pick.member_id))
+				var ri := int(pick.replace_index)
+				if ri >= 0 and (picked.souls as Array).size() < GameState.member_soul_capacity(picked):
+					ri = -1
+				GameState.add_soul(String(pick.member_id), pick.soul, ri)
 				EventBus.hud_message.emit(DataRegistry.t("run.soul_taken", [GameState.get_member(String(pick.member_id)).name, pick.soul.active.name]))
 			_dispose_corpse(e)
 			fd.enemies.erase(e)
@@ -611,7 +626,7 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 				return false
 			m["soul_capacity"] = int(m.soul_capacity) + int(it.efecto.valor)
 			GameState.consume_item_at(index)
-			UIToast.show(get_tree(), DataRegistry.t("run.capacity_up", [m.name, int(m.soul_capacity)]), "soul")
+			UIToast.show(get_tree(), DataRegistry.t("run.capacity_up", [m.name, GameState.member_soul_capacity(m)]), "soul")
 		"sello_retiro":
 			var d := UIConfirmDialog.ask(ui_parent, String(it.nombre), DataRegistry.t("run.seal_text"), DataRegistry.t("exit.retreat"), DataRegistry.t("ui.cancel"))
 			if not await d.answered:

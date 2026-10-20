@@ -18,13 +18,14 @@ extends Node
 ##
 ## Para probar valores sin tocar balance.json (se pueden correr varias a la vez):
 ##   godot --headless --path . res://tools/balance_sim.tscn -- \
-##     --set=leveling.heal_on_level_pct=0.1 --set='leveling.xp_to_next=[20,30,40]'
-## (el valor se lee como JSON).
+##     --set=leveling.heal_on_level_pct=0.1 --set='leveling.xp_to_next=[20,30,40,55,70,90,110,135,160]'
+## (el valor se lee como JSON; xp_to_next necesita max_level − 1 valores).
 
 const RUNS := 300
 ## Fracción de enemigos normales del piso que el jugador termina peleando.
 const ENCOUNTER_RATE := 0.75
-## Cómo empiezan los combates (chocar primero / normal / emboscada).
+## Cómo empiezan los combates (chocar primero / normal / emboscada). Los
+## jefes siempre empiezan con sorpresa (ver _fight).
 const START_SURPRISE := 0.6
 const START_AMBUSH := 0.15
 
@@ -163,6 +164,10 @@ func _fight(rank: int, kind: String, soul_id: String, _floor_n: int) -> bool:
 	var eatk := int(stats.atk)
 	var r := rng.randf()
 	var mode := "surprise" if r < START_SURPRISE else ("ambush" if r < START_SURPRISE + START_AMBUSH else "normal")
+	if kind == RunRules.BOSS:
+		# En el juego el jefe no se mueve (RunController._enemies_act lo salta):
+		# solo se lo pelea chocándolo, o sea siempre con ataque sorpresa.
+		mode = "surprise"
 	var surprise := mode == "surprise"
 	var enemy_turns := 0
 	if mode == "ambush":
@@ -260,3 +265,9 @@ func _override(spec: String) -> void:
 		d = d[parts[i]]
 	d[parts[parts.size() - 1]] = value
 	print("balance_sim: %s = %s" % [spec.substr(0, eq), value])
+	# La misma regla que DataRegistry._validate_balance: una curva corta
+	# funcionaría como un tope de nivel escondido.
+	var curve: Variant = DataRegistry.bal("leveling.xp_to_next")
+	if typeof(curve) != TYPE_ARRAY or (curve as Array).size() < RunRules.max_level() - 1:
+		printerr("balance_sim: leveling.xp_to_next necesita al menos %d valores (max_level − 1)" % (RunRules.max_level() - 1))
+		get_tree().quit(1)

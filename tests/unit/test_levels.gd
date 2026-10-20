@@ -55,7 +55,22 @@ func test_repartir_puntos() -> void:
 	check(GameState.apply_points(m, {"vit": 2, "atq": 1}), "reparto válido")
 	eq(int(m.points), 0, "se gastaron los 3")
 	eq(GameState.member_max_hp(m), hp_before + RunRules.stat_hp(2), "VIT sube el HP máximo")
-	eq(GameState.member_atk(m), atk_before + RunRules.stat_atk(1), "ATQ sube el ataque")
+	eq(GameState.member_atk(m), atk_before + RunRules.stat_atk(1), "ATQ suma por escalones")
+	# Con suficientes puntos de ATQ el ataque sube de verdad (no depende de
+	# cómo redondee la fórmula).
+	m["points"] = 8
+	check(GameState.apply_points(m, {"atq": 8}), "reparto de ATQ")
+	check(GameState.member_atk(m) > atk_before, "ATQ sube el ataque")
+
+func test_nivel_proyectado_igual_a_add_xp() -> void:
+	# El combate usa level_after_xp para saber si la victoria abre un espacio
+	# de alma: tiene que dar lo mismo que add_xp de verdad.
+	for gained: int in [0, 1, RunRules.xp_to_next(1), RunRules.xp_to_next(1) + RunRules.xp_to_next(2) + 5, 100000]:
+		var m := _member()
+		m["xp"] = 3
+		var expected := RunRules.level_after_xp(int(m.level), int(m.xp), gained)
+		GameState.add_xp(gained)
+		eq(int(m.level), expected, "EXP %d" % gained)
 
 func test_exp_por_enemigo() -> void:
 	check(RunRules.kill_xp(9, RunRules.NORMAL) < RunRules.kill_xp(5, RunRules.NORMAL), "más rango, más EXP")

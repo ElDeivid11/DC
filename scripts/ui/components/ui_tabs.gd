@@ -52,7 +52,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		select(posmod(tab_bar.current_tab + step, _pages.size()))
 
 func _on_tab_changed(index: int) -> void:
+	# Si el foco estaba dentro de la página que se oculta, Godot lo suelta y
+	# nadie lo recupera (teclado y mando quedarían sin foco): vuelve al TabBar.
+	var focused := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	var lost := focused != null and content.is_ancestor_of(focused)
 	for i in _pages.size():
 		_pages[i].visible = i == index
+	if lost:
+		tab_bar.grab_focus()
 	SceneRouter.play_ui("hover")
 	tab_changed.emit(index)

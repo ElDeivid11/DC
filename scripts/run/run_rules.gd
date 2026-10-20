@@ -96,24 +96,36 @@ static func xp_to_next(level: int) -> int:
 		return 0
 	return int(table[level - 1])
 
+## Nivel al que llega alguien de `level` con `xp` acumulada si gana `gained`
+## (el mismo bucle que GameState.add_xp, sin tocar nada). Lo usa el combate
+## para saber si la victoria le abre un espacio de alma antes de elegirla.
+static func level_after_xp(level: int, xp: int, gained: int) -> int:
+	var lvl := level
+	var pool := xp + gained
+	while xp_to_next(lvl) > 0 and pool >= xp_to_next(lvl):
+		pool -= xp_to_next(lvl)
+		lvl += 1
+	return lvl
+
 ## Almas extra por nivel: +1 cada `soul_slot_every` niveles (nivel 2, 4, 6…).
 static func level_soul_slots(level: int) -> int:
 	var every := DataRegistry.bal_i("leveling.soul_slot_every", 2)
 	return floori(level / float(every)) if every > 0 else 0
 
-## Efecto de los puntos de una estadística. Los totales se redondean (los
-## valores por punto pueden ser fraccionarios: 3 puntos de ATQ = +1 de ataque).
+## Efecto de los puntos de una estadística. Los valores por punto pueden ser
+## fraccionarios: ATQ, DEF y ESP van por escalones (hacia abajo: con 0.25, +1
+## cada 4 puntos, como dice Atributos); VIT se redondea.
 static func stat_hp(vit: int) -> int:
 	return roundi(vit * DataRegistry.bal_f("stats.vit_hp", 1.0))
 
 static func stat_atk(atq: int) -> int:
-	return roundi(atq * DataRegistry.bal_f("stats.atq_atk", 0.34))
+	return floori(atq * DataRegistry.bal_f("stats.atq_atk", 0.25))
 
 static func stat_def(def: int) -> int:
 	return floori(def * DataRegistry.bal_f("stats.def_reduction", 0.25))
 
 static func stat_esp(esp: int) -> int:
-	return roundi(esp * DataRegistry.bal_f("stats.esp_ability", 0.5))
+	return floori(esp * DataRegistry.bal_f("stats.esp_ability", 0.5))
 
 static func stat_crit(agi: int) -> float:
 	return agi * DataRegistry.bal_f("stats.agi_crit", 0.015)

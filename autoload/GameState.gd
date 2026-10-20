@@ -333,13 +333,16 @@ func register_seen(species_id: String) -> void:
 
 ## Registra una kill: monedas (con pasivas de codicia), contadores y señales.
 ## Devuelve las monedas ganadas.
-func register_kill(species_id: String, rank: int, kind: String) -> int:
+## coin_bonus: el bonus de monedas fijado al empezar el combate (el mismo que
+## mostró el resumen); -1 = calcularlo ahora con el equipo vivo.
+func register_kill(species_id: String, rank: int, kind: String, coin_bonus := -1.0) -> int:
 	var first_time := not MetaState.has_killed(species_id) and not kills_by_species.has(species_id)
 	kills_by_species[species_id] = int(kills_by_species.get(species_id, 0)) + 1
 	kills_total += 1
 	seen_species[species_id] = true
 	var coins := RunRules.kill_coins(rank, kind, floor_n)
-	coins = roundi(float(coins) * (1.0 + party_coin_bonus()))
+	var bonus := coin_bonus if coin_bonus >= 0.0 else party_coin_bonus()
+	coins = roundi(float(coins) * (1.0 + bonus))
 	add_coins(coins, "boss" if kind == RunRules.BOSS else "kills")
 	EventBus.enemy_killed.emit(species_id, first_time)
 	if kind == RunRules.BOSS:

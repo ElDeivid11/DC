@@ -33,8 +33,9 @@ signal enemy_defeated
 ## {name, rank, hp, atk, ability_damage, ability_name, kind, species_id}
 var enemy_data := {"name": "???", "rank": 10, "hp": 10, "atk": 1, "ability_damage": 1, "ability_name": "", "kind": "normal", "species_id": ""}
 ## Copia del equipo: [{id, name, hp, max_hp, atk, souls, soul_capacity,
-## def, ability_bonus, crit_bonus}] (los tres últimos salen de los puntos de
-## estadística: DEF, ESP y AGI).
+## def, ability_bonus, crit_bonus, level, level_win, soul_capacity_win}].
+## def/ability_bonus/crit_bonus salen de los puntos de DEF, ESP y AGI;
+## level_win y soul_capacity_win, de cómo queda si gana (la EXP de esta kill).
 var party_roster: Array = []
 ## Copia del inventario (ids); se usan solo los que sirven en combate.
 var inventory: Array[String] = []
@@ -116,6 +117,8 @@ func _build_party() -> void:
 			"def": int(m.get("def", 0)),
 			"ability_bonus": int(m.get("ability_bonus", 0)),
 			"crit_bonus": float(m.get("crit_bonus", 0.0)),
+			"level": int(m.get("level", 1)),
+			"level_win": int(m.get("level_win", m.get("level", 1))),
 		})
 
 func _bal(path: String, default: float) -> float:
@@ -645,6 +648,9 @@ func _finish(victory: bool) -> void:
 	var lines: Array[String] = [DataRegistry.t("combat.coins_gained", [UIFormat.coins(int(reward_preview.coins))])]
 	if int(reward_preview.get("xp", 0)) > 0:
 		lines.append(DataRegistry.t("combat.xp_gained", [int(reward_preview.xp)]))
+		for p: Dictionary in party:
+			if int(p.hp) > 0 and int(p.level_win) > int(p.level):
+				lines.append(DataRegistry.t("combat.level_up_line", [p.name, int(p.level_win)]))
 	if reward_preview.get("first_kill", false):
 		lines.append(DataRegistry.t("combat.first_kill", [String(reward_preview.get("species_name", enemy.name)), UIFormat.coins(int(reward_preview.first_kill_bonus))]))
 	if not soul_drop.is_empty():
@@ -728,7 +734,7 @@ func _choose_member() -> void:
 	var buttons: Array = []
 	for m: Dictionary in party_roster:
 		var souls: Array = m.souls
-		var cap := int(m.get("soul_capacity", 1))
+		var cap := _capacity_after_win(m)
 		var full := souls.size() >= cap
 		var label := DataRegistry.t("combat.soul_member", [m.name, souls.size(), cap])
 		if full:
@@ -748,6 +754,15 @@ func _choose_member() -> void:
 	buttons.append(back)
 	UIFocus.chain_vertical(buttons)
 	(buttons[0] as Control).call_deferred("grab_focus")
+
+## Capacidad de almas con la que queda al ganar: quien sigue en pie recibe la
+## EXP de esta kill y, si llega a un nivel par, tiene un espacio más.
+func _capacity_after_win(m: Dictionary) -> int:
+	var cap := int(m.get("soul_capacity", 1))
+	for p: Dictionary in party:
+		if String(p.id) == String(m.id) and int(p.hp) > 0:
+			cap = int(m.get("soul_capacity_win", cap))
+	return cap
 
 ## Personaje lleno: reemplazar una de sus almas (se pierde) o descartar la nueva.
 func _choose_replacement(member_id: String) -> void:
