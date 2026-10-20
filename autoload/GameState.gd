@@ -7,10 +7,12 @@ extends Node
 ## escribe.
 ##
 ## Personaje (party[i]):
-##   {id, name, base_hp, base_atk, hp, souls: [], soul_capacity}
+##   {id, name, base_hp, base_atk, hp, souls: [], soul_capacity,
+##    level, xp, points, stats: {vit, atq, def, esp, agi, sue}}
 ##   base_hp/base_atk ya incluyen las mejoras de meta (se aplican al empezar).
-##   max_hp/ataque efectivos = base + modificadores de sus almas + bonus de
-##   la run (talismanes): member_max_hp() / member_atk().
+##   max_hp/ataque efectivos = base + modificadores de sus almas + puntos de
+##   estadística + bonus de la run (talismanes): member_max_hp() / member_atk().
+##   Nivel, EXP y estadísticas son de la run: cada expedición empieza en 1.
 
 var active := false
 var ended := false
@@ -94,6 +96,10 @@ func new_run(p_seed: int, p_test_room := false) -> void:
 			"base_atk": int(md.base_atk) + atk_bonus,
 			"souls": [],
 			"soul_capacity": capacity,
+			"level": 1,
+			"xp": 0,
+			"points": 0,
+			"stats": empty_stats(),
 		}
 		member["hp"] = member.base_hp
 		party.append(member)
@@ -132,7 +138,7 @@ func end_run(p_outcome: String, p_cause := "") -> Dictionary:
 func snapshot() -> Dictionary:
 	var party_summary: Array = []
 	for m: Dictionary in party:
-		party_summary.append({"name": m.name, "hp": m.hp, "max_hp": member_max_hp(m), "souls": (m.souls as Array).size()})
+		party_summary.append({"name": m.name, "hp": m.hp, "max_hp": member_max_hp(m), "souls": (m.souls as Array).size(), "level": int(m.get("level", 1))})
 	return {
 		"outcome": outcome,
 		"cause": cause,
@@ -164,21 +170,104 @@ func get_member(member_id: String) -> Dictionary:
 	return {}
 
 func member_max_hp(m: Dictionary) -> int:
-	var hp := int(m.base_hp)
+	var hp := int(m.base_hp) + RunRules.stat_hp(member_stat(m, "vit"))
 	for soul: Dictionary in m.souls:
 		var mods: Dictionary = soul.get("stat_modifiers", {})
 		hp += int(mods.get("hp", 0)) + int(mods.get("max_hp", 0))
 	return hp
 
 func member_atk(m: Dictionary) -> int:
-	var atk := int(m.base_atk) + run_atk_bonus()
+	var atk := int(m.base_atk) + run_atk_bonus() + RunRules.stat_atk(member_stat(m, "atq"))
 	for soul: Dictionary in m.souls:
 		var mods: Dictionary = soul.get("stat_modifiers", {})
 		atk += int(mods.get("atk", 0))
 	return atk
 
+## Capacidad de almas: la base (+ Amuleto de hueso) + 1 cada 2 niveles.
 func member_soul_capacity(m: Dictionary) -> int:
-	return int(m.soul_capacity)
+	return int(m.soul_capacity) + RunRules.level_soul_slots(int(m.get("level", 1)))
+
+# --- Niveles y estadísticas ---------------------------------------------------------
+
+func empty_stats() -> Dictionary:
+	var s := {}
+	for id in RunRules.STATS:
+		s[id] = 0
+	return s
+
+func member_stat(m: Dictionary, stat: String) -> int:
+	var s: Dictionary = m.get("stats", {})
+	return int(s.get(stat, 0))
+
+## Daño que resta DEF a cada golpe recibido.
+func member_def(m: Dictionary) -> int:
+	return RunRules.stat_def(member_stat(m, "def"))
+
+## Daño extra de las habilidades de alma (ESP).
+func member_ability_bonus(m: Dictionary) -> int:
+	return RunRules.stat_esp(member_stat(m, "esp"))
+
+## Probabilidad extra de crítico (AGI).
+func member_crit_bonus(m: Dictionary) -> float:
+	return RunRules.stat_crit(member_stat(m, "agi"))
+
+## Suma de una estadística entre el equipo vivo (AGI para huir, SUE para
+## almas y monedas: son del grupo, no de un golpe).
+func party_stat_total(stat: String) -> int:
+	var total := 0
+	for m: Dictionary in alive_members():
+		total += member_stat(m, stat)
+	return total
+
+## Promedio de una estadística entre el equipo vivo.
+func party_stat_average(stat: String) -> float:
+	var alive := alive_members()
+	return float(party_stat_total(stat)) / alive.size() if not alive.is_empty() else 0.0
+
+## Suma EXP a cada personaje vivo. Devuelve las subidas de nivel
+## [{member_id, name, level, slots}] (slots = almas extra que ganó).
+func add_xp(amount: int) -> Array:
+	var ups: Array = []
+	for m: Dictionary in alive_members():
+		m["xp"] = int(m.xp) + amount
+		while RunRules.xp_to_next(int(m.level)) > 0 and int(m.xp) >= RunRules.xp_to_next(int(m.level)):
+			m["xp"] = int(m.xp) - RunRules.xp_to_next(int(m.level))
+			var old_slots := member_soul_capacity(m)
+			m["level"] = int(m.level) + 1
+			m["points"] = int(m.points) + DataRegistry.bal_i("leveling.points_per_level", 3)
+			heal_member(m, ceili(member_max_hp(m) * DataRegistry.bal_f("leveling.heal_on_level_pct", 0.0)))
+			ups.append({"member_id": m.id, "name": m.name, "level": int(m.level), "slots": member_soul_capacity(m) - old_slots})
+			EventBus.level_up.emit(String(m.id), int(m.level))
+		if RunRules.xp_to_next(int(m.level)) == 0:
+			m["xp"] = 0 # nivel máximo: la EXP ya no se acumula
+	return ups
+
+## Reparte puntos: alloc = {stat: cantidad}. Falla (sin tocar nada) si pide
+## más puntos de los que tiene o una estadística que no existe. Lo que suba
+## VIT también sube el HP actual.
+func apply_points(m: Dictionary, alloc: Dictionary) -> bool:
+	var total := 0
+	for stat: Variant in alloc.keys():
+		if not RunRules.STATS.has(String(stat)) or int(alloc[stat]) < 0:
+			return false
+		total += int(alloc[stat])
+	if total <= 0 or total > int(m.points):
+		return false
+	var old_max := member_max_hp(m)
+	var s: Dictionary = m.stats
+	for stat: Variant in alloc.keys():
+		s[String(stat)] = int(s.get(String(stat), 0)) + int(alloc[stat])
+	m["points"] = int(m.points) - total
+	if int(m.hp) > 0:
+		m["hp"] = mini(int(m.hp) + maxi(member_max_hp(m) - old_max, 0), member_max_hp(m))
+	return true
+
+## Bonus de monedas por kill del grupo: pasivas de codicia + SUE.
+func party_coin_bonus() -> float:
+	return party_passive_total("coin_bonus_pct") + RunRules.stat_coins(party_stat_total("sue"))
+
+func points_pending() -> bool:
+	return party.any(func(m: Dictionary) -> bool: return int(m.get("points", 0)) > 0)
 
 func alive_members() -> Array:
 	return party.filter(func(m: Dictionary) -> bool: return int(m.hp) > 0)
@@ -250,7 +339,7 @@ func register_kill(species_id: String, rank: int, kind: String) -> int:
 	kills_total += 1
 	seen_species[species_id] = true
 	var coins := RunRules.kill_coins(rank, kind, floor_n)
-	coins = roundi(float(coins) * (1.0 + party_passive_total("coin_bonus_pct")))
+	coins = roundi(float(coins) * (1.0 + party_coin_bonus()))
 	add_coins(coins, "boss" if kind == RunRules.BOSS else "kills")
 	EventBus.enemy_killed.emit(species_id, first_time)
 	if kind == RunRules.BOSS:

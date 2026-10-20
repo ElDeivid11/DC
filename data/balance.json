@@ -14,6 +14,27 @@
 	"start_items": ["pocion_menor"],
 	"inventory_capacity": 8,
 	"soul_capacity": 1,
+	"leveling": {
+		"max_level": 10,
+		"xp_to_next": [12, 22, 34, 48, 64, 82, 102, 124, 148],
+		"xp_kill_base": 3,
+		"xp_per_rank": 1.0,
+		"xp_elite_mult": 1.5,
+		"xp_boss_mult": 4.0,
+		"points_per_level": 3,
+		"soul_slot_every": 2,
+		"heal_on_level_pct": 0.25
+	},
+	"stats": {
+		"vit_hp": 1.0,
+		"atq_atk": 0.34,
+		"def_reduction": 0.25,
+		"esp_ability": 0.5,
+		"agi_crit": 0.015,
+		"agi_flee": 0.015,
+		"sue_soul": 0.005,
+		"sue_coins": 0.02
+	},
 	"heal_between_floors_pct": 0.3,
 	"coins": {
 		"kill_base": 11,

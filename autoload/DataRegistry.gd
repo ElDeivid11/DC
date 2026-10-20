@@ -501,6 +501,17 @@ func _validate_balance() -> void:
 	for path: String in ["floors_per_run", "inventory_capacity", "soul_capacity", "coins.kill_base", "coins.coin_keep_on_death", "soul_drop.normal_base"]:
 		if bal(path) == null:
 			_err("%s: falta '%s'" % [F, path])
+	for path: String in ["leveling.max_level", "leveling.points_per_level", "leveling.soul_slot_every", "leveling.xp_kill_base",
+			"stats.vit_hp", "stats.atq_atk", "stats.def_reduction", "stats.esp_ability", "stats.agi_crit", "stats.agi_flee", "stats.sue_soul", "stats.sue_coins"]:
+		if bal(path) == null:
+			_err("%s: falta '%s'" % [F, path])
+	var curve: Variant = bal("leveling.xp_to_next")
+	if typeof(curve) != TYPE_ARRAY or (curve as Array).size() < bal_i("leveling.max_level", 10) - 1:
+		_err("%s: leveling.xp_to_next debe ser una lista con la EXP de cada nivel (max_level − 1 valores)" % F)
+	else:
+		var c: Array = curve
+		for i in c.size():
+			c[i] = maxi(1, int(c[i]))
 	for it: Variant in bal("start_items", []):
 		if not items.has(String(it)):
 			_err("%s: start_items incluye '%s', que no existe" % [F, it])

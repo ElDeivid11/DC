@@ -30,8 +30,13 @@ static func show(tree: SceneTree, text: String, kind := "info") -> void:
 			l.theme_type_variation = "SoulLabel"
 	panel.add_child(l)
 	_stack.add_child(panel)
+	# remove_child primero: queue_free solo no saca al nodo en el momento, la
+	# cuenta no baja y el bucle no terminaba nunca (con 5 avisos a la vez se
+	# llenaba la memoria).
 	while _stack.get_child_count() > 4:
-		_stack.get_child(0).queue_free()
+		var oldest := _stack.get_child(0)
+		_stack.remove_child(oldest)
+		oldest.queue_free()
 	panel.modulate.a = 0.0
 	var tw := panel.create_tween()
 	tw.tween_property(panel, "modulate:a", 1.0, UIStyle.TRANSITION)

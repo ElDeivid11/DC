@@ -425,11 +425,12 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	var species := DataRegistry.get_species(String(e.species_id))
 
 	var soul: Dictionary = {}
-	var chance := RunRules.soul_drop_chance(rank, kind, MetaState.upgrade_bonus("soul_chance_pct"))
+	# Sabiduría (mejora) y SUE del equipo suman puntos porcentuales.
+	var chance := RunRules.soul_drop_chance(rank, kind, MetaState.upgrade_bonus("soul_chance_pct") + 100.0 * RunRules.stat_soul(GameState.party_stat_total("sue")))
 	if DebugTools.force_soul_drop or GameState.rng.randf() < chance:
 		soul = DataRegistry.make_soul(String(e.soul_id), rank, String(e.display_name))
 
-	var coin_preview := roundi(RunRules.kill_coins(rank, kind, GameState.floor_n) * (1.0 + GameState.party_passive_total("coin_bonus_pct")))
+	var coin_preview := roundi(RunRules.kill_coins(rank, kind, GameState.floor_n) * (1.0 + GameState.party_coin_bonus()))
 	var first_kill := not MetaState.has_killed(String(e.species_id)) and not GameState.kills_by_species.has(e.species_id)
 
 	var roster: Array = []
@@ -438,6 +439,8 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 			"id": m.id, "name": m.name, "hp": int(m.hp), "max_hp": GameState.member_max_hp(m),
 			"atk": GameState.member_atk(m), "souls": (m.souls as Array).duplicate(true),
 			"soul_capacity": GameState.member_soul_capacity(m),
+			"def": GameState.member_def(m), "ability_bonus": GameState.member_ability_bonus(m),
+			"crit_bonus": GameState.member_crit_bonus(m),
 		})
 
 	combat = COMBAT_SCRIPT.new()
@@ -449,9 +452,11 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	combat.set("party_roster", roster)
 	combat.set("inventory", GameState.inventory.duplicate())
 	combat.set("start_mode", mode)
-	combat.set("flee_chance", RunRules.flee_chance(rank, GameState.floor_n))
+	# AGI promedio del equipo vivo facilita huir (dentro de los topes de balance).
+	var flee := RunRules.flee_chance(rank, GameState.floor_n) + RunRules.stat_flee(roundi(GameState.party_stat_average("agi")))
+	combat.set("flee_chance", clampf(flee, DataRegistry.bal_f("flee.min", 0.1), DataRegistry.bal_f("flee.max", 0.9)))
 	combat.set("soul_drop", soul)
-	combat.set("reward_preview", {"coins": coin_preview, "first_kill": first_kill, "first_kill_bonus": RunRules.first_kill_bonus(int(species.get("rank", rank))), "species_name": String(species.get("display_name", e.display_name))})
+	combat.set("reward_preview", {"coins": coin_preview, "xp": RunRules.kill_xp(rank, kind), "first_kill": first_kill, "first_kill_bonus": RunRules.first_kill_bonus(int(species.get("rank", rank))), "species_name": String(species.get("display_name", e.display_name))})
 	combat.set("rng", GameState.rng)
 	combat.set("god_mode", DebugTools.god_mode)
 	combat.set("one_hit", DebugTools.one_hit)
@@ -507,6 +512,7 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 	match outcome:
 		"victory":
 			GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind))
+			_grant_xp(RunRules.kill_xp(int(e.rank), String(e.kind)))
 			var pick: Dictionary = result.soul_pick
 			if not pick.is_empty():
 				GameState.add_soul(String(pick.member_id), pick.soul, int(pick.replace_index))
@@ -682,8 +688,21 @@ func debug_kill_front() -> void:
 		return
 	_on_combat_ended_debug(e)
 
+## EXP para el equipo vivo y aviso de cada subida de nivel (los puntos se
+## reparten en Estado → Atributos).
+func _grant_xp(xp: int) -> void:
+	for up: Dictionary in GameState.add_xp(xp):
+		var text := DataRegistry.t("run.level_up", [up.name, int(up.level), DataRegistry.bal_i("leveling.points_per_level", 3)])
+		if int(up.slots) > 0:
+			text += " " + DataRegistry.t("run.level_up_slot")
+		UIToast.show(get_tree(), text, "good")
+		SceneRouter.play_ui("coin")
+	if hud:
+		hud.refresh()
+
 func _on_combat_ended_debug(e: Dictionary) -> void:
 	GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind))
+	_grant_xp(RunRules.kill_xp(int(e.rank), String(e.kind)))
 	_dispose_corpse(e)
 	fd.enemies.erase(e)
 	if e.kind == RunRules.BOSS:

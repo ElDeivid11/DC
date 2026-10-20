@@ -70,6 +70,63 @@ static func flee_chance(enemy_rank: int, floor_n: int) -> float:
 	var chance := DataRegistry.bal_f("flee.base", 0.5) + DataRegistry.bal_f("flee.per_rank", 0.1) * (float(enemy_rank) - ref)
 	return clampf(chance, DataRegistry.bal_f("flee.min", 0.1), DataRegistry.bal_f("flee.max", 0.9))
 
+# --- Niveles y estadísticas (por expedición: se reinician en cada run) ----------
+
+## Las 6 estadísticas que se suben con puntos al subir de nivel (la gráfica
+## hexagonal de Estado sigue este orden).
+const STATS: Array[String] = ["vit", "atq", "def", "esp", "agi", "sue"]
+
+## EXP que da un enemigo: base + (10 − rango) × por_rango; élite y jefe
+## multiplican. La recibe entero cada personaje vivo.
+static func kill_xp(rank: int, kind: String) -> int:
+	var xp := DataRegistry.bal_f("leveling.xp_kill_base", 3.0) + float(10 - rank) * DataRegistry.bal_f("leveling.xp_per_rank", 1.0)
+	if kind == ELITE:
+		xp *= DataRegistry.bal_f("leveling.xp_elite_mult", 1.5)
+	elif kind == BOSS:
+		xp *= DataRegistry.bal_f("leveling.xp_boss_mult", 4.0)
+	return maxi(roundi(xp), 1)
+
+static func max_level() -> int:
+	return DataRegistry.bal_i("leveling.max_level", 10)
+
+## EXP que falta para pasar de `level` al siguiente (0 = nivel máximo).
+static func xp_to_next(level: int) -> int:
+	var table: Array = DataRegistry.bal("leveling.xp_to_next", [])
+	if level >= max_level() or level < 1 or level > table.size():
+		return 0
+	return int(table[level - 1])
+
+## Almas extra por nivel: +1 cada `soul_slot_every` niveles (nivel 2, 4, 6…).
+static func level_soul_slots(level: int) -> int:
+	var every := DataRegistry.bal_i("leveling.soul_slot_every", 2)
+	return floori(level / float(every)) if every > 0 else 0
+
+## Efecto de los puntos de una estadística. Los totales se redondean (los
+## valores por punto pueden ser fraccionarios: 3 puntos de ATQ = +1 de ataque).
+static func stat_hp(vit: int) -> int:
+	return roundi(vit * DataRegistry.bal_f("stats.vit_hp", 1.0))
+
+static func stat_atk(atq: int) -> int:
+	return roundi(atq * DataRegistry.bal_f("stats.atq_atk", 0.34))
+
+static func stat_def(def: int) -> int:
+	return floori(def * DataRegistry.bal_f("stats.def_reduction", 0.25))
+
+static func stat_esp(esp: int) -> int:
+	return roundi(esp * DataRegistry.bal_f("stats.esp_ability", 0.5))
+
+static func stat_crit(agi: int) -> float:
+	return agi * DataRegistry.bal_f("stats.agi_crit", 0.015)
+
+static func stat_flee(agi: int) -> float:
+	return agi * DataRegistry.bal_f("stats.agi_flee", 0.015)
+
+static func stat_soul(sue: int) -> float:
+	return sue * DataRegistry.bal_f("stats.sue_soul", 0.005)
+
+static func stat_coins(sue: int) -> float:
+	return sue * DataRegistry.bal_f("stats.sue_coins", 0.02)
+
 ## Fracción de monedas de la run que se conserva según cómo terminó.
 static func keep_fraction(outcome: String) -> float:
 	if outcome == "retiro" or outcome == "victoria":

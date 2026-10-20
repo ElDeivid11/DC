@@ -22,6 +22,8 @@ signal soul_acquired(member_id: String, soul: Dictionary)
 signal item_picked(item_id: String)
 signal item_used(item_id: String)
 signal coins_changed(run_coins: int)
+## Un personaje subió de nivel en la run (ya tiene sus puntos para repartir).
+signal level_up(member_id: String, level: int)
 signal unlock_earned(unlock_id: String)
 ## Cambió algún ajuste en Opciones (p. ej. pixelado): quien dependa, se reajusta.
 signal settings_changed()

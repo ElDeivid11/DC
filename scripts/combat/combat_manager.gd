@@ -32,7 +32,9 @@ signal enemy_defeated
 # --- Configuración (la pasa RunController antes de add_child) ---------------------
 ## {name, rank, hp, atk, ability_damage, ability_name, kind, species_id}
 var enemy_data := {"name": "???", "rank": 10, "hp": 10, "atk": 1, "ability_damage": 1, "ability_name": "", "kind": "normal", "species_id": ""}
-## Copia del equipo: [{id, name, hp, max_hp, atk, souls, soul_capacity}]
+## Copia del equipo: [{id, name, hp, max_hp, atk, souls, soul_capacity,
+## def, ability_bonus, crit_bonus}] (los tres últimos salen de los puntos de
+## estadística: DEF, ESP y AGI).
 var party_roster: Array = []
 ## Copia del inventario (ids); se usan solo los que sirven en combate.
 var inventory: Array[String] = []
@@ -111,6 +113,9 @@ func _build_party() -> void:
 			"id": m.id, "name": m.name, "hp": int(m.hp), "max_hp": int(m.max_hp),
 			"atk": int(m.atk), "defending": false, "souls": m.souls,
 			"soul_capacity": int(m.get("soul_capacity", 1)),
+			"def": int(m.get("def", 0)),
+			"ability_bonus": int(m.get("ability_bonus", 0)),
+			"crit_bonus": float(m.get("crit_bonus", 0.0)),
 		})
 
 func _bal(path: String, default: float) -> float:
@@ -347,7 +352,7 @@ func _show_abilities() -> void:
 	var items: Array = []
 	for soul: Dictionary in m.souls:
 		var active: Dictionary = soul.get("active", {})
-		var dmg := int(active.get("damage", 1))
+		var dmg := int(active.get("damage", 1)) + int(m.get("ability_bonus", 0))
 		var aname := String(active.get("name", "?"))
 		items.append([DataRegistry.t("combat.ability_entry", [aname, dmg]), func() -> void: _on_ability(aname, dmg)])
 	_show_menu(DataRegistry.t("combat.ability"), items, true)
@@ -424,7 +429,7 @@ func _outgoing(member: Dictionary, base: int) -> Array:
 	var dmg := base + int(SoulEffects.total(member, "damage_bonus_flat"))
 	if surprise_round:
 		dmg = roundi(dmg * _bal("surprise_damage_mult", 1.5))
-	var crit := rng.randf() < SoulEffects.total(member, "crit_chance")
+	var crit := rng.randf() < SoulEffects.total(member, "crit_chance") + float(member.get("crit_bonus", 0.0))
 	if crit:
 		dmg = roundi(dmg * _bal("crit_mult", 2.0))
 	if one_hit:
@@ -580,6 +585,10 @@ func _damage_member(i: int, raw: int) -> void:
 		if dmg < before:
 			var eff := SoulEffects.get_passive_effect(target, "damage_reduction_flat")
 			_log(DataRegistry.t("combat.log_absorb", [eff._passive_name, target.name]))
+	# DEF (puntos de estadística) resta daño, pero solo no deja un golpe en 0.
+	var def := int(target.get("def", 0))
+	if def > 0 and dmg > 1:
+		dmg = maxi(dmg - def, 1)
 	dmg = maxi(dmg, 0) # con pasivas un golpe SÍ puede quedar en 0
 	if god_mode:
 		dmg = 0
@@ -626,6 +635,8 @@ func _finish(victory: bool) -> void:
 	_log(DataRegistry.t("combat.log_victory"))
 	enemy_defeated.emit()
 	var lines: Array[String] = [DataRegistry.t("combat.coins_gained", [UIFormat.coins(int(reward_preview.coins))])]
+	if int(reward_preview.get("xp", 0)) > 0:
+		lines.append(DataRegistry.t("combat.xp_gained", [int(reward_preview.xp)]))
 	if reward_preview.get("first_kill", false):
 		lines.append(DataRegistry.t("combat.first_kill", [String(reward_preview.get("species_name", enemy.name)), UIFormat.coins(int(reward_preview.first_kill_bonus))]))
 	if not soul_drop.is_empty():
@@ -653,6 +664,8 @@ func _show_summary(title: String, lines: Array, on_continue: Callable, title_var
 			l.theme_type_variation = "CoinLabel"
 		if String(line).begins_with("★"):
 			l.theme_type_variation = "AccentLabel"
+		if String(line).begins_with("✦"):
+			l.theme_type_variation = "GoodLabel"
 		if String(line) == DataRegistry.t("combat.soul_hint"):
 			l.theme_type_variation = "SoulLabel"
 		summary_panel.body.add_child(l)
