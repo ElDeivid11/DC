@@ -299,8 +299,10 @@ func _enemies_act() -> void:
 			return
 		occupied.erase(ec)
 		occupied[target] = true
+		# Girar ANTES de cambiar de celda (el giro se calcula desde la celda
+		# actual; después daba dirección nula y caminaba de costado).
+		_turn_enemy_towards(e, target, true)
 		e["cell"] = target
-		_turn_enemy_towards(e, target)
 		var node: Node3D = e.node
 		_anim(e, "walk")
 		var tw := node.create_tween()
@@ -314,12 +316,21 @@ func _enemies_act() -> void:
 		)
 	_after_move()
 
-func _turn_enemy_towards(e: Dictionary, target: Vector2i) -> void:
+## Gira al enemigo hacia una celda VECINA de la suya. `animate`: giro corto
+## (0,12 s) por el lado más corto; si no, de golpe.
+func _turn_enemy_towards(e: Dictionary, target: Vector2i, animate := false) -> void:
 	var d: Vector2i = target - (e.cell as Vector2i)
 	var idx := DIRS.find(d)
-	if idx >= 0:
-		e["facing"] = idx
-		(e.node as Node3D).rotation_degrees.y = -idx * 90.0 + 180.0
+	if idx < 0:
+		return
+	e["facing"] = idx
+	var node: Node3D = e.node
+	var want := deg_to_rad(180.0 - idx * 90.0)
+	if not animate:
+		node.rotation.y = want
+		return
+	var to := node.rotation.y + wrapf(want - node.rotation.y, -PI, PI)
+	node.create_tween().tween_property(node, "rotation:y", to, 0.12)
 
 ## Un esqueleto dormido se levanta: animación de salir del suelo y mira hacia
 ## el camino por el que viene el equipo.
