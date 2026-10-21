@@ -1,0 +1,1751 @@
+{
+	"version": 1,
+	"pixel_scale": 2,
+	"palette_sha256": "47e2e9d6c57ac7505b96595fa9499d60f80d24a79cf9234505ea28a73582fc33",
+	"generator_sha256": "17dd1fa776a34836764887399025699cfc5743484a81852c5c6f25227fb844bd",
+	"atlas": "res://ui/kit/ui_atlas.png",
+	"size": [
+		1024,
+		288
+	],
+	"sprites": {
+		"bar_fill_coin": {
+			"region": [
+				558,
+				248,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_enemy": {
+			"region": [
+				310,
+				248,
+				8,
+				12
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_exp": {
+			"region": [
+				710,
+				248,
+				8,
+				6
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_exp_thin": {
+			"region": [
+				742,
+				248,
+				8,
+				2
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_flash": {
+			"region": [
+				574,
+				248,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_hp": {
+			"region": [
+				590,
+				248,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_progress": {
+			"region": [
+				606,
+				248,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_soul": {
+			"region": [
+				622,
+				248,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_trail": {
+			"region": [
+				638,
+				248,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_focus": {
+			"region": [
+				174,
+				248,
+				16,
+				16
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				2,
+				2,
+				2,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"bar_frame": {
+			"region": [
+				198,
+				248,
+				16,
+				16
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				2,
+				2,
+				2,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"button_danger_focus": {
+			"region": [
+				126,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"button_disabled": {
+			"region": [
+				166,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"button_focus": {
+			"region": [
+				206,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"button_normal": {
+			"region": [
+				246,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"button_pressed": {
+			"region": [
+				286,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"card": {
+			"region": [
+				406,
+				208,
+				28,
+				28
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"card_focus": {
+			"region": [
+				442,
+				208,
+				28,
+				28
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"card_soul": {
+			"region": [
+				478,
+				208,
+				28,
+				28
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"keycap": {
+			"region": [
+				928,
+				208,
+				20,
+				22
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				4
+			],
+			"content": [
+				3,
+				1,
+				3,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"menu_band": {
+			"region": [
+				454,
+				248,
+				96,
+				10
+			],
+			"margin": [
+				0,
+				0,
+				40,
+				1
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"panel_hud": {
+			"region": [
+				744,
+				208,
+				24,
+				24
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"panel_inset": {
+			"region": [
+				776,
+				208,
+				24,
+				24
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				6,
+				6,
+				6,
+				6
+			],
+			"axis": [
+				"tile",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"panel_iron": {
+			"region": [
+				434,
+				6,
+				60,
+				60
+			],
+			"margin": [
+				10,
+				10,
+				10,
+				10
+			],
+			"content": [
+				14,
+				14,
+				14,
+				14
+			],
+			"axis": [
+				"tile",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"portrait_frame": {
+			"region": [
+				206,
+				168,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"portrait_frame_active": {
+			"region": [
+				246,
+				168,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"rank_plaque": {
+			"region": [
+				6,
+				248,
+				20,
+				20
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				3,
+				1,
+				3,
+				1
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"ribbon": {
+			"region": [
+				670,
+				6,
+				80,
+				36
+			],
+			"margin": [
+				8,
+				0,
+				8,
+				0
+			],
+			"content": [
+				10,
+				3,
+				10,
+				3
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"ribbon_small": {
+			"region": [
+				550,
+				208,
+				64,
+				26
+			],
+			"margin": [
+				5,
+				0,
+				5,
+				0
+			],
+			"content": [
+				7,
+				0,
+				7,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"scroll_grabber": {
+			"region": [
+				222,
+				248,
+				12,
+				16
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"scroll_grabber_hot": {
+			"region": [
+				242,
+				248,
+				12,
+				16
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"scroll_track": {
+			"region": [
+				326,
+				248,
+				12,
+				12
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				2,
+				2,
+				2,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"separator": {
+			"region": [
+				726,
+				248,
+				8,
+				4
+			],
+			"margin": [
+				0,
+				1,
+				0,
+				1
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"separator_v": {
+			"region": [
+				698,
+				248,
+				4,
+				8
+			],
+			"margin": [
+				1,
+				0,
+				1,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"stretch",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"slot_empty": {
+			"region": [
+				502,
+				6,
+				48,
+				48
+			],
+			"margin": [
+				5,
+				5,
+				5,
+				5
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"slot_focus": {
+			"region": [
+				558,
+				6,
+				48,
+				48
+			],
+			"margin": [
+				5,
+				5,
+				5,
+				5
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"slot_normal": {
+			"region": [
+				614,
+				6,
+				48,
+				48
+			],
+			"margin": [
+				5,
+				5,
+				5,
+				5
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"tab_focus": {
+			"region": [
+				808,
+				208,
+				32,
+				24
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				0
+			],
+			"content": [
+				6,
+				3,
+				6,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"tab_normal": {
+			"region": [
+				848,
+				208,
+				32,
+				24
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				0
+			],
+			"content": [
+				6,
+				3,
+				6,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"tab_selected": {
+			"region": [
+				888,
+				208,
+				32,
+				24
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				0
+			],
+			"content": [
+				6,
+				3,
+				6,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"tooltip": {
+			"region": [
+				514,
+				208,
+				28,
+				28
+			],
+			"margin": [
+				3,
+				3,
+				5,
+				5
+			],
+			"content": [
+				5,
+				4,
+				7,
+				6
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		}
+	},
+	"frames": {
+		"cursor_flame": {
+			"region": [
+				656,
+				208,
+				80,
+				24
+			],
+			"frame": [
+				16,
+				24
+			],
+			"count": 5,
+			"fps": 8
+		}
+	},
+	"icons": {
+		"almas": {
+			"alma": [
+				758,
+				6,
+				32,
+				32
+			],
+			"vela": [
+				838,
+				6,
+				32,
+				32
+			],
+			"apagado": [
+				798,
+				6,
+				32,
+				32
+			]
+		},
+		"atacar": {
+			"bronce": [
+				918,
+				6,
+				32,
+				32
+			],
+			"vela": [
+				958,
+				6,
+				32,
+				32
+			],
+			"apagado": [
+				878,
+				6,
+				32,
+				32
+			]
+		},
+		"bestiario": {
+			"bronce": [
+				46,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				86,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				6,
+				88,
+				32,
+				32
+			]
+		},
+		"continuar": {
+			"bronce": [
+				366,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				406,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				326,
+				88,
+				32,
+				32
+			]
+		},
+		"desbloqueos": {
+			"bronce": [
+				486,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				526,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				446,
+				88,
+				32,
+				32
+			]
+		},
+		"estadisticas": {
+			"bronce": [
+				606,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				646,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				566,
+				88,
+				32,
+				32
+			]
+		},
+		"estado": {
+			"bronce": [
+				726,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				766,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				686,
+				88,
+				32,
+				32
+			]
+		},
+		"exp": {
+			"amatista": [
+				806,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				846,
+				88,
+				32,
+				32
+			]
+		},
+		"habilidad": {
+			"bronce": [
+				926,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				966,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				886,
+				88,
+				32,
+				32
+			]
+		},
+		"hp": {
+			"sangre": [
+				46,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				6,
+				128,
+				32,
+				32
+			]
+		},
+		"huir": {
+			"bronce": [
+				126,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				166,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				86,
+				128,
+				32,
+				32
+			]
+		},
+		"iniciar": {
+			"bronce": [
+				246,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				286,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				206,
+				128,
+				32,
+				32
+			]
+		},
+		"inventario": {
+			"bronce": [
+				366,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				406,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				326,
+				128,
+				32,
+				32
+			]
+		},
+		"mapa": {
+			"bronce": [
+				486,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				526,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				446,
+				128,
+				32,
+				32
+			]
+		},
+		"mejoras": {
+			"bronce": [
+				606,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				646,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				566,
+				128,
+				32,
+				32
+			]
+		},
+		"monedas": {
+			"moneda": [
+				726,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				686,
+				128,
+				32,
+				32
+			]
+		},
+		"muerte": {
+			"sangre": [
+				846,
+				128,
+				32,
+				32
+			],
+			"bronce": [
+				806,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				766,
+				128,
+				32,
+				32
+			]
+		},
+		"objeto": {
+			"bronce": [
+				926,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				966,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				886,
+				128,
+				32,
+				32
+			]
+		},
+		"opciones": {
+			"bronce": [
+				46,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				86,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				6,
+				168,
+				32,
+				32
+			]
+		},
+		"piso": {
+			"bronce": [
+				126,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				166,
+				168,
+				32,
+				32
+			]
+		},
+		"retiro": {
+			"bronce": [
+				326,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				406,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				286,
+				168,
+				32,
+				32
+			],
+			"sangre": [
+				366,
+				168,
+				32,
+				32
+			]
+		},
+		"salir": {
+			"bronce": [
+				486,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				526,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				446,
+				168,
+				32,
+				32
+			]
+		},
+		"stat_agi": {
+			"bronce": [
+				606,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				646,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				566,
+				168,
+				32,
+				32
+			]
+		},
+		"stat_atq": {
+			"bronce": [
+				726,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				766,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				686,
+				168,
+				32,
+				32
+			]
+		},
+		"stat_def": {
+			"bronce": [
+				846,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				886,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				806,
+				168,
+				32,
+				32
+			]
+		},
+		"stat_esp": {
+			"bronce": [
+				966,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				6,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				926,
+				168,
+				32,
+				32
+			]
+		},
+		"stat_sue": {
+			"bronce": [
+				86,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				126,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				46,
+				208,
+				32,
+				32
+			]
+		},
+		"stat_vit": {
+			"bronce": [
+				206,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				246,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				166,
+				208,
+				32,
+				32
+			]
+		},
+		"tiempo": {
+			"bronce": [
+				286,
+				208,
+				32,
+				32
+			]
+		},
+		"victoria": {
+			"moneda": [
+				366,
+				208,
+				32,
+				32
+			],
+			"bronce": [
+				326,
+				208,
+				32,
+				32
+			]
+		}
+	},
+	"singles": {
+		"check_off": [
+			956,
+			208,
+			20,
+			20
+		],
+		"check_on": [
+			984,
+			208,
+			20,
+			20
+		],
+		"crest": [
+			74,
+			248,
+			22,
+			18
+		],
+		"divider_gem": [
+			346,
+			248,
+			10,
+			10
+		],
+		"map_chest": [
+			364,
+			248,
+			10,
+			10
+		],
+		"map_enemy": [
+			382,
+			248,
+			10,
+			10
+		],
+		"map_exit": [
+			400,
+			248,
+			10,
+			10
+		],
+		"map_player": [
+			418,
+			248,
+			10,
+			10
+		],
+		"map_stairs": [
+			436,
+			248,
+			10,
+			10
+		],
+		"option_arrow": [
+			654,
+			248,
+			14,
+			8
+		],
+		"option_arrow_focus": [
+			676,
+			248,
+			14,
+			8
+		],
+		"pip_empty": [
+			262,
+			248,
+			8,
+			14
+		],
+		"pip_full": [
+			278,
+			248,
+			8,
+			14
+		],
+		"pip_vela": [
+			294,
+			248,
+			8,
+			14
+		],
+		"seal": [
+			622,
+			208,
+			26,
+			26
+		],
+		"seal_mini": [
+			104,
+			248,
+			18,
+			18
+		],
+		"slider_grabber": [
+			34,
+			248,
+			12,
+			20
+		],
+		"slider_grabber_focus": [
+			54,
+			248,
+			12,
+			20
+		],
+		"soul_empty": [
+			130,
+			248,
+			14,
+			18
+		],
+		"soul_full": [
+			152,
+			248,
+			14,
+			18
+		]
+	},
+	"logo": {
+		"region": [
+			6,
+			6,
+			420,
+			74
+		],
+		"text": "Dungeon Grid"
+	}
+}

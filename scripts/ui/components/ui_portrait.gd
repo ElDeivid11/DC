@@ -1,11 +1,12 @@
 class_name UIPortrait
 extends PanelContainer
-## Retrato con marco (héroes y objetos). Píxel nítido: filtro nearest y la
+## Retrato en un nicho con marco de bronce (héroes y objetos). Píxel nítido: filtro nearest y la
 ## imagen centrada sin deformar. Los PNG salen de tools/portraits (render 3D
 ## con filtro PS1); la ruta va en los datos: items.json → retrato y
 ## balance.json → party[].retrato.
 
 var texture_rect: TextureRect
+var _skull: UIIcon
 
 func _init(texture: Texture2D = null, side := 64) -> void:
 	theme_type_variation = "PortraitFrame"
@@ -23,9 +24,23 @@ func _init(texture: Texture2D = null, side := 64) -> void:
 func set_texture(texture: Texture2D) -> void:
 	texture_rect.texture = texture
 
-## Apagado (personaje caído, objeto bloqueado).
+## Apagado (objeto bloqueado).
 func set_dimmed(on: bool) -> void:
-	texture_rect.modulate = UIStyle.TEXT_DIM if on else Color.WHITE
+	texture_rect.modulate = UIStyle.FALLEN_TINT if on else Color.WHITE
+
+## Personaje caído: retrato apagado y una calavera encima.
+func set_fallen(on: bool) -> void:
+	set_dimmed(on)
+	if on and _skull == null:
+		_skull = UIIcon.make("muerte", "sangre")
+		_skull.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		add_child(_skull)
+	if _skull:
+		_skull.visible = on
+
+## Marco encendido (el que actúa en combate).
+func set_active(on: bool) -> void:
+	theme_type_variation = "PortraitFrameActive" if on else "PortraitFrame"
 
 ## Silueta (objeto secreto todavía no descubierto).
 func set_silhouette(on: bool) -> void:

@@ -10,7 +10,7 @@
 	"ui.cancel": "Cancelar",
 	"ui.danger_example": "Abandonar",
 	"ui.disabled_example": "Bloqueado",
-	"ui.rank_short": "R%d",
+	"ui.rank_short": "%s",
 	"ui.rank_tooltip": "Rango %d (10 = más débil, 1 = más fuerte)",
 	"ui.none": "—",
 	"soul.from": "De: %s",

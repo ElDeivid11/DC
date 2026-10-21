@@ -127,7 +127,7 @@ func _build_ui() -> void:
 	cols.add_child(right)
 	coins_label = Label.new()
 	coins_label.theme_type_variation = "CoinLabel"
-	coins_label.add_theme_font_size_override("font_size", UIStyle.FONT_TITLE)
+	coins_label.add_theme_font_size_override("font_size", UIStyle.FONT_NUM)
 	coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	right.add_child(coins_label)
 	last_run_panel = UIPanel.new(DataRegistry.t("hub.last_run"), "HudPanel")

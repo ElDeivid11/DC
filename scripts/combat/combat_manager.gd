@@ -156,7 +156,7 @@ func _build_ui() -> void:
 	ebox.add_child(ehead)
 	enemy_name_label = Label.new()
 	enemy_name_label.theme_type_variation = "DangerLabel" if String(enemy_data.kind) == RunRules.BOSS else "SubtitleLabel"
-	enemy_name_label.add_theme_font_size_override("font_size", UIStyle.FONT_SUBTITLE)
+	enemy_name_label.add_theme_font_size_override("font_size", UIStyle.FONT_HEAD)
 	enemy_name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ehead.add_child(enemy_name_label)
 	enemy_badge = UIRankBadge.new(int(enemy_data.rank))
@@ -289,7 +289,7 @@ func _float_number(text: String, at: Vector2, variation: String, big := false) -
 	var l := Label.new()
 	l.text = text
 	l.theme_type_variation = variation
-	l.add_theme_font_size_override("font_size", UIStyle.FONT_TITLE if big else UIStyle.FONT_SUBTITLE)
+	l.add_theme_font_size_override("font_size", UIStyle.FONT_NUM if big else UIStyle.FONT_HEAD)
 	l.position = at
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	float_layer.add_child(l)

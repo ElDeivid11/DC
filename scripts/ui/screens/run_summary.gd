@@ -43,7 +43,7 @@ func _build() -> void:
 	title_label.text = DataRegistry.t("summary.title", [DataRegistry.t("outcome." + outcome), int(snap.max_floor), UIFormat.time(float(snap.time_sec))])
 	if outcome == "muerte" or outcome == "abandono":
 		title_label.theme_type_variation = "DangerLabel"
-		title_label.add_theme_font_size_override("font_size", UIStyle.FONT_TITLE)
+		title_label.add_theme_font_size_override("font_size", UIStyle.FONT_NUM)
 	show_coins(MetaState.coins)
 
 	var row := HBoxContainer.new()
@@ -66,7 +66,7 @@ func _build() -> void:
 		_kv(money.body, "summary.lost", "-%s (%s)" % [UIFormat.number(int(coins.lost)), UIFormat.pct(1.0 - float(coins.keep_fraction))], "DangerLabel")
 	var total := Label.new()
 	total.theme_type_variation = "CoinLabel"
-	total.add_theme_font_size_override("font_size", UIStyle.FONT_TITLE)
+	total.add_theme_font_size_override("font_size", UIStyle.FONT_NUM)
 	total.text = "= " + UIFormat.coins(int(coins.total))
 	total.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	money.body.add_child(total)

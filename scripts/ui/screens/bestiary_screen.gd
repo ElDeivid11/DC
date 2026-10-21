@@ -24,11 +24,11 @@ func _fill_list() -> void:
 		var sp := DataRegistry.get_species(id)
 		var e := MetaState.bestiary_entry(id)
 		if not e.seen:
-			add_row("???", [["", "DimLabel", 90], [DataRegistry.t("ui.rank_short", [int(sp.rank)]), "DimLabel", 50]], true)
+			add_row("???", [["", "DimLabel", 90], [DataRegistry.t("ui.rank_short", [UIFormat.roman(int(sp.rank))]), "DimLabel", 50]], true)
 		else:
 			add_row(String(sp.display_name), [
 				[DataRegistry.t("bestiary.kills_short", [int(e.kills)]), "DimLabel", 90],
-				[DataRegistry.t("ui.rank_short", [int(sp.rank)]), "AccentLabel", 50],
+				[DataRegistry.t("ui.rank_short", [UIFormat.roman(int(sp.rank))]), "AccentLabel", 50],
 			])
 
 func _show_detail(index: int) -> void:

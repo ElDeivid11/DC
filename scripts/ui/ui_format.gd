@@ -28,3 +28,16 @@ static func time(seconds: float) -> String:
 ## 0.25 → "25%"
 static func pct(f: float) -> String:
 	return "%d%%" % roundi(f * 100.0)
+
+## 8 → "VIII" (rangos, pisos y niveles en placas y encabezados; 1..39).
+static func roman(n: int) -> String:
+	if n <= 0 or n >= 40:
+		return str(n)
+	var out := ""
+	var rest := n
+	for pair: Array in [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]:
+		var value: int = pair[0]
+		while rest >= value:
+			out += String(pair[1])
+			rest -= value
+	return out
