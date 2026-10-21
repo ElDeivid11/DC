@@ -16,13 +16,13 @@ func _init(text := "", current := 0, target := 1) -> void:
 	add_child(row)
 	bar = ProgressBar.new()
 	bar.show_percentage = false
-	bar.theme_type_variation = "AccentBar"
-	bar.custom_minimum_size = Vector2(160, 12)
+	bar.theme_type_variation = "CoinBar"
+	bar.custom_minimum_size = Vector2(160, 16)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(bar)
 	count_label = Label.new()
-	count_label.theme_type_variation = "DetailLabel"
+	count_label.theme_type_variation = "NumSmallLabel"
 	count_label.custom_minimum_size.x = 48
 	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(count_label)
@@ -34,4 +34,4 @@ func set_progress(text: String, current: int, target: int) -> void:
 	bar.max_value = maxi(target, 1)
 	bar.value = clampi(current, 0, maxi(target, 1))
 	count_label.text = "%d/%d" % [mini(current, target), target]
-	bar.theme_type_variation = "HpGood" if current >= target else "AccentBar"
+	bar.theme_type_variation = "SoulBar" if current >= target else "CoinBar"

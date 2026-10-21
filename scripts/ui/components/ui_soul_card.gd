@@ -1,6 +1,6 @@
 class_name UISoulCard
 extends PanelContainer
-## Tarjeta de alma: nombre de la activa (color alma) + insignia de rango,
+## Tarjeta de alma (placa con filete azul): llama de alma + nombre de la activa + placa de rango,
 ## especie de origen, activa con su daño, pasiva (o "sin pasiva") con su
 ## efecto mecánico, y modificadores de stats.
 
@@ -8,7 +8,7 @@ var soul: Dictionary = {}
 var _box: VBoxContainer
 
 func _init(p_soul: Dictionary = {}, compact := false) -> void:
-	theme_type_variation = "Card"
+	theme_type_variation = "CardSoul"
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", UIStyle.SPACE)
 	add_child(_box)
@@ -22,10 +22,13 @@ func set_soul(p_soul: Dictionary, compact := false) -> void:
 
 	var active: Dictionary = soul.get("active", {})
 	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
 	_box.add_child(header)
+	header.add_child(UISprite.new("soul_full"))
 	var title := Label.new()
-	title.theme_type_variation = "SoulLabel"
-	title.text = "%s %s" % [UIStyle.SOUL_SYMBOL, active.get("name", "???")]
+	title.theme_type_variation = "HeadLabel"
+	title.add_theme_color_override("font_color", UIStyle.SOUL)
+	title.text = String(active.get("name", "???"))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	header.add_child(UIRankBadge.new(int(soul.get("source_rank", 10))))

@@ -1,7 +1,8 @@
 class_name UITabs
 extends VBoxContainer
-## Pestañas: TabBar arriba + contenido abajo. Con el TabBar enfocado,
-## ←/→ cambian de pestaña; además Q/E (o LB/RB) cambian desde cualquier lado.
+## Pestañas del grimorio: [Q] lengüetas con ícono [E] arriba y la página en un
+## inserto hundido abajo. Con el TabBar enfocado, ←/→ cambian de pestaña;
+## además Q/E (o LB/RB) cambian desde cualquier lado, con sonido de página.
 
 signal tab_changed(index: int)
 
@@ -10,16 +11,36 @@ var content: PanelContainer
 var _pages: Array[Control] = []
 
 func _init() -> void:
+	add_theme_constant_override("separation", 0)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	add_child(row)
+	row.add_child(_keycap(DataRegistry.t("ui.key_q")))
 	tab_bar = TabBar.new()
 	tab_bar.focus_mode = Control.FOCUS_ALL
 	tab_bar.tab_changed.connect(_on_tab_changed)
-	add_child(tab_bar)
+	row.add_child(tab_bar)
+	row.add_child(_keycap(DataRegistry.t("ui.key_e")))
 	content = PanelContainer.new()
+	content.theme_type_variation = "PanelAlt"
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(content)
 
-func add_tab(title: String, page: Control) -> void:
+static func _keycap(key: String) -> PanelContainer:
+	var cap := PanelContainer.new()
+	cap.theme_type_variation = "KeyCap"
+	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var l := Label.new()
+	l.theme_type_variation = "NumSmallLabel"
+	l.text = key
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cap.add_child(l)
+	return cap
+
+func add_tab(title: String, page: Control, icon_id := "") -> void:
 	tab_bar.add_tab(title)
+	if icon_id != "":
+		tab_bar.set_tab_icon(tab_bar.tab_count - 1, UIIcon.texture_for(icon_id, "bronce"))
 	page.visible = _pages.is_empty()
 	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pages.append(page)
@@ -60,5 +81,5 @@ func _on_tab_changed(index: int) -> void:
 		_pages[i].visible = i == index
 	if lost:
 		tab_bar.grab_focus()
-	SceneRouter.play_ui("hover")
+	SceneRouter.play_ui("page")
 	tab_changed.emit(index)
