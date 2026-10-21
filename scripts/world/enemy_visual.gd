@@ -1,24 +1,34 @@
 class_name EnemyVisual
 extends Node3D
-## Modelo 3D animado de un enemigo (esqueletos KayKit adaptados, ver
-## tools/assets/). Se configura con el bloque "visual" de data/species.json.
+## Modelo 3D animado de un enemigo (esqueleto realista CC0 con el rig y las
+## animaciones de Quaternius, armado por tools/assets/). Se configura con el
+## bloque "visual" de data/species.json.
 ##
 ## Estilo PS1/Lunacid:
 ## - Animación a PASOS (12 fps): el AnimationPlayer va en modo manual y se
 ##   avanza de a 1/12 s, sin interpolar entre cuadros.
-## - Proporciones menos "chibi" que el original: cabeza y manos más chicas
-##   (escala de huesos tras animar: visual.head_scale y visual.bone_scale).
 ## - Material PSX (snapping, afín, niebla por vértice) con un tinte por tipo,
-##   y ojos que brillan sin sombrear NI niebla: dos puntos en la oscuridad
-##   que se ven antes que el cuerpo.
+##   y ojos que brillan sin sombrear NI niebla (malla "*_Eyes"): dos puntos en
+##   la oscuridad que se ven antes que el cuerpo.
 ## - Sombra "blob" con trama (recorte, sin transparencia) bajo los pies.
 ##
-## Roles de animación (data: visual.anims): idle, combat, walk, attack
-## (lista), hit (lista), death, spawn, dormant, ability, block.
+## Datos (visual):
+## - bones: nombres de los huesos que usa el juego, {hand_r, hand_l, head}.
+##   Por defecto los del rig de Quaternius (UAL): hand_r, hand_l, Head.
+## - weapon_r / weapon_l: escena del arma, colgada de esa mano con
+##   weapon_r_mount / weapon_l_mount = {pos: [x,y,z] (m, espacio del hueso),
+##   rot: [x,y,z] (grados, como rotation_degrees), scale: n}.
+## - head_scale / bone_scale {hueso: escala}: escala de huesos tras cada
+##   cuadro (opcional; servía para achicar las cabezas "chibi").
+##
+## Roles de animación (visual.anims): idle, combat, walk, attack (lista),
+## hit (lista), death, spawn, dormant, ability, taunt.
 
 signal finished_role(role: String)
 
 const LOOPING: Array[String] = ["idle", "combat", "walk", "dormant"]
+## Huesos por defecto (rig de UAL1/UAL2 de Quaternius, estilo Unreal).
+const DEFAULT_BONES := {"hand_r": "hand_r", "hand_l": "hand_l", "head": "Head"}
 
 var anim: AnimationPlayer
 var skeleton: Skeleton3D
@@ -53,20 +63,26 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 	anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	skeleton = model.find_child("Skeleton3D", true, false) as Skeleton3D
 	if skeleton:
+		var bones := DEFAULT_BONES.duplicate()
+		var custom: Variant = def.get("bones", {})
+		if typeof(custom) == TYPE_DICTIONARY:
+			bones.merge(custom as Dictionary, true)
 		var scales: Dictionary = (def.get("bone_scale", {}) as Dictionary).duplicate()
 		if head_scale != 1.0:
-			scales["head"] = head_scale
+			scales[String(bones.head)] = head_scale
 		for bone_name: String in scales.keys():
 			var idx := skeleton.find_bone(bone_name)
 			if idx >= 0:
 				_bone_scales[idx] = float(scales[bone_name])
-		# El arma cuelga de la mano: se compensa la escala de la mano para
-		# que el arma conserve su tamaño.
-		_attach_weapon(def.get("weapon_r", ""), "handslot.r", 1.0 / float(scales.get("hand.r", 1.0)))
-		_attach_weapon(def.get("weapon_l", ""), "handslot.l", 1.0 / float(scales.get("hand.l", 1.0)))
+		# El arma cuelga de la mano: se compensa la escala de la mano (si se
+		# achicó) para que el arma conserve su tamaño.
+		for side: String in ["r", "l"]:
+			var bone := String(bones["hand_" + side])
+			_attach_weapon(def.get("weapon_" + side, ""), bone, def.get("weapon_%s_mount" % side, {}), 1.0 / float(scales.get(bone, 1.0)))
 	_apply_materials(model, tint, eye)
 	add_child(_make_blob_shadow(float(def.get("shadow", 0.9))))
 	if anim:
+		_check_anims(String(def.model_path))
 		anim.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 		anim.animation_finished.connect(_on_finished)
 		for role: String in LOOPING:
@@ -76,18 +92,41 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 	if def.has("light"):
 		var l: Dictionary = def.light
 		light = FlickerLight.make(eye.lerp(l.get("color", eye), 0.5), float(l.get("energy", 1.0)), float(l.get("range", 3.0)), 1.0, 0.1, 8.0)
-		light.position = Vector3(0, 1.4, 0.4)
+		# visual.light.pos (opcional): dónde va la luz, en metros del modelo.
+		light.position = _vec3(l.pos) if l.has("pos") else Vector3(0, 1.4, 0.4)
 		add_child(light)
 
-func _attach_weapon(path: Variant, bone: String, counter_scale := 1.0) -> void:
+## Cada animación nombrada en visual.anims tiene que existir en el modelo (ojo:
+## el importador de Godot les saca el sufijo "_Loop"). Si falta, aviso: los
+## tests y el smoke test lo toman como error.
+func _check_anims(model_path: String) -> void:
+	for role: String in anims.keys():
+		var v: Variant = anims[role]
+		var names: Array = v if typeof(v) == TYPE_ARRAY else [v]
+		for n: Variant in names:
+			if not anim.has_animation(String(n)):
+				push_warning("EnemyVisual: %s no tiene la animación '%s' (papel %s)" % [model_path, n, role])
+
+## `mount` = {pos, rot, scale} (ver el encabezado): ubica el arma en el puño.
+func _attach_weapon(path: Variant, bone: String, mount: Variant, counter_scale := 1.0) -> void:
 	if typeof(path) != TYPE_STRING or String(path) == "" or skeleton.find_bone(bone) < 0:
 		return
+	var m: Dictionary = mount if typeof(mount) == TYPE_DICTIONARY else {}
 	var att := BoneAttachment3D.new()
 	att.bone_name = bone
 	skeleton.add_child(att)
 	var weapon: Node3D = (load(String(path)) as PackedScene).instantiate()
-	weapon.scale = Vector3.ONE * counter_scale
+	weapon.position = _vec3(m.get("pos", null))
+	weapon.rotation_degrees = _vec3(m.get("rot", null))
+	weapon.scale = Vector3.ONE * float(m.get("scale", 1.0)) * counter_scale
 	att.add_child(weapon)
+
+## [x, y, z] de los JSON (floats) -> Vector3; cualquier otra cosa, cero.
+static func _vec3(v: Variant) -> Vector3:
+	if typeof(v) != TYPE_ARRAY or (v as Array).size() != 3:
+		return Vector3.ZERO
+	var a: Array = v
+	return Vector3(float(a[0]), float(a[1]), float(a[2]))
 
 ## Mancha de sombra redonda con trama Bayer (recorte, sin mezcla alfa: no hay
 ## problemas de orden de dibujo, y es como lo hacía PS1).

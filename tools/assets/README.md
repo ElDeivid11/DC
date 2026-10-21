@@ -3,34 +3,137 @@
 Adapta assets libres (CC0) al estilo PSX/Lunacid del juego. Los resultados se
 commitean en `assets/`; los packs originales NO van al repo (se bajan aparte).
 
-Requisitos: Node 22 y Python 3 con Pillow + numpy.
+Requisitos: Node 22 y Python 3 con Pillow + numpy. Los enemigos además
+necesitan Blender como módulo de Python (`bpy`, ver abajo).
 
 ```
 cd tools/assets && npm ci          # una vez (node_modules está en .gitignore)
 ```
 
-## Enemigos (`process_enemies.mjs`)
+## Enemigos (`build_skeletons.py` + `process_enemies.mjs`)
 
-Fuente: **KayKit Character Pack: Skeletons 1.0** (Kay Lousberg, CC0),
-<https://github.com/KayKit-Game-Assets/kaykit-character-pack-skeletons-1.0>.
+Un esqueleto humano **realista** (no "chibi") con skinning rígido estilo PS1,
+animado con el rig y las bibliotecas de animación de Quaternius. Todas las
+fuentes son CC0; las licencias y de qué copia/commit sale cada archivo están
+en `assets/enemies/LICENSE_*.txt`.
+
+| Fuente | Qué se usa | De dónde (copia usada) |
+|---|---|---|
+| **Skeleton - Realistic**, Paul Kotelevets (Blender Studio, *Human Base Meshes* v1.4.1), CC0 | la malla (135 piezas, 66k triángulos, sin rig ni textura) | bundle oficial en <https://www.blender.org/download/demo-files/#asset-bundles>; copia usada: `beldenge/diamondback` @ `3e582c7eecdef16867fb52ccc3c7a2947e5a1eaa`, `src/reimagined/models/sources/blender-skeleton/skeleton-realistic.blend` (sha256 `f54a3ee1…46eeb7`) |
+| **Universal Animation Library 2** [Standard], Quaternius, CC0 | el rig de 65 huesos (estilo Unreal: `root`, `pelvis`, `spine_01`…, `Head`, `hand_r`…) y animaciones | `agentkaerf/FreeModels` @ `db3df04d1e4714298a09510b26fb6de6645138a2`, `Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb` |
+| **Universal Animation Library** [Standard] (la 1), Quaternius, CC0 | más animaciones (mismo rig) | `IAFahim/quaternius.universalAnimationLibrary.standard` @ `8456155dbae7eb861f553a2341871ccae633c857`, `UAL1_Standard.fbx` |
+| **Modular Character Outfits - Fantasy** [Standard], Quaternius, CC0 | capucha, chaqueta y mangas del nigromante (`Male_Ranger`) | `agentkaerf/FreeModels` @ `db3df04…`, `Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/` |
+| **KayKit Character Pack: Skeletons 1.0**, Kay Lousberg, CC0 | solo las **armas** (`assets/enemies/weapons/`) | <https://github.com/KayKit-Game-Assets/kaykit-character-pack-skeletons-1.0> |
+
+Quaternius anunció una licencia propia (QAL) para lanzamientos futuros: las
+copias de arriba (y sus archivos de licencia) dicen CC0 1.0. Si se vuelven a
+bajar, usar esos commits y releer la licencia.
+
+### Bajar las fuentes (una vez; no van al repo)
+
+Clones parciales (solo lo que se usa):
 
 ```
-GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/KayKit-Game-Assets/kaykit-character-pack-skeletons-1.0 ~/kaykit-game-assets/kaykit-character-pack-skeletons-1.0
-cd tools/assets && node process_enemies.mjs [ruta/al/addons/kaykit_character_pack_skeletons]
+mkdir -p ~/fuentes && cd ~/fuentes
+git clone --depth 1 --filter=blob:none --no-checkout https://github.com/agentkaerf/FreeModels
+(cd FreeModels && git fetch --depth 1 origin db3df04d1e4714298a09510b26fb6de6645138a2 && \
+ git checkout db3df04d1e4714298a09510b26fb6de6645138a2 -- \
+   "Universal Animation Library 2[Standard]" \
+   "Modular Character Outfits - Fantasy[Standard]/License_Standard.txt" \
+   "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits")
+git clone --depth 1 https://github.com/IAFahim/quaternius.universalAnimationLibrary.standard ual1
+git clone --depth 1 --filter=blob:none --no-checkout https://github.com/beldenge/diamondback
+(cd diamondback && git fetch --depth 1 origin 3e582c7eecdef16867fb52ccc3c7a2947e5a1eaa && \
+ git checkout 3e582c7eecdef16867fb52ccc3c7a2947e5a1eaa -- src/reimagined/models/sources/blender-skeleton)
 ```
 
-Por cada enemigo (tabla `ENEMIES` del script): se queda solo con las
-animaciones que usa el juego, las remuestrea a 12 fps, suelda y simplifica la
-malla (~40% de los triángulos), y recolorea la textura con
-`recolor_texture.py` (64 px, paleta de 15 bits con trama Bayer 4x4, huesos
-color marfil sucio y un acento de color por tipo). Salida:
-`assets/enemies/<id>.glb` y `assets/enemies/weapons/<arma>.glb`.
+En vez de la copia de `diamondback` sirve el `.blend` del bundle oficial de
+Blender (la colección se busca por nombre, `--collection "Skeleton - Realistic"`).
 
-El resto (escala, ojos que brillan, cabeza más chica, animación a pasos) lo
-hace `scripts/world/enemy_visual.gd` en el juego, con los datos de
-`data/species.json` → `visual`.
+### Blender como módulo (`bpy`)
 
-Revisión visual: `tools/enemy_preview.tscn` (ver su encabezado).
+`bpy` 5.2 (el de PyPI necesita Python 3.13):
+
+```
+python3.13 -m venv ~/venv_bpy && ~/venv_bpy/bin/pip install bpy==5.2.2
+```
+
+### Comandos
+
+```
+# 1) Cuerpos, rig y animaciones (Blender, ~1 min). Intermedios en tools/assets/.work/
+~/venv_bpy/bin/python -I tools/assets/build_skeletons.py \
+    --skeleton ~/fuentes/diamondback/src/reimagined/models/sources/blender-skeleton/skeleton-realistic.blend \
+    --ual2 "$HOME/fuentes/FreeModels/Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb" \
+    --ual1 ~/fuentes/ual1/UAL1_Standard.fbx \
+    --outfits "$HOME/fuentes/FreeModels/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits" \
+    --out tools/assets/.work
+# 2) Un .glb por enemigo en assets/enemies/ (Node + Python)
+cd tools/assets && node process_enemies.mjs [--work .work] [--kaykit <pack>/addons/kaykit_character_pack_skeletons]
+cd ../.. && godot --headless --path . --import
+```
+
+**Paso 1, `build_skeletons.py`** (ver su encabezado), por variante (`esqueleto`
+para las tres especies comunes y `nigromante`):
+
+- Saca la subdivisión y **decima** las 135 piezas a ~3.300 triángulos.
+- Escala el esqueleto al alto del maniquí de UAL2 (×0,97) y **encaja cada
+  miembro en las articulaciones del rig**: húmero/fémur giran sobre el hombro o
+  la cadera y se estiran hasta el codo/rodilla del rig; radio+cúbito y
+  tibia+peroné se llevan al codo/rodilla, se orientan y se estiran hasta la
+  muñeca/tobillo; la mano se gira para que palma y dedos coincidan con `hand_*`.
+  Así los pivotes del rig caen en las articulaciones de la malla (y el arma
+  queda en el puño).
+- **Skinning rígido** (PS1): cada pieza entera al hueso que le corresponde por
+  nombre (`proximal.index.L` → `index_01_l`, `leg_tibula.R` → `calf_r`...); las
+  vértebras, al segmento de hueso más cercano.
+- UV nuevas (smart project) y horneado con Cycles de **oclusión ambiental** y
+  **altura** (`<variante>_ao.png`, `_height.png`).
+- **Ojos**: dos esferitas (malla `Skeleton_Eyes`) en el centro de cada órbita,
+  que se busca con un mapa de profundidad del cráneo (hueco entre ceja y pómulo).
+- Nigromante: capucha, chaqueta y mangas del `Male_Ranger` (sus proporciones
+  se ajustan al reposo de UAL2 antes de pasarle el skinning; se decima al 20%),
+  más una **falda cónica** generada hasta los tobillos (doble cara, pesos de
+  pelvis a piernas). Se borran las piezas del esqueleto que tapa la ropa.
+- Pasa `UAL1_Standard.fbx` a `ual1_anims.glb` (a 30 fps: así queda en el FBX).
+  Las rotaciones locales de sus huesos son las mismas que las de UAL2; solo el
+  nodo `Armature` viene girado 180°, y el paso 2 no copia sus canales.
+
+**Paso 2, `process_enemies.mjs`**, por enemigo (tabla `ENEMIES`: base, colores):
+
+- Arma **solo los clips que pide `data/species.json` → `visual.anims`** de esa
+  especie, según la tabla `CLIPS` (de qué biblioteca sale cada uno; se pueden
+  encadenar clips o sacar una pose quieta). Los nombres finales no terminan en
+  `_Loop`: el importador de Godot se los saca.
+- Remuestrea todo a **12 fps exactos** (el juego avanza de a 1/12 s) y saca los
+  canales que nunca se mueven del reposo.
+- Texturas con `skeleton_textures.py`: **hueso de 128 px** (oclusión + altura
+  + paleta por especie: hueso, sombra de las uniones, manchas) y la **túnica**
+  (atlas del Ranger re-pintado a 128 px). 15 bits con trama Bayer 4x4.
+
+| Especie | Cuerpo (tris) | Hueso | Arma | idle / combat / walk | attack | otros |
+|---|---|---|---|---|---|---|
+| esbirro | 3.283 + 40 ojos | marfil amarillento, moho | `hoja` | `Zombie_Idle` / `Sword_Idle` / `Zombie_Walk` | `Sword_Attack`, `Zombie_Scratch` | |
+| ballestero | 3.283 + 40 | gris frío | `ballesta` | `Idle` / `Pistol_Idle` / `Walk` | `Pistol_Shoot` | |
+| guardián | 3.283 + 40 | tostado, óxido | `hacha` + `escudo` | `Shield_Idle` / `Shield_Idle` / `Walk_Formal` | `Sword_Attack`, `Shield_OneShot` | hit: `Sword_Block`, `Hit_Chest` |
+| nigromante | 1.937 + 1.858 túnica + 40 | ceniza | `baculo` | `Torch_Idle` / `Torch_Idle` / `Walk_Formal` | `Spell_Shoot`, `Spell_Cast_Full` | ability `OverhandThrow`, taunt `Idle_Rail_Call` |
+
+Todos: hit `Hit_Chest`/`Hit_Head`, death `Death01`, spawn `LayToIdle` (se
+levanta del piso), dormant `Floor_Pose` (primer cuadro de `LayToIdle`).
+
+Las **armas** siguen siendo las de KayKit (procesadas como antes con
+`recolor_texture.py`; solo se rehacen con `--kaykit`). En el juego cuelgan de
+`hand_r`/`hand_l` con un montaje por especie (`visual.weapon_r_mount`:
+posición, rotación y escala en el espacio del hueso). Para calcular una
+rotación que deje el arma de cierta forma en una pose, se puede leer la pose
+del hueso con un script de Godot (`get_bone_global_pose`) y despejar
+`hueso⁻¹ · orientación_deseada`.
+
+El resto (escala, ojos que brillan, animación a pasos, luz propia) lo hace
+`scripts/world/enemy_visual.gd` con los datos de `data/species.json` → `visual`.
+
+Revisión visual: `tools/enemy_preview.tscn` (ver su encabezado: papel,
+cuadro congelado, cámara cerca/cara y una sola especie).
 
 ## Texturas (`make_textures.py`)
 
