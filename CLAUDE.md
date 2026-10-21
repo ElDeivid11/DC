@@ -47,7 +47,7 @@ Las fases 0–9 de la guía están hechas: el roguelike es **jugable de punta a 
 - Datos de juego en `data/*.json` (especies, almas, objetos, desbloqueos, mejoras, pisos, balance, textos), validados por `DataRegistry`.
 - UI: un solo Theme generado por `scripts/ui/theme_builder.gd` desde los tokens de `scripts/ui/ui_style.gd`; componentes en `scripts/ui/components/`.
 - Plugins: `addons/psx` (PSX Visuals, **parcheado**: ver abajo), `addons/level_block` (parcheado; el juego usa su algoritmo en mallas propias), `addons/dungeon_crawler_3d` (evaluado y descartado) y `addons/kaykit_dungeon_remastered` (CC0; de ahí salen las antorchas).
-- Enemigos: esqueletos de KayKit (CC0) adaptados con `tools/assets/` → `assets/enemies/`, animados por `scripts/world/enemy_visual.gd` según `species.json → visual`. Los goblins quedan `"activo": false` (sin licencia).
+- Enemigos: esqueleto realista CC0 (Kotelevets) + animaciones CC0 de Quaternius (UAL1/UAL2), armas de KayKit (CC0); armado con `tools/assets/` (`build_skeletons.py` con `bpy` + `process_enemies.mjs`) → `assets/enemies/`, animados por `scripts/world/enemy_visual.gd` según `species.json → visual`. Los goblins quedan `"activo": false` (sin licencia).
 - Estilo Lunacid: biomas por piso en `floors.json → themes`, texturas CC0 (WRAD) en `assets/textures/<bioma>/`, imagen PS1 por `scripts/world/retro_view.gd` (presets en `balance.json → render.presets`).
 - Las carpetas `GoblinPack_Free/`, `Gothic Furniture/` y `PSX Dungeon Boxes and Barrels Pack/` son las descargas originales: llevan `.gdignore`.
 

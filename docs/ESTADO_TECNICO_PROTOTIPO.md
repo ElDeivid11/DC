@@ -72,9 +72,9 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 
 ### Enemigos — `EnemyVisual` (`scripts/world/enemy_visual.gd`)
 
-- Modelos: KayKit Character Pack: Skeletons (CC0), adaptados por `tools/assets/process_enemies.mjs` (solo las animaciones usadas, remuestreadas a 12 fps; malla simplificada ~40%; textura de 64 px con paleta de 15 bits). Armas aparte, en `BoneAttachment3D` sobre `handslot.l/r`.
+- Modelos: esqueleto anatómico "Skeleton - Realistic" (Paul Kotelevets, CC0) con skinning rígido estilo PS1 sobre el rig de 65 huesos de la Universal Animation Library de Quaternius (UAL1 + UAL2, CC0). `tools/assets/build_skeletons.py` (Blender como módulo `bpy`) decima las 135 piezas, las encaja en las articulaciones, ata cada pieza a su hueso, hornea oclusión, pone los ojos y arma la túnica del nigromante (Modular Character Outfits - Fantasy, CC0, + una falda cónica). `process_enemies.mjs` deja solo los clips que pide `species.json`, a 12 fps, y `skeleton_textures.py` pinta el hueso a 128 px por especie. ~3,3k triángulos por cuerpo. Armas (KayKit, CC0) en `BoneAttachment3D` sobre los huesos de `visual.bones` (por defecto `hand_r`/`hand_l`/`Head`), con montaje por arma en datos (`weapon_r_mount`/`weapon_l_mount`: pos, rot, scale).
 - Animación **a pasos**: el `AnimationPlayer` va en modo manual y se avanza de a 1/12 s. Cada papel (`idle`, `combat`, `walk`, `attack`, `hit`, `death`, `spawn`, `dormant`, `ability`, `taunt`) se mapea en `species.json → visual.anims` (texto o lista para variar).
-- Proporciones: la cabeza y las manos se achican con escala de huesos tras cada cuadro (`head_scale`, `bone_scale`); el arma compensa la escala de la mano.
+- Si a un modelo le falta una animación que pide `species.json`, `EnemyVisual` lo avisa con un warning (verify lo cuenta como error). Los clips no pueden terminar en `_Loop`: el importador de Godot les saca el sufijo.
 - Ojos: material sin sombrear **y sin niebla** (se ven antes que el cuerpo). Sombra "blob" con trama Bayer en recorte (sin mezcla alfa). Material un poco más claro que el entorno (`enemies.albedo_boost`).
 - RunController: caminar (`walk` → `idle`), despertar (`spawn`), golpe recibido (`hit` + parpadeo), ataque y habilidad del jefe (señal `enemy_acting`, el daño llega `combat.enemy_attack_windup` s después), burla del jefe al empezar, muerte (`enemy_defeated`) y el cadáver se hunde en el piso (un montón de huesos quieto ya significa "esqueleto dormido").
 
@@ -138,7 +138,7 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 ## Gotchas nuevos (además de los de CLAUDE.md)
 
 - Texturas del mundo y de enemigos: `detect_3d/compress_to=0` en su `.import`. Si no, el editor las pasa a VRAM comprimida con mipmaps la primera vez que las ve en 3D y se pierde el píxel limpio.
-- Los modelos KayKit miden entre 2,1 y 2,6 m (con casco o sombrero) y el techo normal es de 2 m: por eso las escalas de `species.json` y el techo alto de la sala del jefe. Revisar con `tools/enemy_preview.tscn` (líneas de 1, 2 y 3 m).
+- El esqueleto mide 1,775 m y el techo normal es de 2 m (escala 0,95–1,05 en `species.json`; la capucha del nigromante llega a ~1,93 m; la sala del jefe tiene 3 m). Revisar con `tools/enemy_preview.tscn` (líneas de 1, 2 y 3 m; `--preview-role`, `--preview-at`, `--preview-cam`, `--preview-only`).
 - `tools/screenshot.gd --call=metodo:arg` pasa el argumento como texto ("true"/"false" se convierten a bool).
 
 - `RenderingServer.global_shader_parameter_get_list()` **solo funciona en el editor**: en el juego devuelve vacío y tira un error. Para saber si un global PSX ya existe se mira `ProjectSettings.has_setting("shader_globals/<nombre>")`.
@@ -167,6 +167,6 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 
 ## Pendiente
 
-- Modelos de enemigos de proporciones más realistas (los de KayKit son estilizados); integrar Gothic Furniture; sonidos reales.
+- Más especies (candidatos ya evaluados: LibreQuake, BSD-3, zombi y caballero infernal); integrar Gothic Furniture; sonidos reales.
 - Licencias: el pack de goblins no tiene (sus especies están inactivas); el pack PSX de cajas/barriles prohíbe redistribuirlo (revisar si el repo es público).
 - Diferido: razas, árbol de habilidades, crafting, eventos mensuales.

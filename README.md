@@ -32,7 +32,7 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 
 - **Pisos 1 a 5**, cada uno más grande (25×25 → 45×45) y con enemigos de rango más fuerte. Rango 10 = más débil, 1 = más fuerte.
 - Cada piso es un **bioma** con su paleta, niebla y texturas: Catacumbas del Pozo, Cisterna Anegada, Salones de la Luna, Castillo Carmesí y El Abismo.
-- **Enemigos** (esqueletos animados): el **esbirro** y el **ballestero** (básicos), el **guardián** (élite, con hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, color y tamaño piso a piso. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
+- **Enemigos** (esqueletos de proporciones reales, animados a 12 fps): el **esbirro** y el **ballestero** (básicos), el **guardián** (élite, con hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, color y tamaño piso a piso. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
 - Los enemigos **deambulan y te persiguen**. Si chocas tú primero: **ataque sorpresa** (turno gratis y daño ×1,5). Si te alcanzan **por la espalda o un costado: emboscada** (pegan primero ×1,5).
 - Cada piso tiene un **jefe** que custodia la salida. Al vencerlo eliges: **bajar**, **retirarte con el botín** o quedarte.
 - **Almas**: a veces un enemigo suelta su alma (los jefes siempre). Se revela al pulsar Continuar; recogerla es opcional y eliges quién la lleva (1 activa + pasiva opcional + modificadores). **No salen de la cripta.**
@@ -121,7 +121,7 @@ docs/       GUIA_CLAUDE_CODE.md, ESTADO_TECNICO_PROTOTIPO.md, capturas/
 ## Licencias
 
 - Fuentes: Pixelify Sans, Noto Sans Symbols y Noto Sans Symbols 2 (SIL OFL 1.1, ver `assets/fonts/`). Las Noto están recortadas y con las métricas ajustadas.
-- **Enemigos**: KayKit Character Pack: Skeletons, de Kay Lousberg (CC0, `assets/enemies/LICENSE_KayKit_Skeletons.txt`), adaptados con `tools/assets`.
+- **Enemigos**: esqueleto "Skeleton - Realistic" de Paul Kotelevets (Blender Human Base Meshes, CC0), animado con Universal Animation Library 1 y 2 de Quaternius (CC0); la túnica del nigromante sale de Modular Character Outfits - Fantasy de Quaternius (CC0). Las armas son de KayKit Character Pack: Skeletons, de Kay Lousberg (CC0). Licencias, repos y commits exactos en `assets/enemies/LICENSE_*.txt`; el armado, en `tools/assets/` (Blender por `bpy` + Node).
 - **Antorchas**: KayKit Dungeon Remastered, de Kay Lousberg (CC0, `addons/kaykit_dungeon_remastered/Assets/LICENSE.txt`).
 - **Retratos**: héroes de KayKit Character Pack: Adventurers (Barbarian y Rogue con capucha, recoloreados) y objetos de KayKit Dungeon Remastered y Halloween Bits, más algunos hechos con primitivas; todo de Kay Lousberg, CC0 (`assets/portraits/LICENSE_KayKit_*.txt`). Detalle por retrato en `tools/portraits/README.md`.
 - **Texturas de los biomas**: WRAD Textures, de wriks (CC0, `assets/textures/LICENSE_WRAD.txt`), reducidas y recoloreadas con `tools/assets/make_textures.py`.
@@ -134,5 +134,4 @@ docs/       GUIA_CLAUDE_CODE.md, ESTADO_TECNICO_PROTOTIPO.md, capturas/
 - Diferido a propósito, sin pedido no se implementa: razas, árbol de habilidades, crafting, eventos mensuales. (Niveles/EXP ya están, por expedición.)
 - `addons/dungeon_crawler_3d` quedó sin usar: el generador propio produce la grilla que ya consume el juego (ver `docs/ESTADO_TECNICO_PROTOTIPO.md`).
 - Gothic Furniture sigue sin integrar (los `.fbx` necesitan materiales asignados a mano).
-- Los esqueletos de KayKit tienen proporciones estilizadas ("chibi"): se achicaron cabeza y manos, pero un modelo de proporciones más realistas (CC0) encajaría mejor con Lunacid.
 - Sonidos: hay blips generados por código; faltan sonidos reales.
