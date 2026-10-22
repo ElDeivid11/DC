@@ -94,6 +94,11 @@ func set_name_text(t: String) -> void:
 
 ## HP bajo: destello corto cada 0,8 s (el color de la barra no cambia).
 func _process(delta: float) -> void:
+	# Godot reactiva _process al entrar al árbol aunque _init lo apague: las
+	# barras que no son de HP (EXP, almas...) no destellan ni cambian de relleno.
+	if kind != "hp":
+		set_process(false)
+		return
 	if _fraction >= LOW or _fraction <= 0.0:
 		if bar.theme_type_variation != "HpGood":
 			bar.theme_type_variation = "HpGood"

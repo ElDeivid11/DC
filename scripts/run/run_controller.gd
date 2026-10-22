@@ -209,9 +209,10 @@ func _pickup_at(cell: Vector2i) -> void:
 		item_nodes.erase(cell)
 		fd.items = fd.items.filter(func(x: Dictionary) -> bool: return x.cell != cell)
 		EventBus.hud_message.emit(DataRegistry.t("run.picked", [it.nombre]))
-		SceneRouter.play_ui("coin")
+		SceneRouter.play_ui("item")
 	else:
 		EventBus.hud_message.emit(DataRegistry.t("run.inventory_full", [it.nombre]))
+		SceneRouter.play_ui("error")
 
 func _open_chest(cell: Vector2i) -> void:
 	var node: Node3D = chest_nodes[cell]
@@ -219,20 +220,21 @@ func _open_chest(cell: Vector2i) -> void:
 	var coins := RunRules.chest_coins(GameState.floor_n, GameState.rng)
 	GameState.add_coins(coins, "chests")
 	var id := FloorGenerator.roll_item(GameState.rng, MetaState.available_items())
-	var msg := DataRegistry.t("run.chest_coins", [UIFormat.coins(coins)])
+	# Las monedas van en un toast dorado («◈ +12 monedas»); el mensaje de
+	# abajo solo cuenta qué objeto había dentro.
+	UIToast.show(get_tree(), DataRegistry.t("run.chest_toast", [coins]), "coin")
 	if id != "":
 		var it := DataRegistry.get_item(id)
 		if GameState.add_item(id):
-			msg += " " + DataRegistry.t("run.chest_item", [it.nombre])
+			EventBus.hud_message.emit(DataRegistry.t("run.chest_item", [it.nombre]))
 		else:
 			# Inventario lleno: el objeto queda en el piso, al lado del cofre abierto.
 			item_nodes[cell] = {"node": builder.spawn_item(cell), "item_id": id}
-			msg += " " + DataRegistry.t("run.chest_item_left", [it.nombre])
+			EventBus.hud_message.emit(DataRegistry.t("run.chest_item_left", [it.nombre]))
 	node.queue_free()
 	var open := builder.spawn_prop("Crate_1_open", FloorBuilder.cell_to_world(cell), node.rotation_degrees.y)
 	if open:
 		open.scale = Vector3.ONE * 1.2
-	EventBus.hud_message.emit(msg)
 	SceneRouter.play_ui("coin")
 	_after_move()
 
@@ -446,7 +448,7 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 			"soul_capacity": GameState.member_soul_capacity(m),
 			# Si gana y sigue en pie, recibe la EXP de esta kill: nivel y almas con
 			# los que queda (para no marcarlo "lleno" si la victoria le abre lugar).
-			"level": int(m.level), "level_win": RunRules.level_after_xp(int(m.level), int(m.xp), xp),
+			"level": int(m.level), "xp": int(m.xp), "level_win": RunRules.level_after_xp(int(m.level), int(m.xp), xp),
 			"soul_capacity_win": int(m.soul_capacity) + RunRules.level_soul_slots(RunRules.level_after_xp(int(m.level), int(m.xp), xp)),
 			"def": GameState.member_def(m), "ability_bonus": GameState.member_ability_bonus(m),
 			"crit_bonus": GameState.member_crit_bonus(m),
@@ -568,7 +570,11 @@ func _exit_dialog() -> void:
 	if _is_last_floor():
 		d = UIChoiceDialog.ask(self, DataRegistry.t("exit.title_last"), DataRegistry.t("exit.text_last"), [DataRegistry.t("exit.win")], DataRegistry.t("exit.stay"))
 	else:
-		d = UIChoiceDialog.ask(self, DataRegistry.t("exit.title"), DataRegistry.t("exit.text", [UIFormat.coins(GameState.run_coins())]), [DataRegistry.t("exit.descend", [GameState.floor_n + 1]), DataRegistry.t("exit.retreat")], DataRegistry.t("exit.stay"))
+		d = UIChoiceDialog.ask(self, DataRegistry.t("exit.title"), DataRegistry.t("exit.text"), [DataRegistry.t("exit.descend", [GameState.floor_n + 1]), DataRegistry.t("exit.retreat")], DataRegistry.t("exit.stay"))
+		var loot := UILedgerRow.new(DataRegistry.t("exit.loot"), UIFormat.number(GameState.run_coins()), "CoinLabel", "monedas", "moneda")
+		loot.custom_minimum_size.x = 440
+		loot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		d.add_content(loot)
 	var choice: int = await d.chosen
 	dialog_open = false
 	if _is_last_floor() and choice == 0:
@@ -583,6 +589,7 @@ func _exit_dialog() -> void:
 			player.call("set_input_locked", false)
 
 func advance_floor() -> void:
+	SceneRouter.play_ui("descend")
 	GameState.advance_floor()
 	SceneRouter.goto(SceneRouter.RUN)
 
@@ -614,9 +621,11 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 				return false
 			var healed := GameState.heal_member(m, int(it.efecto.valor))
 			GameState.consume_item_at(index)
+			SceneRouter.play_ui("item")
 			UIToast.show(get_tree(), DataRegistry.t("run.healed", [m.name, healed]), "good")
 		"antorcha":
 			GameState.consume_item_at(index)
+			SceneRouter.play_ui("item")
 			GameState.floor_flags["torch"] = true
 			_light_torch()
 			UIToast.show(get_tree(), DataRegistry.t("run.torch"), "good")
@@ -626,12 +635,14 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 				return false
 			m["soul_capacity"] = int(m.soul_capacity) + int(it.efecto.valor)
 			GameState.consume_item_at(index)
+			SceneRouter.play_ui("soul")
 			UIToast.show(get_tree(), DataRegistry.t("run.capacity_up", [m.name, GameState.member_soul_capacity(m)]), "soul")
 		"sello_retiro":
 			var d := UIConfirmDialog.ask(ui_parent, String(it.nombre), DataRegistry.t("run.seal_text"), DataRegistry.t("exit.retreat"), DataRegistry.t("ui.cancel"))
 			if not await d.answered:
 				return false
 			GameState.consume_item_at(index)
+			SceneRouter.play_ui("item")
 			end_run("retiro")
 		_:
 			return false
@@ -715,12 +726,23 @@ func debug_kill_front() -> void:
 ## EXP para el equipo vivo y aviso de cada subida de nivel (los puntos se
 ## reparten en Estado → Atributos).
 func _grant_xp(xp: int) -> void:
-	for up: Dictionary in GameState.add_xp(xp):
-		var text := DataRegistry.t("run.level_up", [up.name, int(up.level), DataRegistry.bal_i("leveling.points_per_level", 3)])
-		if int(up.slots) > 0:
-			text += " " + DataRegistry.t("run.level_up_slot")
-		UIToast.show(get_tree(), text, "good")
-		SceneRouter.play_ui("coin")
+	var ups: Array = GameState.add_xp(xp)
+	# Un toast por personaje con el nivel al que llegó (aunque suba varios).
+	var last_up := {}
+	var slots := {}
+	for up: Dictionary in ups:
+		var mid := String(up.member_id)
+		last_up[mid] = up
+		slots[mid] = int(slots.get(mid, 0)) + int(up.slots)
+	for mid: Variant in last_up.keys():
+		var up: Dictionary = last_up[mid]
+		UIToast.show(get_tree(), DataRegistry.t("run.level_up_toast", [up.name, int(up.level)]), "level")
+		var hint := DataRegistry.t("run.level_up_hint", [up.name, int(GameState.get_member(String(mid)).get("points", 0))])
+		if int(slots[mid]) > 0:
+			hint += " " + DataRegistry.t("run.level_up_slot")
+		EventBus.hud_message.emit(hint)
+	if not ups.is_empty():
+		SceneRouter.play_ui("level_up")
 	if hud:
 		hud.refresh()
 

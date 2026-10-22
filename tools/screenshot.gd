@@ -12,12 +12,22 @@ extends Node
 ##   --summary            deja terminada una run de ejemplo (para RunSummary.tscn)
 ##   --test-room          la run arranca en la sala de pruebas (un enemigo de cada)
 ##   --floor=N            la run arranca en el piso N (semilla fija: revisar biomas)
+##   --combat=metodo[:a,b][;otro]  casi al final, llama eso sobre el combate abierto
+##                        (p. ej. _show_abilities, _show_items, debug_lose,
+##                        _damage_member:1,99, _choose_replacement:bjorn)
+##   --face-chest         pone al jugador frente a un cofre (placa de interacción)
+##   --message=texto      casi al final, muestra ese mensaje en el HUD
+##   --party3             suma un tercer héroe (copia de Elena) a la run de
+##                        ejemplo: para revisar el combate con tres tarjetas
 
 var _scene_path := "res://scenes/ui/UIGallery.tscn"
 var _out := "user://screenshot.png"
 var _frames := 30
 var _call := ""
 var _screen := ""
+var _combat_call := ""
+var _message := ""
+var _face_chest := false
 var _scene: Node
 
 func _ready() -> void:
@@ -32,6 +42,17 @@ func _ready() -> void:
 			_call = arg.substr(7)
 		elif arg.begins_with("--screen="):
 			_screen = arg.substr(9)
+		elif arg.begins_with("--combat="):
+			_combat_call = arg.substr(9)
+		elif arg.begins_with("--message="):
+			_message = arg.substr(10)
+		elif arg == "--face-chest":
+			_face_chest = true
+		elif arg == "--party3" and GameState.party.size() >= 2:
+			var third: Dictionary = (GameState.party[1] as Dictionary).duplicate(true)
+			third["id"] = "tercero"
+			third["name"] = "Ilsa"
+			GameState.party.append(third)
 		elif arg == "--demo":
 			_demo_meta()
 		elif arg == "--run":
@@ -66,18 +87,58 @@ func _capture() -> void:
 			var parts := _call.split(":")
 			if _scene.has_method(parts[0]):
 				if parts.size() > 1:
-					# "true"/"false" llegan como texto: se pasan como bool.
+					# "true"/"false" y los enteros llegan como texto: se convierten.
 					var arg: Variant = parts[1]
 					if parts[1] == "true" or parts[1] == "false":
 						arg = parts[1] == "true"
+					elif parts[1].is_valid_int():
+						arg = int(parts[1])
 					_scene.call(parts[0], arg)
 				else:
 					_scene.call(parts[0])
+		if i == int(_frames / 2.0) - 1 and _face_chest:
+			_put_in_front_of_chest()
+		if i == _frames - 6:
+			if _message != "":
+				EventBus.hud_message.emit(_message)
+			if _combat_call != "":
+				_call_on_combat()
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	var err := img.save_png(_out)
 	print("captura: ", _out, " (", error_string(err), ")")
 	get_tree().quit()
+
+## Llama métodos del combate abierto (RunController.combat), separados por
+## ";". Los argumentos van separados por comas; los números pasan como int.
+func _call_on_combat() -> void:
+	var combat: Variant = _scene.get("combat")
+	if not combat is Node:
+		return
+	for one in _combat_call.split(";"):
+		var parts := one.split(":")
+		var args: Array = []
+		if parts.size() > 1:
+			for a in parts[1].split(","):
+				var v: Variant = a
+				if a.is_valid_int():
+					v = int(a)
+				args.append(v)
+		(combat as Node).callv(parts[0], args)
+
+## Frente a un cofre: busca una celda libre al lado y mira hacia él.
+func _put_in_front_of_chest() -> void:
+	var chests: Variant = _scene.get("chest_nodes")
+	if not chests is Dictionary:
+		return
+	var dirs: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+	for c: Variant in (chests as Dictionary).keys():
+		var cell: Vector2i = c
+		for i in dirs.size():
+			var stand := cell - dirs[i]
+			if not bool(_scene.call("is_wall", stand)) and not bool(_scene.call("get_enemy_at", stand)):
+				_scene.call("debug_teleport", "%d,%d,%d" % [stand.x, stand.y, i])
+				return
 
 func _demo_meta() -> void:
 	MetaState.coins = 1240
