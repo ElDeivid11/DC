@@ -29,6 +29,7 @@ func _ready() -> void:
 			printerr("TEST FAIL: script no instanciable ", path)
 			failures += 1
 	_check_text_keys(files)
+	_check_ui_colors(files)
 	print("lint: %d archivos revisados, %d fallos" % [files.size(), failures])
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -63,3 +64,29 @@ func _check_text_keys(files: Array[String]) -> void:
 				if not DataRegistry.has_text(key):
 					printerr("TEST FAIL: texto '%s' usado en %s no existe en data/texts.json" % [key, path])
 					failures += 1
+
+## La UI no usa colores sueltos: todos salen de UIStyle (y la paleta de
+## data/ui_palette.json). Un Color( con un número o un "#hex" en código de UI
+## es un error; lo transparente se escribe Color.TRANSPARENT.
+const UI_COLOR_DIRS: Array[String] = ["res://scripts/ui/", "res://scripts/combat/", "res://autoload/SceneRouter.gd"]
+const UI_COLOR_EXCEPTIONS: Array[String] = ["res://scripts/ui/ui_style.gd"]
+
+func _check_ui_colors(files: Array[String]) -> void:
+	var regex := RegEx.new()
+	regex.compile("Color\\(\\s*[0-9\"#]")
+	for path in files:
+		if not path.ends_with(".gd") or UI_COLOR_EXCEPTIONS.has(path):
+			continue
+		var in_ui := false
+		for dir in UI_COLOR_DIRS:
+			in_ui = in_ui or path.begins_with(dir)
+		if not in_ui:
+			continue
+		var n := 0
+		for line in FileAccess.get_file_as_string(path).split("\n"):
+			n += 1
+			if line.strip_edges().begins_with("#"):
+				continue
+			if regex.search(line) != null:
+				printerr("TEST FAIL: color suelto en %s:%d (usar UIStyle): %s" % [path, n, line.strip_edges()])
+				failures += 1
