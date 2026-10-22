@@ -92,6 +92,7 @@
 	"hud.points": "▲%d",
 	"hud.points_mark": "▲",
 	"hud.act_open": "Abrir el cofre",
+	"hud.act_pick": "Recoger",
 	"hud.act_fight": "Atacar primero",
 	"hud.act_descend": "Salir del piso",
 	"hud.act_sealed": "Salida sellada",
