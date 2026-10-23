@@ -16,44 +16,48 @@ func _ready() -> void:
 	for id in ids:
 		if MetaState.bestiary_entry(id).seen:
 			seen += 1
-	title_label.text = DataRegistry.t("bestiary.title_count", [seen, ids.size()])
+	show_count("%d/%d" % [seen, ids.size()])
 	add_footer_button(DataRegistry.t("ui.back"), close)
 
 func _fill_list() -> void:
 	for id in ids:
 		var sp := DataRegistry.get_species(id)
 		var e := MetaState.bestiary_entry(id)
-		if not e.seen:
-			add_row("???", [["", "DimLabel", 90], [DataRegistry.t("ui.rank_short", [UIFormat.roman(int(sp.rank))]), "DimLabel", 50]], true)
-		else:
-			add_row(String(sp.display_name), [
-				[DataRegistry.t("bestiary.kills_short", [int(e.kills)]), "DimLabel", 90],
-				[DataRegistry.t("ui.rank_short", [UIFormat.roman(int(sp.rank))]), "AccentLabel", 50],
-			])
+		var columns: Array = []
+		if e.seen:
+			var kills := HBoxContainer.new()
+			kills.add_theme_constant_override("separation", 4)
+			kills.add_child(UIIcon.make("muerte", "bronce"))
+			var n := col(DataRegistry.t("bestiary.kills_short", [int(e.kills)]), "NumLabel", 56)
+			n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			kills.add_child(n)
+			columns.append(kills)
+			var seal := UISprite.new("seal_mini") if int(e.kills) > 0 else Control.new()
+			seal.custom_minimum_size = Vector2(18, 18)
+			columns.append(seal)
+		columns.append(UIRankBadge.new(int(sp.rank)))
+		add_row(String(sp.display_name) if e.seen else "???", columns, not e.seen, "bestiario")
 
 func _show_detail(index: int) -> void:
 	var id := ids[index]
 	var sp := DataRegistry.get_species(id)
 	var e := MetaState.bestiary_entry(id)
+	var info := detail_header(String(sp.display_name) if e.seen else "???", null, "muerte", "bronce" if e.seen else "apagado")
+	var plate_row := HBoxContainer.new()
+	plate_row.add_theme_constant_override("separation", 12)
+	info.add_child(plate_row)
+	plate_row.add_child(UIRankBadge.new(int(sp.rank)))
 	if not e.seen:
-		detail.set_title("???")
 		detail_line(DataRegistry.t("bestiary.unseen"), "DimLabel")
-		detail_box.add_child(UIRankBadge.new(int(sp.rank)))
 		return
-	detail.set_title(String(sp.display_name))
-	var head := HBoxContainer.new()
-	detail_box.add_child(head)
-	head.add_child(UIRankBadge.new(int(sp.rank)))
-	var desc := Label.new()
-	desc.text = String(sp.description)
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(desc)
 	var stats := DataRegistry.stats_for_rank(int(sp.rank))
-	detail_line(DataRegistry.t("bestiary.stats", [stats.hp, stats.atk]), "")
-	detail_line(DataRegistry.t("bestiary.kills", [int(e.kills)]), "DimLabel")
+	var stat_label := UILabel.make(DataRegistry.t("bestiary.stats", [stats.hp, stats.atk]).to_upper(), "NumSmallLabel")
+	stat_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	plate_row.add_child(stat_label)
+	detail_line(String(sp.description))
+	detail_box.add_child(UILedgerRow.new(DataRegistry.t("bestiary.kills_label"), "%d" % int(e.kills), "NumLabel", "muerte", "bronce"))
 	if int(e.kills) == 0:
-		detail_line(DataRegistry.t("bestiary.first_kill_pending", [UIFormat.coins(RunRules.first_kill_bonus(int(sp.rank)))]), "CoinLabel")
+		detail_line(DataRegistry.t("bestiary.first_kill_pending", [UIFormat.coins(RunRules.first_kill_bonus(int(sp.rank)))]), "AccentLabel")
 	else:
 		detail_line(DataRegistry.t("bestiary.first_kill_done", [int(e.first_kill_run)]), "DetailLabel")
 	detail_line(DataRegistry.t("bestiary.soul"), "SoulLabel")

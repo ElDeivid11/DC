@@ -4,6 +4,7 @@ extends PanelContainer
 ## la derecha en las pantallas (UIScreen.show_coins) y en el Hub.
 
 var label: Label
+var icon: UIIcon
 
 func _init(big := false) -> void:
 	theme_type_variation = "HudPanel"
@@ -12,7 +13,8 @@ func _init(big := false) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	add_child(row)
-	row.add_child(UIIcon.make("monedas", "moneda"))
+	icon = UIIcon.make("monedas", "moneda")
+	row.add_child(icon)
 	label = Label.new()
 	label.theme_type_variation = "CoinBigLabel" if big else "CoinLabel"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -22,3 +24,10 @@ func _init(big := false) -> void:
 
 func set_amount(amount: int) -> void:
 	label.text = UIFormat.number(amount)
+
+## Conteo sin monedas (sin ícono, cifras claras).
+func set_text(text: String) -> void:
+	icon.visible = false
+	label.theme_type_variation = "NumLabel"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.text = text

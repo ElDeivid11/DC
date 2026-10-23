@@ -19,7 +19,7 @@ func _ready() -> void:
 	)
 	super._ready()
 	var available := MetaState.available_items().size()
-	title_label.text = DataRegistry.t("unlocks.title_count", [available, ids.size()])
+	show_count("%d/%d" % [available, ids.size()])
 	add_footer_button(DataRegistry.t("ui.back"), close)
 
 ## Orden: de inicio, desbloqueados, en progreso, bloqueados.
@@ -40,38 +40,42 @@ func _hidden(item_id: String) -> bool:
 func _fill_list() -> void:
 	for id in ids:
 		var it := DataRegistry.get_item(id)
-		var status := ""
-		var variation := "DimLabel"
+		var columns: Array = []
 		if it.unlock_id == null:
-			status = DataRegistry.t("unlocks.from_start")
-			variation = "GoodLabel"
+			columns.append(col(DataRegistry.t("unlocks.from_start"), "GoodLabel", 150))
 		elif MetaState.is_unlocked(String(it.unlock_id)):
-			status = "✓ " + DataRegistry.t("unlocks.unlocked")
-			variation = "GoodLabel"
+			columns.append(col(DataRegistry.t("unlocks.unlocked"), "GoodLabel", 150))
+		elif _hidden(id):
+			columns.append(col("???", "DimLabel", 150))
 		else:
 			var u := DataRegistry.get_unlock(String(it.unlock_id))
 			var p := UnlockEvaluator.progress_of(u, MetaState.progress)
-			status = "???" if _hidden(id) else "%d/%d" % [p.x, p.y]
-			variation = "AccentLabel" if p.x > 0 else "DimLabel"
-		add_row("???" if _hidden(id) else String(it.nombre), [[status, variation, 140]], _rank(id) == 2)
+			var bar := ProgressBar.new()
+			bar.show_percentage = false
+			bar.theme_type_variation = "CoinBar"
+			bar.custom_minimum_size = Vector2(96, 16)
+			bar.max_value = maxi(p.y, 1)
+			bar.value = clampi(p.x, 0, maxi(p.y, 1))
+			columns.append(bar)
+			columns.append(col("%d/%d" % [mini(p.x, p.y), p.y], "NumSmallLabel", 48))
+		var row := add_row("???" if _hidden(id) else String(it.nombre), columns, _rank(id) == 2, "", UIPortrait.item_texture(id))
+		if _hidden(id) and row.picture:
+			row.picture.modulate = UIStyle.HIERRO_OSC
 
 func _show_detail(index: int) -> void:
 	var id := ids[index]
 	var it := DataRegistry.get_item(id)
+	var is_hidden := _hidden(id)
+	var info := detail_header("???" if is_hidden else String(it.nombre), UIPortrait.item_texture(id))
 	# Retrato: en silueta si el objeto todavía es secreto, apagado si está bloqueado.
-	var pic := UIPortrait.for_item(id, 96)
-	detail_box.add_child(pic)
-	if _hidden(id):
-		pic.set_silhouette(true)
-	elif _rank(id) == 2:
-		pic.set_dimmed(true)
-	if _hidden(id):
-		detail.set_title("???")
+	if is_hidden:
+		detail_portrait.set_silhouette(true)
 		detail_line(DataRegistry.t("unlocks.hidden_text"), "DimLabel")
 		return
-	detail.set_title(String(it.nombre))
+	elif _rank(id) == 2:
+		detail_portrait.set_dimmed(true)
+	info.add_child(_type_plate(String(it.tipo)))
 	detail_line(String(it.descripcion))
-	detail_line(DataRegistry.t("item.type." + String(it.tipo)), "DetailLabel")
 	if it.unlock_id == null:
 		detail_line(DataRegistry.t("unlocks.from_start_text"), "GoodLabel")
 		return
@@ -84,3 +88,11 @@ func _show_detail(index: int) -> void:
 	detail_box.add_child(UIProgressUnlock.new(String(u.descripcion), p.x, p.y))
 	if u.condicion.tipo == "no_item_use_run":
 		detail_line(DataRegistry.t("unlocks.per_run_note"), "DetailLabel")
+
+## Placa de piedra con el tipo del objeto ("CONSUMIBLE", "PASIVO").
+static func _type_plate(kind: String) -> PanelContainer:
+	var plate := PanelContainer.new()
+	plate.theme_type_variation = "RankPlaque"
+	plate.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	plate.add_child(UILabel.make(DataRegistry.t("item.type." + kind).to_upper(), "NumSmallLabel"))
+	return plate

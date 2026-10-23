@@ -15,6 +15,9 @@ func _init(p_id := "", p_ramp := "bronce", side := UIStyle.ICON_SIZE) -> void:
 	expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
 	custom_minimum_size = Vector2(side, side)
+	# Más grande que 32: se escala ×2/×3 entero (pixel nítido).
+	if side != UIStyle.ICON_SIZE:
+		stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_apply()

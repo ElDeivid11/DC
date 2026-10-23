@@ -126,6 +126,12 @@ func _ready() -> void:
 	).set_delay(0.033)
 	tw.tween_callback(func() -> void: panel.scale = Vector2.ONE).set_delay(0.033)
 
+## Placa con un conteo en cifras (p. ej. "12/30" en Objetos o el Bestiario),
+## en el lugar de la placa de monedas.
+func show_count(text: String) -> void:
+	coins_plate.visible = not compact
+	coins_plate.set_text(text)
+
 func show_coins(amount: int) -> void:
 	coins_plate.visible = not compact
 	coins_plate.set_amount(amount)

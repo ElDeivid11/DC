@@ -77,6 +77,7 @@
 	"hub.last_floor_kills": "Piso %d · %d enemigos",
 	"hub.last_cause": "Ante: %s",
 	"hub.last_time": "Duración: %s",
+	"hub.last_floor_of": "Piso %s de %s",
 	"hud.hints": "Tab estado · I inventario · M mapa · Esc pausa",
 	"hud.floor": "Piso %d/%d",
 	"hud.floor_short": "Piso %d",
@@ -315,7 +316,8 @@
 	"controls.menus_keys": "↑↓ / Enter / Esc  ·  Cruceta / A / B",
 	"upgrades.title": "Mejoras",
 	"upgrades.buy": "Comprar",
-	"upgrades.level": "Nivel %d/%d   %s",
+	"upgrades.level_num": "Nivel %d / %d",
+	"upgrades.buy_cost": "Comprar · %s",
 	"upgrades.now": "Ahora: %s",
 	"upgrades.next": "Siguiente nivel: %s",
 	"upgrades.cost": "Coste: %s",
@@ -341,9 +343,10 @@
 	"bestiary.title": "Bestiario",
 	"bestiary.title_count": "Bestiario  %d/%d",
 	"bestiary.unseen": "Aún no has encontrado esta criatura.",
-	"bestiary.kills_short": "× %d",
+	"bestiary.kills_short": "×%d",
 	"bestiary.stats": "HP %d · ATK %d",
 	"bestiary.kills": "Derrotados: %d",
+	"bestiary.kills_label": "Derrotados",
 	"bestiary.first_kill_pending": "Bonus de primera muerte pendiente: %s",
 	"bestiary.first_kill_done": "Primera muerte en la expedición n.º %d.",
 	"bestiary.soul": "Alma que otorga",
@@ -415,5 +418,5 @@
 	"debug.not_in_run": "Solo funciona durante una expedición.",
 	"debug.fight_nearest": "Pelear con el más cercano",
 	"debug.fight_boss": "Pelear con el jefe",
-	"upgrades.at_max": "%s al máx."
+	"upgrades.at_max": "Tope: %s"
 }
