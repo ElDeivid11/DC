@@ -15,18 +15,21 @@ func _init() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	add_child(row)
-	row.add_child(_keycap(DataRegistry.t("ui.key_q")))
+	row.add_child(make_keycap(DataRegistry.t("ui.key_q")))
 	tab_bar = TabBar.new()
 	tab_bar.focus_mode = Control.FOCUS_ALL
+	# Sin recorte: el TabBar pide el ancho de todas sus lengüetas (sin flechas).
+	tab_bar.clip_tabs = false
 	tab_bar.tab_changed.connect(_on_tab_changed)
 	row.add_child(tab_bar)
-	row.add_child(_keycap(DataRegistry.t("ui.key_e")))
+	row.add_child(make_keycap(DataRegistry.t("ui.key_e")))
 	content = PanelContainer.new()
 	content.theme_type_variation = "PanelAlt"
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(content)
 
-static func _keycap(key: String) -> PanelContainer:
+## Tecla en una placa (KeyCap): Q/E de las pestañas, controles en Opciones.
+static func make_keycap(key: String) -> PanelContainer:
 	var cap := PanelContainer.new()
 	cap.theme_type_variation = "KeyCap"
 	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER

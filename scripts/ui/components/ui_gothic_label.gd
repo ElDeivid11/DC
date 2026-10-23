@@ -19,6 +19,7 @@ const FIXED_KEYS: Array[String] = [
 	"stats.title", "options.title", "status.title", "inventory.title", "map.title",
 	"combat.victory_title", "summary.souls_note",
 	"combat.defeat_title", "combat.fled_title", "combat.replace_title", "exit.title", "exit.title_last",
+	"stats.no_kills",
 ]
 const SHADOW := 2
 

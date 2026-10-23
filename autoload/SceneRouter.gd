@@ -59,6 +59,8 @@ func _ready() -> void:
 	_material.set_shader_parameter("progress", 0.0)
 	_rect.material = _material
 	add_child(_rect)
+	# La escala de UI depende del tamaño de la ventana (píxel de arte entero).
+	get_tree().root.size_changed.connect(func() -> void: GameSettings.apply_ui_scale(get_tree().root, MetaState.settings))
 
 # --- Sonidos de UI ----------------------------------------------------------------
 

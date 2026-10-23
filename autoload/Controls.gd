@@ -66,18 +66,20 @@ func ensure_actions() -> void:
 			jm.axis_value = float(axis[1])
 			InputMap.action_add_event(action, jm)
 
-## "↑ / W · Cruceta ↑" para mostrar en pantalla.
-func bindings_text(action: String) -> String:
-	if not ACTIONS.has(action):
-		return ""
-	var def: Dictionary = ACTIONS[action]
-	var keys: Array[String] = []
-	for key: Variant in def.keys:
-		keys.append(String(KEY_NAMES.get(int(key), OS.get_keycode_string(int(key)))))
-	var pads: Array[String] = []
-	for b: Variant in def.buttons:
-		pads.append(String(BUTTON_NAMES.get(int(b), "Botón %d" % int(b))))
-	var txt := " / ".join(keys)
-	if not pads.is_empty():
-		txt += "  ·  " + " / ".join(pads)
-	return txt
+## Nombres en pantalla de las teclas de una acción ("W", "↑").
+func key_names(action: String) -> Array[String]:
+	var out: Array[String] = []
+	if ACTIONS.has(action):
+		var def: Dictionary = ACTIONS[action]
+		for key: Variant in def.keys:
+			out.append(String(KEY_NAMES.get(int(key), OS.get_keycode_string(int(key)))))
+	return out
+
+## Nombres en pantalla de los botones de mando de una acción.
+func pad_names(action: String) -> Array[String]:
+	var out: Array[String] = []
+	if ACTIONS.has(action):
+		var def: Dictionary = ACTIONS[action]
+		for b: Variant in def.buttons:
+			out.append(String(BUTTON_NAMES.get(int(b), "Botón %d" % int(b))))
+	return out

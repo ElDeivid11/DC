@@ -1,13 +1,17 @@
 class_name OptionsScreen
 extends UIScreen
-## Opciones: volumen, pantalla completa, escala de UI (80–150%), estilo de
-## imagen (presets PS1, ver RetroView), balanceo de cámara, controles (lista)
-## e idioma. Se guardan y aplican al instante.
-## Desde el Hub (con build de debug) además: sala de pruebas, galería de UI
-## y reiniciar guardado.
+## Opciones: volumen, pantalla completa, escala de UI (Compacta / Normal /
+## Grande, ver GameSettings.ui_factor), estilo de imagen (presets PS1, ver
+## RetroView), balanceo de cámara e idioma. Se guardan y aplican al instante.
+## A la derecha, pestañas de Controles (teclas en KeyCaps) y Créditos.
+## Desde el Hub además: reiniciar guardado, y con build de debug la sala de
+## pruebas y la galería de UI (al pie).
+
+const LABEL_WIDTH := 220
+const CONTROL_WIDTH := 260
 
 var from_hub := false
-var scale_value: Label
+var volume_value: Label
 
 func _init(p_from_hub := false) -> void:
 	super(DataRegistry.t("options.title"))
@@ -19,103 +23,144 @@ func _ready() -> void:
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", UIStyle.SPACE * 4)
 	body.add_child(row)
+	var vol := _build_general(row)
+	_build_right(row)
 
+	if from_hub and OS.is_debug_build():
+		add_footer_button(DataRegistry.t("options.test_room"), _start_test_room)
+		add_footer_button(DataRegistry.t("gallery.title"), func() -> void: SceneRouter.goto(SceneRouter.UI_GALLERY))
+		var spacer := Control.new()
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		footer.add_child(spacer)
+	add_footer_button(DataRegistry.t("ui.back"), close)
+	vol.call_deferred("grab_focus")
+
+func _build_general(parent: Control) -> HSlider:
 	var general := UIPanel.new(DataRegistry.t("options.general"), "PanelAlt")
-	general.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(general)
+	general.custom_minimum_size.x = LABEL_WIDTH + CONTROL_WIDTH + 80
+	general.body.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	parent.add_child(general)
 	var s := MetaState.settings
 
-	general.body.add_child(_label(DataRegistry.t("options.volume")))
 	var vol := HSlider.new()
 	vol.min_value = 0
 	vol.max_value = 100
 	vol.step = 5
 	vol.value = roundf(float(s.get("master_volume", 0.8)) * 100.0)
 	vol.focus_mode = Control.FOCUS_ALL
-	vol.value_changed.connect(func(v: float) -> void: _apply_setting("master_volume", v / 100.0))
-	general.body.add_child(vol)
+	vol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vol.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	volume_value = UILabel.make("%d%%" % int(vol.value), "NumSmallLabel")
+	volume_value.custom_minimum_size.x = 44
+	volume_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	vol.value_changed.connect(func(v: float) -> void:
+		volume_value.text = "%d%%" % int(v)
+		_apply_setting("master_volume", v / 100.0))
+	var vol_box := HBoxContainer.new()
+	vol_box.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	vol_box.add_child(vol)
+	vol_box.add_child(volume_value)
+	general.body.add_child(_row("options.volume", vol_box))
 
 	var fs := CheckBox.new()
-	fs.text = DataRegistry.t("options.fullscreen")
 	fs.button_pressed = bool(s.get("fullscreen", false))
 	fs.toggled.connect(func(on: bool) -> void: _apply_setting("fullscreen", on))
-	general.body.add_child(fs)
+	general.body.add_child(_row("options.fullscreen", fs))
 
-	var image_label := _label(DataRegistry.t("options.image"))
-	general.body.add_child(image_label)
+	var scale_opt := OptionButton.new()
+	for key: String in ["options.ui_scale_compact", "options.ui_scale_normal", "options.ui_scale_large"]:
+		scale_opt.add_item(DataRegistry.t(key))
+	scale_opt.selected = GameSettings.UI_SCALE_STEPS.find(GameSettings.nearest_step(float(s.get("ui_scale", 1.0))))
+	scale_opt.item_selected.connect(func(i: int) -> void: _apply_setting("ui_scale", GameSettings.UI_SCALE_STEPS[i]))
+	UITooltip.attach(scale_opt, DataRegistry.t("options.ui_scale_tip"))
+	general.body.add_child(_row("options.ui_scale", scale_opt))
+
 	var image := OptionButton.new()
 	for id in RetroView.PRESETS:
 		image.add_item(DataRegistry.t("options.preset_" + id))
 	image.selected = RetroView.PRESETS.find(RetroView.preset_id())
 	image.item_selected.connect(func(i: int) -> void: _apply_setting("retro_preset", RetroView.PRESETS[i]))
 	UITooltip.attach(image, DataRegistry.t("options.image_tip"))
-	general.body.add_child(image)
+	general.body.add_child(_row("options.image", image))
 
 	var bob := CheckBox.new()
-	bob.text = DataRegistry.t("options.head_bob")
 	bob.button_pressed = bool(s.get("head_bob", true))
 	bob.toggled.connect(func(on: bool) -> void: _apply_setting("head_bob", on))
 	UITooltip.attach(bob, DataRegistry.t("options.head_bob_tip"))
-	general.body.add_child(bob)
+	general.body.add_child(_row("options.head_bob", bob))
 
-	var scale_row := HBoxContainer.new()
-	general.body.add_child(scale_row)
-	var sl := _label(DataRegistry.t("options.ui_scale"))
-	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scale_row.add_child(sl)
-	scale_value = _label("")
-	scale_value.theme_type_variation = "AccentLabel"
-	scale_row.add_child(scale_value)
-	var sc := HSlider.new()
-	sc.min_value = GameSettings.UI_SCALE_MIN * 100.0
-	sc.max_value = GameSettings.UI_SCALE_MAX * 100.0
-	sc.step = 10
-	sc.value = roundf(float(s.get("ui_scale", 1.0)) * 100.0)
-	sc.focus_mode = Control.FOCUS_ALL
-	scale_value.text = "%d%%" % int(sc.value)
-	# La escala se aplica al soltar (cambiarla mientras se arrastra mueve el slider bajo el mouse).
-	sc.value_changed.connect(func(v: float) -> void: scale_value.text = "%d%%" % int(v))
-	sc.drag_ended.connect(func(_changed: bool) -> void: _apply_setting("ui_scale", sc.value / 100.0))
-	sc.focus_exited.connect(func() -> void: _apply_setting("ui_scale", sc.value / 100.0))
-	general.body.add_child(sc)
-
-	general.body.add_child(_label(DataRegistry.t("options.language")))
 	var lang := OptionButton.new()
 	lang.add_item(DataRegistry.t("options.language_es"))
 	lang.disabled = true
-	general.body.add_child(lang)
+	general.body.add_child(_row("options.language", lang))
+	return vol
 
-	var controls := UIPanel.new(DataRegistry.t("options.controls"), "PanelAlt")
-	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(controls)
+## Fila de ajuste: etiqueta de ancho fijo + control.
+func _row(label_key: String, control: Control) -> HBoxContainer:
+	var r := HBoxContainer.new()
+	r.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	var l := UILabel.make(DataRegistry.t(label_key))
+	l.custom_minimum_size.x = LABEL_WIDTH
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.add_child(l)
+	control.custom_minimum_size.x = CONTROL_WIDTH
+	control.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.add_child(control)
+	return r
+
+func _build_right(parent: Control) -> void:
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	parent.add_child(col)
+	var tabs := UITabs.new()
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(tabs)
+	tabs.add_tab(DataRegistry.t("options.controls"), _controls_page(), "opciones")
+	tabs.add_tab(DataRegistry.t("options.credits"), _credits_page(), "bestiario")
+	if from_hub:
+		var reset := UIButton.make(DataRegistry.t("options.reset_save"), _reset_save, "DangerButton")
+		reset.size_flags_horizontal = Control.SIZE_SHRINK_END
+		reset.custom_minimum_size.x = 220
+		col.add_child(reset)
+
+## Acción · [teclas] · [botones del mando], todo en KeyCaps.
+func _controls_page() -> Control:
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", UIStyle.SPACE * 4)
-	controls.body.add_child(grid)
+	grid.add_theme_constant_override("v_separation", UIStyle.SPACE * 2)
 	for action in Controls.DISPLAY_ORDER:
-		grid.add_child(_label(DataRegistry.t("controls." + action)))
-		var keys := _label(Controls.bindings_text(action))
-		keys.theme_type_variation = "DimLabel"
-		grid.add_child(keys)
-	grid.add_child(_label(DataRegistry.t("controls.menus")))
-	var menus := _label(DataRegistry.t("controls.menus_keys"))
-	menus.theme_type_variation = "DimLabel"
-	grid.add_child(menus)
+		_controls_row(grid, DataRegistry.t("controls." + action), Controls.key_names(action), Controls.pad_names(action))
+	# Menús: "↑↓ / Enter / Esc  ·  Cruceta / A / B" (teclado · mando).
+	var parts := DataRegistry.t("controls.menus_keys").split("·")
+	var keys: Array[String] = []
+	var pads: Array[String] = []
+	for k in parts[0].split("/"):
+		keys.append(k.strip_edges())
+	if parts.size() > 1:
+		for b in parts[1].split("/"):
+			pads.append(b.strip_edges())
+	_controls_row(grid, DataRegistry.t("controls.menus"), keys, pads)
+	return grid
 
-	if from_hub and OS.is_debug_build():
-		var dbg := UIPanel.new(DataRegistry.t("options.debug"), "PanelAlt")
-		row.add_child(dbg)
-		dbg.body.add_child(UIButton.make(DataRegistry.t("options.test_room"), _start_test_room))
-		dbg.body.add_child(UIButton.make(DataRegistry.t("gallery.title"), func() -> void: SceneRouter.goto(SceneRouter.UI_GALLERY)))
-		dbg.body.add_child(UIButton.make(DataRegistry.t("options.reset_save"), _reset_save, "DangerButton"))
+func _controls_row(grid: GridContainer, text: String, keys: Array[String], pads: Array[String]) -> void:
+	var l := UILabel.make(text)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(l)
+	for names: Array[String] in [keys, pads]:
+		var caps := HBoxContainer.new()
+		caps.add_theme_constant_override("separation", UIStyle.SPACE)
+		for n in names:
+			caps.add_child(UITabs.make_keycap(n))
+		grid.add_child(caps)
 
-	add_footer_button(DataRegistry.t("ui.back"), close)
-	vol.call_deferred("grab_focus")
-
-func _label(text: String) -> Label:
-	var l := Label.new()
-	l.text = text
-	return l
+func _credits_page() -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	for key: String in ["credits.fonts", "credits.icons", "credits.sounds", "credits.models"]:
+		box.add_child(UILabel.make(DataRegistry.t(key), "DetailLabel", true))
+	return box
 
 func _apply_setting(key: String, value: Variant) -> void:
 	MetaState.settings[key] = value

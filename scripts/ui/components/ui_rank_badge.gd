@@ -10,6 +10,8 @@ var _label: Label
 func _init(p_rank := 10) -> void:
 	theme_type_variation = "RankPlaque"
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	# Ancho parejo para I…X: las filas de las listas quedan alineadas.
+	custom_minimum_size.x = 40
 	_label = Label.new()
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
