@@ -6,7 +6,7 @@ suavizado (ui/kit/ui_atlas.png) y escribe ui/kit/manifest.json con las
 regiones, márgenes 9-slice, ejes, cuadros de animación e íconos. ThemeBuilder
 arma el Theme a partir de ese manifiesto (scripts/ui/ui_kit.gd).
 
-    python3 -I tools/ui/make_ui_kit.py [--preview RUTA.png]
+    python3 -I tools/ui/make_ui_kit.py [--preview=RUTA.png]
 
 Determinista: dos corridas dan el mismo PNG y el mismo JSON (el test
 tests/unit/test_ui_kit.gd compara los SHA-256 de la paleta y de este script).

@@ -45,15 +45,29 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 - **Mejoras** con monedas, con tope de 5 niveles: Vitalidad, Fuerza, Botín, Provisiones y Sabiduría.
 - **Objetos y desbloqueos**: los objetos nuevos se desbloquean **por condiciones** (llegar al piso 3, destruir 15 esqueletos, huir 3 veces…), nunca con monedas. Se ve el progreso (9/15).
 - **Bestiario**: especies vistas, kills y el alma que dan. La primera kill de cada especie da un bonus una sola vez.
-- **Estadísticas** y **Opciones**: volumen, pantalla completa, escala de UI 80–150%, **imagen** (Clásica PS1 · Crujiente · Limpia), balanceo de cámara al caminar y controles.
+- **Estadísticas** y **Opciones**: volumen, pantalla completa, escala de la interfaz (Compacta · Normal · Grande, siempre con el píxel parejo), **imagen** (Clásica PS1 · Crujiente · Limpia), balanceo de cámara al caminar, controles y créditos.
 
-| Combate | Revelación del alma | Resumen de la expedición |
+## La interfaz: «Grimorio de la Cripta»
+
+Menús de hierro remachado y vitela oscura, títulos góticos con capitular roja, cursor de llama y foco de brasa. El azul frío es solo de las **almas**, el rojo del HP y la amatista de la EXP. Todo es pixel art (×2, sin suavizado) generado por código desde una paleta en `data/ui_palette.json` (`tools/ui/`), con íconos de game-icons.net, fuentes góticas y pixel de Google Fonts y sonidos de Kenney.
+
+| Combate | Un alma se desprende | Crónica de la expedición |
 |---|---|---|
 | ![](docs/capturas/combat.png) | ![](docs/capturas/soul.png) | ![](docs/capturas/summary_revealed.png) |
 
-| Estado → Atributos | Inventario | HUD con nivel y puntos |
+| Estado → Atributos | Estado → Equipo | Inventario |
 |---|---|---|
-| ![](docs/capturas/atributos.png) | ![](docs/capturas/inventario.png) | ![](docs/capturas/hud_niveles.png) |
+| ![](docs/capturas/atributos.png) | ![](docs/capturas/estado_equipo.png) | ![](docs/capturas/inventario.png) |
+
+| Mejoras | Bestiario | Pausa |
+|---|---|---|
+| ![](docs/capturas/upgrades.png) | ![](docs/capturas/bestiary.png) | ![](docs/capturas/pausa.png) |
+
+| HUD | Mapa | Opciones |
+|---|---|---|
+| ![](docs/capturas/hud_niveles.png) | ![](docs/capturas/map.png) | ![](docs/capturas/opciones.png) |
+
+![Kit de UI](docs/capturas/ui_kit.png)
 
 ## Valores por defecto que hay que revisar (🟡)
 
@@ -94,9 +108,10 @@ Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 (lo mis
 
 - **F1 — panel de debug**: monedas, mejoras ±1, desbloquear o bloquear todo, saltar de piso, pelear con el más cercano o con el jefe, curar, ganar el combate, forzar alma o ataque sorpresa, god mode, matar de un golpe, semilla fija, reiniciar guardado, sala de pruebas y galería de UI. Muestra FPS, celda y estado de la run. Registra los eventos en `user://debug.log`.
 - **Sala de pruebas**: la sala 15×9 del prototipo (con techo alto) con un enemigo de cada tipo, uno dormido y el jefe. Se abre desde Opciones (en debug) o con F1. No guarda progreso.
-- **Galería de UI**: todos los componentes del design system en una pantalla.
-- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, 52 tests unitarios y smoke test de punta a punta, que también usa una poción desde el inventario y reparte puntos en Atributos).
-- `tools/screenshot.tscn`: capturas con Xvfb (ver el encabezado del script; `--floor=N` y `--test-room` para revisar biomas y enemigos).
+- **Galería de UI**: todos los componentes del design system en una pantalla (íconos, barras, rangos, nichos, avisos, diálogos, pestañas).
+- `tools/ui/`: generador del kit pixel de la UI (paleta → atlas + manifiesto → Theme). Ver su `README.md`.
+- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, 64 tests unitarios y smoke test de punta a punta, que también usa una poción desde el inventario y reparte puntos en Atributos).
+- `tools/screenshot.tscn`: capturas con Xvfb (ver el encabezado del script; `--floor=N` y `--test-room` para revisar biomas y enemigos, `--screen=Clase` y `--tab=N` para las pantallas).
 - `tools/enemy_preview.tscn`: todos los enemigos en fila, de frente y de perfil, con líneas de referencia del techo (2 m y 3 m).
 - `tools/assets/`: pipeline que adapta los assets libres al estilo (modelos de enemigos y texturas de cada bioma). Ver su `README.md`.
 - `tools/portraits/`: hornea los retratos de héroes (96×96) y objetos (64×64) como render 3D con el filtro PS1 del juego. Ver su `README.md`.
@@ -112,15 +127,17 @@ scripts/    run/ (RunController, FloorGenerator, FloorBuilder, reglas, recompens
             combat/ (CombatManager, pasivas) · world/ (GridPlayer, EnemyVisual, RetroView, FlickerLight)
             ui/ (theme, componentes, pantallas, HUD)
 shaders/    psx_viewport_dither (trama PS1 dentro del SubViewport)
-ui/         theme_main.tres (generado por scripts/ui/theme_builder.gd)
+ui/         theme_main.tres (generado por scripts/ui/theme_builder.gd), kit/ (atlas + manifiesto de tools/ui), shaders/
 tests/      TestRunner (unitarios) y SmokeTest
-tools/      verify.sh, lint, build_theme, balance_sim, screenshot, enemy_preview, assets/ (pipeline de assets), portraits/
+tools/      verify.sh, lint, build_theme, balance_sim, screenshot, enemy_preview, assets/ (pipeline de assets), portraits/, ui/ (kit de la UI)
 docs/       GUIA_CLAUDE_CODE.md, ESTADO_TECNICO_PROTOTIPO.md, capturas/
 ```
 
 ## Licencias
 
-- Fuentes: Pixelify Sans, Noto Sans Symbols y Noto Sans Symbols 2 (SIL OFL 1.1, ver `assets/fonts/`). Las Noto están recortadas y con las métricas ajustadas.
+- **Fuentes** (SIL OFL 1.1, ver `assets/fonts/`): Jacquard 12 y 24, Jacquarda Bastarda 9, Jersey 15 y Micro 5 (The Soft Type Project Authors), Pixelify Sans (The Pixelify Sans Project Authors) y Noto Sans Symbols 1 y 2 (recortadas y con las métricas ajustadas).
+- **Íconos**: game-icons.net — *Icons made by Lorc, Delapouite, Skoll y Sbed*, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Rasterizados a 16 px y recoloreados. Lista y licencia en `tools/ui/`. El crédito también está en Opciones → Créditos.
+- **Sonidos de la UI**: Kenney (kenney.nl), UI Audio, RPG Audio e Interface Sounds, CC0 (`assets/audio/ui/`).
 - **Enemigos**: esqueleto "Skeleton - Realistic" de Paul Kotelevets (Blender Human Base Meshes, CC0), animado con Universal Animation Library 1 y 2 de Quaternius (CC0); la túnica del nigromante sale de Modular Character Outfits - Fantasy de Quaternius (CC0). Las armas son de KayKit Character Pack: Skeletons, de Kay Lousberg (CC0). Licencias, repos y commits exactos en `assets/enemies/LICENSE_*.txt`; el armado, en `tools/assets/` (Blender por `bpy` + Node).
 - **Antorchas**: KayKit Dungeon Remastered, de Kay Lousberg (CC0, `addons/kaykit_dungeon_remastered/Assets/LICENSE.txt`).
 - **Retratos**: héroes de KayKit Character Pack: Adventurers (Barbarian y Rogue con capucha, recoloreados) y objetos de KayKit Dungeon Remastered y Halloween Bits, más algunos hechos con primitivas; todo de Kay Lousberg, CC0 (`assets/portraits/LICENSE_KayKit_*.txt`). Detalle por retrato en `tools/portraits/README.md`.

@@ -8,14 +8,11 @@ func _ready() -> void:
 	title_label.text = DataRegistry.t("gallery.title")
 	show_coins(1240)
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	body.add_child(scroll)
+	# El cuerpo de UIScreen ya se desplaza (sigue al foco).
 	var cols := HBoxContainer.new()
 	cols.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cols.add_theme_constant_override("separation", UIStyle.SPACE * 4)
-	scroll.add_child(cols)
+	body.add_child(cols)
 
 	var left := _column(cols)
 	var mid := _column(cols)
@@ -27,9 +24,16 @@ func _ready() -> void:
 	var menu := VBoxContainer.new()
 	menu.add_theme_constant_override("separation", 0)
 	buttons.body.add_child(menu)
-	for key: String in ["hub.start", "hub.upgrades", "hub.unlocks"]:
-		menu.add_child(UIMenuItem.make_item(DataRegistry.t(key), func() -> void: pass))
-	var row := HBoxContainer.new()
+	for pair: Array in [["hub.start", "iniciar", false], ["hub.upgrades", "mejoras", false], ["hub.quit", "salir", true]]:
+		var item := UIMenuItem.make_item(DataRegistry.t(String(pair[0])), func() -> void: pass, String(pair[1]), bool(pair[2]))
+		item.custom_minimum_size.x = 340
+		menu.add_child(item)
+	var list_row := UIListRow.new(DataRegistry.get_item("pocion_menor").get("nombre", ""), "", UIPortrait.item_texture("pocion_menor"))
+	list_row.add_column(UIPips.new(2, 5))
+	buttons.body.add_child(list_row)
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", UIStyle.SPACE * 2)
+	row.add_theme_constant_override("v_separation", UIStyle.SPACE * 2)
 	buttons.body.add_child(row)
 	row.add_child(UIButton.make(DataRegistry.t("ui.accept"), func() -> void: pass))
 	row.add_child(UIButton.make(DataRegistry.t("ui.danger_example"), func() -> void: pass, "DangerButton"))
@@ -40,12 +44,16 @@ func _ready() -> void:
 	# Tipografía
 	var labels := UIPanel.new(DataRegistry.t("gallery.labels"), "PanelAlt")
 	left.add_child(labels)
-	for v: String in ["TitleLabel", "SubtitleLabel", "", "DimLabel", "DetailLabel", "AccentLabel", "CoinLabel", "SoulLabel", "GoodLabel", "DangerLabel"]:
+	labels.body.add_child(UIGothicLabel.new(DataRegistry.t("summary.epitaph_retire"), "GothicTitle", UIStyle.HUESO, UIStyle.RUBRICA_CLARA))
+	labels.body.add_child(UIGothicLabel.new(DataRegistry.t("app.subtitle"), "GothicQuote", UIStyle.TEXT_DIM))
+	labels.body.add_child(UIDivider.new(280))
+	for v: String in ["HeadLabel", "", "DimLabel", "DetailLabel", "AccentLabel", "SoulLabel", "GoodLabel", "DangerLabel", "NumLabel", "CoinLabel", "XpLabel"]:
 		var l := Label.new()
 		l.text = v if v != "" else "Label"
 		if v != "":
 			l.theme_type_variation = v
 		labels.body.add_child(l)
+	labels.body.add_child(UILedgerRow.new(DataRegistry.t("summary.kills_coins"), "+42", "CoinLabel", "muerte"))
 
 	# Barras, rangos y progreso
 	var bars := UIPanel.new(DataRegistry.t("gallery.bars"), "PanelAlt")
@@ -62,7 +70,17 @@ func _ready() -> void:
 	var soul_bar := UIStatBar.new(DataRegistry.t("gallery.soul"), "soul")
 	soul_bar.set_values(3, 5)
 	bars.body.add_child(soul_bar)
-	var badges := HBoxContainer.new()
+	var xp_bar := UIStatBar.new(DataRegistry.t("attr.xp"), "xp")
+	xp_bar.set_values(30, 76)
+	bars.body.add_child(xp_bar)
+	var marks := HBoxContainer.new()
+	marks.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	marks.add_child(UIPips.new(3, 5))
+	marks.add_child(UIPips.new(2, 2, "vela"))
+	marks.add_child(UISoulSlots.new(1, 3))
+	marks.add_child(UITabs.make_keycap(DataRegistry.t("ui.key_q")))
+	bars.body.add_child(marks)
+	var badges := HFlowContainer.new()
 	for r in range(10, 0, -1):
 		badges.add_child(UIRankBadge.new(r))
 	bars.body.add_child(badges)
@@ -91,13 +109,32 @@ func _ready() -> void:
 	# Objetos, tooltip, diálogo, toasts
 	var items := UIPanel.new(DataRegistry.t("gallery.items"), "PanelAlt")
 	right.add_child(items)
-	var grid := GridContainer.new()
-	grid.columns = 1
+	var grid := HFlowContainer.new()
+	grid.add_theme_constant_override("h_separation", UIStyle.SPACE * 2)
+	grid.add_theme_constant_override("v_separation", UIStyle.SPACE * 2)
 	items.body.add_child(grid)
 	for id: String in ["pocion_menor", "talisman_hueso", "bomba_humo", ""]:
-		var slot := UIItemSlot.new(id)
-		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(slot)
+		grid.add_child(UIItemSlot.new(id, true, true))
+	items.body.add_child(UIItemSlot.type_plate("consumible"))
+
+	# Íconos del kit (rampa bronce o la propia) y marcadores del mapa.
+	var icons := UIPanel.new(DataRegistry.t("gallery.icons"), "PanelAlt")
+	right.add_child(icons)
+	var flow := HFlowContainer.new()
+	icons.body.add_child(flow)
+	for id in UIStyle.ICON_IDS:
+		var icon := UIIcon.new(id, "bronce")
+		if icon.texture == null:
+			for ramp: String in ["vela", "alma", "moneda", "sangre", "amatista"]:
+				if UIIcon.texture_for(id, ramp) != null:
+					icon.set_ramp(ramp)
+					break
+		flow.add_child(icon)
+	var map_row := HBoxContainer.new()
+	map_row.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	for sprite: String in ["map_player", "map_enemy", "map_chest", "map_exit", "map_stairs", "seal_mini", "soul_full"]:
+		map_row.add_child(UISprite.new(sprite))
+	icons.body.add_child(map_row)
 
 	var feedback := UIPanel.new(DataRegistry.t("gallery.feedback"), "PanelAlt")
 	right.add_child(feedback)
@@ -107,7 +144,7 @@ func _ready() -> void:
 	feedback.body.add_child(UIButton.make(DataRegistry.t("gallery.confirm_button"), _demo_confirm))
 	var toasts := HFlowContainer.new()
 	feedback.body.add_child(toasts)
-	for kind: String in ["info", "good", "danger", "coin", "soul"]:
+	for kind: String in ["info", "good", "danger", "coin", "soul", "level"]:
 		toasts.add_child(UIButton.make(kind, func() -> void: UIToast.show(get_tree(), DataRegistry.t("gallery.toast_text", [kind]), kind)))
 
 	# Entradas y pestañas
@@ -130,10 +167,10 @@ func _ready() -> void:
 	inputs.body.add_child(edit)
 	var tabs := UITabs.new()
 	tabs.custom_minimum_size.y = 90
-	for key: String in ["status.tab_party", "status.tab_souls", "status.tab_items"]:
+	for pair: Array in [["status.tab_party", "estado"], ["status.tab_souls", "almas"], ["status.tab_items", "inventario"]]:
 		var l := Label.new()
-		l.text = DataRegistry.t(key)
-		tabs.add_tab(DataRegistry.t(key), l)
+		l.text = DataRegistry.t(String(pair[0]))
+		tabs.add_tab(DataRegistry.t(String(pair[0])), l, String(pair[1]))
 	inputs.body.add_child(tabs)
 
 	add_footer_button(DataRegistry.t("ui.back"), close)

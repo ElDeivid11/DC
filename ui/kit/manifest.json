@@ -2,7 +2,7 @@
 	"version": 1,
 	"pixel_scale": 2,
 	"palette_sha256": "47e2e9d6c57ac7505b96595fa9499d60f80d24a79cf9234505ea28a73582fc33",
-	"generator_sha256": "17dd1fa776a34836764887399025699cfc5743484a81852c5c6f25227fb844bd",
+	"generator_sha256": "802ad7a71d8f53c1ccaf83708190c5a69af67bc69c30ba5e81f09fb38930ce05",
 	"atlas": "res://ui/kit/ui_atlas.png",
 	"size": [
 		1024,

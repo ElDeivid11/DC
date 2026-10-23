@@ -43,6 +43,7 @@ enabled=PackedStringArray("res://addons/dungeon_crawler_3d/plugin.cfg", "res://a
 
 [gui]
 
+common/show_focus_state_on_pointer_event=2
 theme/custom="res://ui/theme_main.tres"
 
 [rendering]

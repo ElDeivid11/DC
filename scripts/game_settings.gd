@@ -52,6 +52,8 @@ static func nearest_step(ui_scale: float) -> float:
 
 ## Se llama también cuando cambia el tamaño de la ventana (SceneRouter).
 static func apply_ui_scale(root: Window, settings: Dictionary) -> void:
-	var f := ui_factor(Vector2(root.size), nearest_step(float(settings.get("ui_scale", 1.0))))
+	var step := nearest_step(float(settings.get("ui_scale", 1.0)))
+	# En headless (tests) la ventana no es real: el paso tal cual.
+	var f := step if DisplayServer.get_name() == "headless" else ui_factor(Vector2(root.size), step)
 	if not is_equal_approx(root.content_scale_factor, f):
 		root.content_scale_factor = f
