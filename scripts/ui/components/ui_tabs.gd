@@ -43,7 +43,11 @@ static func make_keycap(key: String) -> PanelContainer:
 func add_tab(title: String, page: Control, icon_id := "") -> void:
 	tab_bar.add_tab(title)
 	if icon_id != "":
-		tab_bar.set_tab_icon(tab_bar.tab_count - 1, UIIcon.texture_for(icon_id, "bronce"))
+		# Rampa de reposo; los íconos de color propio (almas) no tienen bronce.
+		var tex := UIIcon.texture_for(icon_id, "bronce")
+		if tex == null:
+			tex = UIIcon.texture_for(icon_id, "vela")
+		tab_bar.set_tab_icon(tab_bar.tab_count - 1, tex)
 	page.visible = _pages.is_empty()
 	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pages.append(page)

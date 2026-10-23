@@ -1,18 +1,22 @@
 class_name InventoryScreen
 extends UIScreen
-## Inventario de la run (I / X): casillas a la izquierda, detalle del objeto
-## enfocado a la derecha (con su retrato), y acciones Usar / Descartar.
-## Enter / A sobre una casilla usa el objeto directamente. Los objetos se
-## pierden al terminar la run. El uso real lo resuelve
-## RunController.use_item_field().
+## Inventario de la run (I / X): el morral como nichos de piedra a la
+## izquierda (4 por fila), detalle del objeto enfocado a la derecha (retrato,
+## tipo, descripción) y acciones Descartar / Usar. Enter / A sobre un nicho
+## usa el objeto directamente. Los objetos se pierden al terminar la run. El
+## uso real lo resuelve RunController.use_item_field().
+
+const COLUMNS := 4
 
 var run: Node
 var grid: GridContainer
-var slots_panel: UIPanel
-var detail: UIPanel
+var count_label: Label
+var detail_box: VBoxContainer
 var detail_portrait: UIPortrait
-var detail_tag: Label
+var detail_name: Label
+var detail_tag_box: HBoxContainer
 var detail_text: Label
+var detail_usage: Label
 var use_btn: UIButton
 var drop_btn: UIButton
 var selected := -1
@@ -30,40 +34,75 @@ func _ready() -> void:
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", UIStyle.SPACE * 4)
 	body.add_child(row)
-	slots_panel = UIPanel.new("", "PanelAlt")
-	slots_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(slots_panel)
+
+	# Morral: «Morral 4/8» y los nichos.
+	var bag := PanelContainer.new()
+	bag.theme_type_variation = "PanelAlt"
+	row.add_child(bag)
+	var bag_box := VBoxContainer.new()
+	bag_box.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	bag.add_child(bag_box)
+	var bag_head := HBoxContainer.new()
+	bag_head.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	bag_head.add_child(UIIcon.make("inventario", "bronce"))
+	var bag_title := UILabel.make(DataRegistry.t("inventory.bag"), "HeadLabel")
+	bag_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bag_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bag_head.add_child(bag_title)
+	count_label = UILabel.make("", "NumLabel")
+	count_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bag_head.add_child(count_label)
+	bag_box.add_child(bag_head)
+	bag_box.add_child(UIDivider.new(COLUMNS * int(UIItemSlot.NICHE_SIZE.x) + (COLUMNS - 1) * UIStyle.SPACE * 2))
 	grid = GridContainer.new()
-	grid.columns = 2
-	slots_panel.body.add_child(grid)
-	detail = UIPanel.new("", "PanelAlt")
-	detail.custom_minimum_size.x = 420
+	grid.columns = COLUMNS
+	grid.add_theme_constant_override("h_separation", UIStyle.SPACE * 2)
+	grid.add_theme_constant_override("v_separation", UIStyle.SPACE * 2)
+	bag_box.add_child(grid)
+
+	# Detalle del objeto.
+	var detail := PanelContainer.new()
+	detail.theme_type_variation = "PanelAlt"
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(detail)
+	detail_box = VBoxContainer.new()
+	detail_box.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	detail.add_child(detail_box)
 	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", UIStyle.SPACE * 3)
-	detail.body.add_child(head)
-	detail_portrait = UIPortrait.new(null, 96)
+	head.add_theme_constant_override("separation", UIStyle.SPACE * 4)
+	detail_box.add_child(head)
+	detail_portrait = UIPortrait.new(null, 128)
 	head.add_child(detail_portrait)
-	detail_tag = Label.new()
-	detail_tag.theme_type_variation = "DetailLabel"
-	detail_tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_tag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail_tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	head.add_child(detail_tag)
-	detail_text = Label.new()
-	detail_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	detail.body.add_child(detail_text)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	head.add_child(info)
+	detail_name = UILabel.make("", "HeadLabel")
+	info.add_child(detail_name)
+	var rule := UIDivider.new(240)
+	rule.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	info.add_child(rule)
+	detail_tag_box = HBoxContainer.new()
+	info.add_child(detail_tag_box)
+	detail_text = UILabel.make("", "", true)
+	detail_box.add_child(detail_text)
+	detail_usage = UILabel.make("", "DetailLabel", true)
+	detail_box.add_child(detail_usage)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_box.add_child(spacer)
 	var actions := HBoxContainer.new()
-	detail.body.add_child(actions)
-	use_btn = UIButton.make(DataRegistry.t("inventory.use"), _use)
+	actions.alignment = BoxContainer.ALIGNMENT_END
+	actions.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	detail_box.add_child(actions)
 	drop_btn = UIButton.make(DataRegistry.t("inventory.drop"), _drop, "DangerButton")
-	actions.add_child(use_btn)
+	drop_btn.custom_minimum_size.x = 160
 	actions.add_child(drop_btn)
-	var hint := Label.new()
-	hint.theme_type_variation = "DetailLabel"
-	hint.text = DataRegistry.t("inventory.press_hint")
-	footer.add_child(hint)
+	use_btn = UIButton.make(DataRegistry.t("inventory.use"), _use)
+	use_btn.custom_minimum_size.x = 160
+	actions.add_child(use_btn)
+
+	add_footer_hint(DataRegistry.t("inventory.press_hint"))
 	add_footer_button(DataRegistry.t("ui.close"), close)
 	_rebuild()
 
@@ -73,9 +112,7 @@ func _rebuild() -> void:
 	var first: Control = null
 	for i in GameState.inventory_capacity():
 		var id := GameState.inventory[i] if i < GameState.inventory.size() else ""
-		var slot := UIItemSlot.new(id, false)
-		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		slot.custom_minimum_size.x = 260
+		var slot := UIItemSlot.new(id, false, true)
 		var idx := i
 		slot.focus_entered.connect(func() -> void: _select(idx))
 		slot.pressed.connect(func() -> void:
@@ -86,7 +123,7 @@ func _rebuild() -> void:
 		grid.add_child(slot)
 		if first == null and id != "":
 			first = slot
-	slots_panel.set_title(DataRegistry.t("inventory.capacity", [GameState.inventory.size(), GameState.inventory_capacity()]))
+	count_label.text = "%d/%d" % [GameState.inventory.size(), GameState.inventory_capacity()]
 	if first:
 		first.call_deferred("grab_focus")
 		_select(0)
@@ -96,24 +133,26 @@ func _rebuild() -> void:
 
 func _select(index: int) -> void:
 	selected = index
+	for c in detail_tag_box.get_children():
+		c.queue_free()
 	if index < 0 or index >= GameState.inventory.size():
-		detail.set_title(DataRegistry.t("inventory.empty_title"))
+		detail_name.text = DataRegistry.t("inventory.empty_title")
 		detail_portrait.set_texture(null)
-		detail_tag.text = ""
 		detail_text.text = DataRegistry.t("inventory.empty")
+		detail_usage.text = ""
 		use_btn.disabled = true
 		drop_btn.disabled = true
 		return
 	var it := DataRegistry.get_item(GameState.inventory[index])
-	detail.set_title(String(it.nombre))
+	detail_name.text = String(it.nombre)
 	detail_portrait.set_texture(UIPortrait.item_texture(GameState.inventory[index]))
+	detail_tag_box.add_child(UIItemSlot.type_plate(String(it.tipo)))
 	var where: Array[String] = []
 	if it.efecto.fuera_combate:
 		where.append(DataRegistry.t("inventory.where_field"))
 	if it.efecto.en_combate:
 		where.append(DataRegistry.t("inventory.where_combat"))
-	var usage := DataRegistry.t("inventory.passive_note") if it.tipo == "pasivo" else DataRegistry.t("inventory.usable_in", [" / ".join(where)])
-	detail_tag.text = "%s\n%s" % [DataRegistry.t("item.type." + String(it.tipo)), usage]
+	detail_usage.text = DataRegistry.t("inventory.passive_note") if it.tipo == "pasivo" else DataRegistry.t("inventory.usable_in", [" / ".join(where)])
 	detail_text.text = String(it.descripcion)
 	use_btn.disabled = not bool(it.efecto.fuera_combate) or run == null
 	drop_btn.disabled = false
@@ -134,4 +173,5 @@ func _drop() -> void:
 	var d := UIConfirmDialog.ask(self, DataRegistry.t("inventory.drop_title"), DataRegistry.t("inventory.drop_text", [it.nombre]), DataRegistry.t("inventory.drop"), DataRegistry.t("ui.cancel"), true)
 	if await d.answered:
 		GameState.inventory.remove_at(selected)
+		SceneRouter.play_ui("item")
 		_rebuild()

@@ -6,6 +6,8 @@ extends Node
 ## Opcional:
 ##   --call=metodo[:arg]  se llama sobre la escena a mitad de la espera
 ##   --screen=ClaseUI     abre esa pantalla (class_name) encima de la escena
+##                        (si tiene `run` y la escena es la run, se la pasa)
+##   --tab=N              con --screen: abre la pestaña N (Estado)
 ##   --demo               carga datos de ejemplo en MetaState (no se guardan)
 ##   --run                arranca una run de ejemplo (objetos, un alma, nivel 3)
 ##   --ui-scale=1.5       escala de UI (como en Opciones)
@@ -25,6 +27,7 @@ var _out := "user://screenshot.png"
 var _frames := 30
 var _call := ""
 var _screen := ""
+var _tab := -1
 var _combat_call := ""
 var _message := ""
 var _face_chest := false
@@ -42,6 +45,8 @@ func _ready() -> void:
 			_call = arg.substr(7)
 		elif arg.begins_with("--screen="):
 			_screen = arg.substr(9)
+		elif arg.begins_with("--tab="):
+			_tab = int(arg.substr(6))
 		elif arg.begins_with("--combat="):
 			_combat_call = arg.substr(9)
 		elif arg.begins_with("--message="):
@@ -79,10 +84,14 @@ func _capture() -> void:
 			for c: Dictionary in ProjectSettings.get_global_class_list():
 				if c["class"] == _screen:
 					var screen: Node = (load(String(c["path"])) as GDScript).new()
+					if "run" in screen and _scene is RunController:
+						screen.set("run", _scene)
 					var layer := CanvasLayer.new()
 					layer.layer = 20
 					get_tree().root.add_child(layer)
 					layer.add_child(screen)
+					if _tab >= 0 and screen.get("tabs") is UITabs:
+						(screen.get("tabs") as UITabs).select(_tab)
 		if i == int(_frames / 2.0) and _call != "":
 			var parts := _call.split(":")
 			if _scene.has_method(parts[0]):

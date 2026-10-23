@@ -1,142 +1,183 @@
 class_name AttributesPage
 extends HBoxContainer
-## Pestaña "Atributos" de Estado: personajes a la izquierda y, del elegido,
-## retrato, nivel, EXP, el hexágono de estadísticas y el reparto de puntos
-## (− / + por estadística). Lo repartido queda pendiente (contorno verde en el
-## hexágono) hasta Confirmar, que lo aplica con GameState.apply_points().
-## Cada personaje guarda su reparto pendiente aunque se cambie de personaje.
-## Confirmar / Deshacer quedan bajo la lista de personajes. Con poco ancho
-## (escala de UI alta) el hexágono va arriba de las filas en vez de al lado.
+## Pestaña "Atributos" de Estado, en tres columnas:
+##  - el héroe: filas de personajes (retrato, nivel y pips de vela con los
+##    puntos sin repartir), retrato grande, nivel, EXP, espacios de alma;
+##  - el hexágono de estadísticas (UIStatRadar);
+##  - las 6 filas de estadística ([ícono] SIGLA Nombre valor [−][+] efecto)
+##    y abajo Deshacer / Confirmar.
+## Lo repartido queda pendiente (contorno de vela en el hexágono) hasta
+## Confirmar, que lo aplica con GameState.apply_points(). Cada personaje
+## guarda su reparto pendiente aunque se cambie de personaje. Con poco ancho
+## (escala de UI Grande) el hexágono baja a la columna del héroe.
 
 signal applied
 
-var member_buttons: Array[UIButton] = []
-var detail: UIPanel
+const LEFT_WIDTH := 280
+const NARROW := 1150.0
+
+var member_buttons: Array[UIListRow] = []
+var member_levels: Array[Label] = []
+var member_pips: Array[UIPips] = []
 var portrait: UIPortrait
+var name_label: Label
 var level_label: Label
 var xp_bar: UIStatBar
+var soul_slots: UISoulSlots
 var souls_label: Label
 var points_label: Label
 var radar: UIStatRadar
+var left: VBoxContainer
 var value_labels: Dictionary = {} # stat → Label
 var effect_labels: Dictionary = {} # stat → Label
+var stat_icons: Dictionary = {} # stat → UIIcon
 var minus_buttons: Dictionary = {} # stat → UIButton
 var plus_buttons: Dictionary = {} # stat → UIButton
 var confirm_btn: UIButton
 var undo_btn: UIButton
-var mid: BoxContainer
 var current := 0
 ## Reparto sin confirmar: {member_id: {stat: puntos}}.
 var pending: Dictionary = {}
 
 func _init() -> void:
 	add_theme_constant_override("separation", UIStyle.SPACE * 4)
-	var list := VBoxContainer.new()
-	list.custom_minimum_size.x = 250
-	list.add_theme_constant_override("separation", UIStyle.SPACE * 2)
-	add_child(list)
+	_build_left()
+	radar = UIStatRadar.new(240)
+	radar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	add_child(radar)
+	_build_stats()
+	_select(_first_with_points())
+
+func _build_left() -> void:
+	left = VBoxContainer.new()
+	left.custom_minimum_size.x = LEFT_WIDTH
+	left.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	add_child(left)
 	for i in GameState.party.size():
 		var m: Dictionary = GameState.party[i]
-		var b := UIButton.new("", "ItemSlot")
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.icon = UIPortrait.hero_texture(String(m.id))
-		b.add_theme_constant_override("icon_max_width", 40)
+		var b := UIListRow.new(String(m.name), "", UIPortrait.hero_texture(String(m.id)))
+		var pips := UIPips.new(0, 0, "vela")
+		b.add_column(pips)
+		var lvl := UILabel.make("", "NumSmallLabel")
+		b.add_column(lvl)
 		var idx := i
 		b.focus_entered.connect(func() -> void: _select(idx))
 		b.pressed.connect(func() -> void: _focus_stats())
-		list.add_child(b)
+		left.add_child(b)
 		member_buttons.append(b)
+		member_levels.append(lvl)
+		member_pips.append(pips)
 	UIFocus.chain_vertical(member_buttons, false)
+	left.add_child(UIDivider.new(LEFT_WIDTH - 40))
 
-	detail = UIPanel.new("", "PanelAlt")
-	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(detail)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", UIStyle.SPACE * 3)
-	detail.body.add_child(head)
-	portrait = UIPortrait.new(null, 88)
+	left.add_child(head)
+	portrait = UIPortrait.new(null, 96)
 	head.add_child(portrait)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", UIStyle.SPACE)
 	head.add_child(info)
-	level_label = Label.new()
-	level_label.theme_type_variation = "AccentLabel"
+	name_label = UILabel.make("", "HeadLabel")
+	info.add_child(name_label)
+	level_label = UILabel.make("", "XpLabel")
 	info.add_child(level_label)
-	xp_bar = UIStatBar.new(DataRegistry.t("attr.xp"), "accent", 200)
-	info.add_child(xp_bar)
-	souls_label = Label.new()
-	souls_label.theme_type_variation = "SoulLabel"
-	info.add_child(souls_label)
-	points_label = Label.new()
-	points_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.add_child(points_label)
+	var souls_row := HBoxContainer.new()
+	souls_row.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	soul_slots = UISoulSlots.new()
+	souls_row.add_child(soul_slots)
+	souls_label = UILabel.make("", "NumSmallLabel")
+	souls_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	souls_row.add_child(souls_label)
+	info.add_child(souls_row)
+	xp_bar = UIStatBar.new(DataRegistry.t("attr.xp"), "xp", 160)
+	left.add_child(xp_bar)
+	left.add_child(UILabel.make(DataRegistry.t("attr.soul_rule", [DataRegistry.bal_i("leveling.soul_slot_every", 2)]), "DetailLabel", true))
+	points_label = UILabel.make("", "", true)
+	left.add_child(points_label)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left.add_child(spacer)
+	left.add_child(UILabel.make(DataRegistry.t("attr.party_note"), "DetailLabel", true))
 
-	mid = BoxContainer.new()
-	mid.add_theme_constant_override("separation", UIStyle.SPACE * 4)
-	detail.body.add_child(mid)
-	radar = UIStatRadar.new(236)
-	mid.add_child(radar)
+func _build_stats() -> void:
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	add_child(col)
 	var grid := GridContainer.new()
-	grid.columns = 5
+	grid.columns = 7
 	grid.add_theme_constant_override("h_separation", UIStyle.SPACE * 2)
 	grid.add_theme_constant_override("v_separation", UIStyle.SPACE)
-	grid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	mid.add_child(grid)
+	col.add_child(grid)
 	for id in RunRules.STATS:
 		var stat := id
-		var name_l := Label.new()
-		name_l.text = DataRegistry.t("stats.%s.name" % id)
-		name_l.custom_minimum_size.x = 96
-		name_l.tooltip_text = _desc(id)
-		name_l.mouse_filter = Control.MOUSE_FILTER_PASS
+		var icon := UIIcon.make("stat_" + id)
+		grid.add_child(icon)
+		var short := UILabel.make(DataRegistry.t("stats.%s.short" % id), "NumSmallLabel")
+		short.custom_minimum_size.x = 36
+		short.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		grid.add_child(short)
+		var name_l := UILabel.make(DataRegistry.t("stats.%s.name" % id))
+		name_l.custom_minimum_size.x = 104
+		name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		grid.add_child(name_l)
-		var value_l := Label.new()
-		value_l.custom_minimum_size.x = 28
+		var value_l := UILabel.make("", "NumLabel")
+		value_l.custom_minimum_size.x = 40
 		value_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		value_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		grid.add_child(value_l)
-		var minus := UIButton.make("−", func() -> void: _change(stat, -1))
-		minus.custom_minimum_size.x = UIStyle.BUTTON_MIN_H
+		var minus := UIButton.make(DataRegistry.t("attr.minus"), func() -> void: _change(stat, -1))
+		minus.custom_minimum_size = Vector2(36, 36)
 		UITooltip.attach(minus, _desc(id))
 		grid.add_child(minus)
-		var plus := UIButton.make("+", func() -> void: _change(stat, 1))
-		plus.custom_minimum_size.x = UIStyle.BUTTON_MIN_H
+		var plus := UIButton.make(DataRegistry.t("attr.plus"), func() -> void: _change(stat, 1))
+		plus.custom_minimum_size = Vector2(36, 36)
 		UITooltip.attach(plus, _desc(id))
 		grid.add_child(plus)
-		var effect_l := Label.new()
-		effect_l.theme_type_variation = "DetailLabel"
-		effect_l.custom_minimum_size.x = 210
+		var effect_l := UILabel.make("", "DetailLabel")
+		effect_l.custom_minimum_size.x = 168
+		effect_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		grid.add_child(effect_l)
+		stat_icons[id] = icon
 		value_labels[id] = value_l
 		effect_labels[id] = effect_l
 		minus_buttons[id] = minus
 		plus_buttons[id] = plus
+		# Con foco en − o +, el ícono de la fila se enciende.
+		for b: UIButton in [minus, plus]:
+			b.focus_entered.connect(func() -> void: icon.set_ramp("vela"))
+			b.focus_exited.connect(func() -> void: icon.set_ramp("bronce"))
 
-	# Confirmar / Deshacer y la nota van abajo de la lista de personajes: ahí
-	# sobra lugar y el detalle entra entero sin desplazarse.
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_child(spacer)
-	confirm_btn = UIButton.make(DataRegistry.t("attr.confirm"), _confirm)
+	col.add_child(spacer)
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_END
+	actions.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	col.add_child(actions)
 	undo_btn = UIButton.make(DataRegistry.t("attr.undo"), _undo)
-	list.add_child(confirm_btn)
-	list.add_child(undo_btn)
+	undo_btn.custom_minimum_size.x = 160
+	actions.add_child(undo_btn)
+	confirm_btn = UIButton.make(DataRegistry.t("attr.confirm"), _confirm)
+	confirm_btn.custom_minimum_size.x = 160
+	actions.add_child(confirm_btn)
 	# Con teclado/mando, ↓ desde la última fila llega a Confirmar y ↑ vuelve a
 	# la grilla (pasar por la lista cambiaría de personaje al enfocarlo).
 	var last_stat := RunRules.STATS[RunRules.STATS.size() - 1]
 	for b: UIButton in [minus_buttons[last_stat], plus_buttons[last_stat]]:
 		b.focus_neighbor_bottom = b.get_path_to(confirm_btn)
 	confirm_btn.focus_neighbor_top = confirm_btn.get_path_to(plus_buttons[last_stat])
-	var note := Label.new()
-	note.theme_type_variation = "DetailLabel"
-	note.text = DataRegistry.t("attr.party_note")
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	list.add_child(note)
-	_select(_first_with_points())
+	undo_btn.focus_neighbor_top = undo_btn.get_path_to(minus_buttons[last_stat])
 
 func _ready() -> void:
-	# Las filas necesitan unos 1000 px al lado del hexágono: con la escala de UI
-	# al 150% (853 px de ancho útil) se apilan.
-	mid.vertical = get_viewport_rect().size.x < 1150.0
+	# Las tres columnas necesitan ~1100 px: con la escala Grande el hexágono
+	# baja a la columna del héroe.
+	if get_viewport_rect().size.x < NARROW:
+		radar.reparent(left)
+		left.move_child(radar, left.get_child_count() - 2)
+		radar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 ## Primer personaje con puntos sin repartir (o el primero).
 func _first_with_points() -> int:
@@ -179,9 +220,9 @@ func _spent(alloc: Dictionary) -> int:
 func _select(index: int) -> void:
 	current = clampi(index, 0, GameState.party.size() - 1)
 	var m := _member()
-	detail.set_title(String(m.name))
+	name_label.text = String(m.name)
 	portrait.set_texture(UIPortrait.hero_texture(String(m.id)))
-	portrait.set_dimmed(int(m.hp) <= 0)
+	portrait.set_fallen(int(m.hp) <= 0)
 	# ← desde la grilla vuelve al personaje elegido (sin cambiar de personaje).
 	for id in RunRules.STATS:
 		var minus: UIButton = minus_buttons[id]
@@ -201,20 +242,26 @@ func _refresh() -> void:
 	else:
 		level_label.text = DataRegistry.t("attr.level", [level])
 		xp_bar.set_values(int(m.xp), need)
-	souls_label.text = DataRegistry.t("attr.soul_slots", [(m.souls as Array).size(), GameState.member_soul_capacity(m), DataRegistry.bal_i("leveling.soul_slot_every", 2)])
+	var used := (m.souls as Array).size()
+	var capacity := GameState.member_soul_capacity(m)
+	soul_slots.setup(used, capacity)
+	souls_label.text = DataRegistry.t("attr.soul_count", [used, capacity])
 	if int(m.points) > 0:
 		points_label.text = DataRegistry.t("attr.points", [free])
-		points_label.theme_type_variation = "GoodLabel" if free > 0 else ""
+		points_label.theme_type_variation = "GoodLabel" if free > 0 else "DimLabel"
 	else:
 		points_label.text = DataRegistry.t("attr.no_points", [DataRegistry.bal_i("leveling.points_per_level", 3)])
-		points_label.theme_type_variation = "DimLabel"
+		points_label.theme_type_variation = "DetailLabel"
 	radar.set_values(m.stats, alloc)
 	for id in RunRules.STATS:
 		var add := int(alloc.get(id, 0))
 		var total := GameState.member_stat(m, id) + add
 		var value_l: Label = value_labels[id]
 		value_l.text = "%d" % total
-		value_l.theme_type_variation = "GoodLabel" if add > 0 else ""
+		if add > 0:
+			value_l.add_theme_color_override("font_color", UIStyle.ACCENT)
+		else:
+			value_l.remove_theme_color_override("font_color")
 		var effect_l: Label = effect_labels[id]
 		effect_l.text = _effect(id, total)
 		effect_l.theme_type_variation = "GoodLabel" if add > 0 else "DetailLabel"
@@ -224,11 +271,11 @@ func _refresh() -> void:
 	undo_btn.disabled = spent <= 0
 	for i in member_buttons.size():
 		var mm: Dictionary = GameState.party[i]
-		var left := int(mm.points) - _spent(_alloc(mm))
-		if left > 0:
-			member_buttons[i].text = DataRegistry.t("attr.member_points", [mm.name, int(mm.level), left])
-		else:
-			member_buttons[i].text = DataRegistry.t("attr.member", [mm.name, int(mm.level)])
+		var left_pts := int(mm.points) - _spent(_alloc(mm))
+		member_levels[i].text = DataRegistry.t("attr.level_short", [int(mm.level)])
+		member_pips[i].setup(left_pts, left_pts, "vela")
+		member_pips[i].visible = left_pts > 0
+		member_buttons[i].set_locked(int(mm.hp) <= 0)
 
 func _change(stat: String, delta: int) -> void:
 	var m := _member()
@@ -241,6 +288,7 @@ func _change(stat: String, delta: int) -> void:
 	else:
 		alloc[stat] = now
 	pending[String(m.id)] = alloc
+	SceneRouter.play_ui("click" if delta > 0 else "cancel")
 	_refresh()
 	# Si el botón enfocado quedó deshabilitado (se acabaron los puntos), el
 	# foco pasa a Confirmar para no quedar "trabado".
@@ -258,7 +306,8 @@ func _confirm() -> void:
 		return
 	if GameState.apply_points(m, alloc):
 		pending.erase(String(m.id))
-		UIToast.show(get_tree(), DataRegistry.t("attr.applied", [m.name]), "good")
+		SceneRouter.play_ui("level_up")
+		UIToast.show(get_tree(), DataRegistry.t("attr.applied", [m.name]), "level")
 		applied.emit()
 	_refresh()
 	member_buttons[current].grab_focus()

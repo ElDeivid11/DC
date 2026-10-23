@@ -74,7 +74,7 @@ func _show_detail(index: int) -> void:
 		return
 	elif _rank(id) == 2:
 		detail_portrait.set_dimmed(true)
-	info.add_child(_type_plate(String(it.tipo)))
+	info.add_child(UIItemSlot.type_plate(String(it.tipo)))
 	detail_line(String(it.descripcion))
 	if it.unlock_id == null:
 		detail_line(DataRegistry.t("unlocks.from_start_text"), "GoodLabel")
@@ -88,11 +88,3 @@ func _show_detail(index: int) -> void:
 	detail_box.add_child(UIProgressUnlock.new(String(u.descripcion), p.x, p.y))
 	if u.condicion.tipo == "no_item_use_run":
 		detail_line(DataRegistry.t("unlocks.per_run_note"), "DetailLabel")
-
-## Placa de piedra con el tipo del objeto ("CONSUMIBLE", "PASIVO").
-static func _type_plate(kind: String) -> PanelContainer:
-	var plate := PanelContainer.new()
-	plate.theme_type_variation = "RankPlaque"
-	plate.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	plate.add_child(UILabel.make(DataRegistry.t("item.type." + kind).to_upper(), "NumSmallLabel"))
-	return plate

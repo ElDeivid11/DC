@@ -21,16 +21,13 @@ func _ready() -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(tabs)
 	party_page = _party_page()
-	tabs.add_tab(DataRegistry.t("status.tab_party"), party_page)
+	tabs.add_tab(DataRegistry.t("status.tab_party"), party_page, "estado")
 	attributes = AttributesPage.new()
 	attributes.applied.connect(_rebuild_party_page)
-	tabs.add_tab(DataRegistry.t("status.tab_attributes"), attributes)
-	tabs.add_tab(DataRegistry.t("status.tab_souls"), _souls_page())
-	tabs.add_tab(DataRegistry.t("status.tab_items"), _items_page())
-	var hint := Label.new()
-	hint.theme_type_variation = "DetailLabel"
-	hint.text = DataRegistry.t("status.tabs_hint")
-	footer.add_child(hint)
+	tabs.add_tab(DataRegistry.t("status.tab_attributes"), attributes, "estadisticas")
+	tabs.add_tab(DataRegistry.t("status.tab_souls"), _souls_page(), "almas")
+	tabs.add_tab(DataRegistry.t("status.tab_items"), _items_page(), "inventario")
+	add_footer_hint(DataRegistry.t("status.tabs_hint"))
 	add_footer_button(DataRegistry.t("ui.close"), close)
 	if GameState.points_pending():
 		tabs.select(1)
@@ -60,54 +57,88 @@ func _party_page() -> Control:
 	_fill_party(row)
 	return row
 
+## Una tarjeta por héroe: retrato, nombre, nivel, HP, las 6 estadísticas y
+## sus almas.
 func _fill_party(row: HBoxContainer) -> void:
 	for m: Dictionary in GameState.party:
-		var card := UIPanel.new(String(m.name), "PanelAlt")
+		var fallen := int(m.hp) <= 0
+		var card := PanelContainer.new()
+		card.theme_type_variation = "Card"
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(card)
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+		card.add_child(box)
 		var head := HBoxContainer.new()
-		head.add_theme_constant_override("separation", UIStyle.SPACE * 3)
-		card.body.add_child(head)
-		var pic := UIPortrait.for_hero(String(m.id), 72)
-		pic.set_dimmed(int(m.hp) <= 0)
+		head.add_theme_constant_override("separation", UIStyle.SPACE * 4)
+		box.add_child(head)
+		var pic := UIPortrait.for_hero(String(m.id), 96)
+		pic.set_fallen(fallen)
 		head.add_child(pic)
 		var info := VBoxContainer.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.add_theme_constant_override("separation", UIStyle.SPACE)
 		head.add_child(info)
-		var lvl := Label.new()
-		lvl.theme_type_variation = "AccentLabel"
+		var name_row := HBoxContainer.new()
+		name_row.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+		info.add_child(name_row)
+		name_row.add_child(UILabel.make(String(m.name), "HeadLabel"))
+		if fallen:
+			var f := UILabel.make(DataRegistry.t("combat.fallen"), "DangerLabel")
+			f.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			name_row.add_child(f)
 		var need := RunRules.xp_to_next(int(m.level))
-		lvl.text = DataRegistry.t("status.level_line_max", [int(m.level)]) if need == 0 else DataRegistry.t("status.level_line", [int(m.level), int(m.xp), need])
-		info.add_child(lvl)
-		var bar := UIStatBar.new(DataRegistry.t("stat.hp"))
-		bar.set_values(int(m.hp), GameState.member_max_hp(m))
-		info.add_child(bar)
-		var atk := Label.new()
-		atk.text = DataRegistry.t("status.atk_line", [GameState.member_atk(m), int(m.base_atk)])
-		card.body.add_child(atk)
-		var hp := Label.new()
-		hp.theme_type_variation = "DimLabel"
-		hp.text = DataRegistry.t("status.hp_line", [GameState.member_max_hp(m), int(m.base_hp)])
-		card.body.add_child(hp)
-		if GameState.member_def(m) > 0:
-			var def := Label.new()
-			def.theme_type_variation = "DimLabel"
-			def.text = DataRegistry.t("status.def_line", [GameState.member_def(m)])
-			card.body.add_child(def)
-		var cap := Label.new()
-		cap.theme_type_variation = "SoulLabel"
-		cap.text = DataRegistry.t("status.capacity", [(m.souls as Array).size(), GameState.member_soul_capacity(m)])
-		card.body.add_child(cap)
+		info.add_child(UILabel.make(DataRegistry.t("attr.level_max", [int(m.level)]) if need == 0 else DataRegistry.t("attr.level", [int(m.level)]), "XpLabel"))
+		var hp := UIStatBar.new(DataRegistry.t("stat.hp"), "hp", 160)
+		hp.set_values(int(m.hp), GameState.member_max_hp(m))
+		info.add_child(hp)
+		if need > 0:
+			var xp := UIStatBar.new(DataRegistry.t("attr.xp"), "xp_thin", 160)
+			xp.set_values(int(m.xp), need)
+			info.add_child(xp)
+		box.add_child(UIDivider.new(320))
+		# Estadísticas: [ícono] SIGLA valor, en dos filas de tres.
+		var grid := GridContainer.new()
+		grid.columns = 3
+		grid.add_theme_constant_override("h_separation", UIStyle.SPACE * 4)
+		grid.add_theme_constant_override("v_separation", UIStyle.SPACE)
+		box.add_child(grid)
+		for id in RunRules.STATS:
+			var cell := HBoxContainer.new()
+			cell.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.add_child(UIIcon.make("stat_" + id))
+			var short := UILabel.make(DataRegistry.t("stats.%s.short" % id), "NumSmallLabel")
+			short.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			cell.add_child(short)
+			var v := UILabel.make("%d" % GameState.member_stat(m, id), "NumLabel")
+			v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			cell.add_child(v)
+			grid.add_child(cell)
+		var combat_line := UILabel.make(DataRegistry.t("status.combat_line", [GameState.member_atk(m), GameState.member_def(m)]), "DetailLabel")
+		box.add_child(combat_line)
+		# Almas: espacios + nombre de cada una.
+		var souls: Array = m.souls
+		var souls_row := HBoxContainer.new()
+		souls_row.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+		box.add_child(souls_row)
+		souls_row.add_child(UISoulSlots.new(souls.size(), GameState.member_soul_capacity(m)))
+		var names: Array[String] = []
+		for soul: Dictionary in souls:
+			var active: Dictionary = soul.get("active", {})
+			names.append(String(active.get("name", "")))
+		var souls_text := UILabel.make(", ".join(names) if not names.is_empty() else DataRegistry.t("status.no_souls_short"), "SoulLabel" if not names.is_empty() else "DimLabel", true)
+		souls_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		souls_text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		souls_row.add_child(souls_text)
 		if int(m.points) > 0:
-			var pts := Label.new()
-			pts.theme_type_variation = "GoodLabel"
-			pts.text = DataRegistry.t("attr.points", [int(m.points)])
-			card.body.add_child(pts)
-		if int(m.hp) <= 0:
-			var fallen := Label.new()
-			fallen.theme_type_variation = "DangerLabel"
-			fallen.text = DataRegistry.t("combat.fallen")
-			card.body.add_child(fallen)
+			var pts := HBoxContainer.new()
+			pts.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+			pts.add_child(UIPips.new(int(m.points), int(m.points), "vela"))
+			var pl := UILabel.make(DataRegistry.t("attr.points", [int(m.points)]), "GoodLabel")
+			pl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			pts.add_child(pl)
+			box.add_child(pts)
 
 func _souls_page() -> Control:
 	var scroll := ScrollContainer.new()
@@ -117,53 +148,56 @@ func _souls_page() -> Control:
 	row.add_theme_constant_override("separation", UIStyle.SPACE * 4)
 	scroll.add_child(row)
 	for m: Dictionary in GameState.party:
-		var col := UIPanel.new(String(m.name), "PanelAlt")
+		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", UIStyle.SPACE * 2)
 		row.add_child(col)
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+		col.add_child(head)
+		var pic := UIPortrait.for_hero(String(m.id), 48)
+		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(pic)
+		var hn := UILabel.make(String(m.name), "HeadLabel")
+		hn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(hn)
 		var souls: Array = m.souls
+		var slots := UISoulSlots.new(souls.size(), GameState.member_soul_capacity(m))
+		head.add_child(slots)
+		col.add_child(UIDivider.new(240))
 		if souls.is_empty():
-			var empty := Label.new()
-			empty.theme_type_variation = "DimLabel"
-			empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			empty.text = DataRegistry.t("status.no_souls")
-			col.body.add_child(empty)
+			col.add_child(UILabel.make(DataRegistry.t("status.no_souls"), "DimLabel", true))
 		for soul: Dictionary in souls:
-			col.body.add_child(UISoulCard.new(soul))
+			col.add_child(UISoulCard.new(soul))
 	return scroll
 
+## Morral de solo lectura (para usar algo, el Inventario).
 func _items_page() -> Control:
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	box.add_theme_constant_override("separation", UIStyle.SPACE * 3)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	box.add_child(head)
+	head.add_child(UIIcon.make("inventario"))
+	var title := UILabel.make(DataRegistry.t("inventory.bag"), "HeadLabel")
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(title)
+	var count := UILabel.make("%d/%d" % [GameState.inventory.size(), GameState.inventory_capacity()], "NumLabel")
+	count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(count)
 	var bonus := GameState.run_atk_bonus()
 	if bonus > 0:
-		var b := Label.new()
-		b.theme_type_variation = "GoodLabel"
-		b.text = DataRegistry.t("status.run_bonus", [bonus])
-		box.add_child(b)
-	if GameState.inventory.is_empty():
-		var empty := Label.new()
-		empty.theme_type_variation = "DimLabel"
-		empty.text = DataRegistry.t("inventory.empty")
-		box.add_child(empty)
-	for id in GameState.inventory:
-		var it := DataRegistry.get_item(id)
-		var line := HBoxContainer.new()
-		line.add_theme_constant_override("separation", UIStyle.SPACE * 3)
-		box.add_child(line)
-		line.add_child(UIPortrait.for_item(id, 40))
-		var l := Label.new()
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		l.text = "%s — %s" % [it.nombre, it.descripcion]
-		line.add_child(l)
-	var cap := Label.new()
-	cap.theme_type_variation = "DetailLabel"
-	cap.text = DataRegistry.t("inventory.capacity", [GameState.inventory.size(), GameState.inventory_capacity()])
-	box.add_child(cap)
-	if not GameState.inventory.is_empty():
-		var use := Label.new()
-		use.theme_type_variation = "DetailLabel"
-		use.text = DataRegistry.t("status.use_hint")
-		box.add_child(use)
+		box.add_child(UILabel.make(DataRegistry.t("status.run_bonus", [bonus]), "GoodLabel"))
+	var grid := GridContainer.new()
+	grid.columns = 8
+	grid.add_theme_constant_override("h_separation", UIStyle.SPACE * 2)
+	grid.add_theme_constant_override("v_separation", UIStyle.SPACE * 2)
+	box.add_child(grid)
+	for i in GameState.inventory_capacity():
+		var id := GameState.inventory[i] if i < GameState.inventory.size() else ""
+		var slot := UIItemSlot.new(id, true, true)
+		# Solo para mirar: el nombre y la descripción salen en el tooltip.
+		slot.focus_mode = Control.FOCUS_ALL if id != "" else Control.FOCUS_NONE
+		grid.add_child(slot)
+	box.add_child(UILabel.make(DataRegistry.t("status.use_hint"), "DetailLabel"))
 	return box

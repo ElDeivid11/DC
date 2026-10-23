@@ -211,7 +211,7 @@ static func _buttons(t: Theme, head: Font) -> void:
 	_button_styles(t, "NicheSlot", UIKit.style("slot_normal"), UIKit.style("slot_normal"),
 		UIKit.style("slot_normal"), UIKit.style("slot_empty"), UIKit.style("slot_focus"))
 	_button_colors(t, "NicheSlot", UIStyle.TEXT, UIStyle.ACCENT)
-	t.set_constant("icon_max_width", "NicheSlot", 40)
+	t.set_constant("icon_max_width", "NicheSlot", 64)
 	t.set_constant("h_separation", "NicheSlot", 0)
 
 	# CheckBox: casilla de nicho; el foco, el aro de brasa.
