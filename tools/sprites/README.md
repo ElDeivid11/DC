@@ -2,9 +2,9 @@
 
 Los enemigos se dibujan como **sprites de pixel art dentro del mundo 3D**: un cuadro plano que siempre mira a la cámara, iluminado por las antorchas y con la misma niebla PSX del entorno. El cuadro cambia según la animación y hacia dónde mira el enemigo (8 direcciones). En el juego lo hace `EnemySprite` (`scripts/world/enemy_sprite.gd`, shader `shaders/enemy_sprite.gdshader`).
 
-![El esbirro en las 8 direcciones](../../docs/capturas/esbirro_vistas.png)
+![El esbirro dibujado: frente, perfil, espalda, tajo, golpe y dormido](../../docs/capturas/esbirro_vistas.png)
 
-**Las hojas de hoy son de prueba**, dibujadas por código con `draw_monsters.py` (abajo). El arte definitivo las reemplaza con el **mismo formato** sin tocar código. Opciones → **Enemigos** cambia entre *Pixel art* y *Modelo 3D* (desde el próximo piso; por defecto `data/balance.json → render.enemy_style_default`).
+**Las hojas de hoy son de prueba**, hechas por código (abajo): el esbirro **dibujado en 2D** con `draw_esbirro.py`; los demás, todavía con `draw_monsters.py`. El arte definitivo las reemplaza con el **mismo formato** sin tocar código. Opciones → **Enemigos** cambia entre *Pixel art* y *Modelo 3D* (desde el próximo piso; por defecto `data/balance.json → render.enemy_style_default`).
 
 ## Guía de estilo
 
@@ -13,7 +13,8 @@ Referencia: los remakes HD-2D de Dragon Quest I, II y III (Square Enix, 2024–2
 - **Diseño caricaturesco y amenazante**: calavera enorme (~1/3 del alto) con grietas, cuencas hondas con ceño y una pupila que brilla, pómulos, nariz de dos agujeros y una sonrisa de dientes grandes; cuerpo flaco de huesos con nudos (codos, rodillas, rótulas), dos huesos en antebrazo y pierna, dedos en los pies.
 - **Postura**: agachado, piernas abiertas y arqueadas, encorvado; arma en una mano y escudo en la otra.
 - **Silueta que se lee**: una prenda de color fuerte por especie (bufanda roja del esbirro, capucha verde del ballestero, casco con cuernos del guardián, túnica morada del nigromante). Las variantes por rango o piso se tiñen en el juego (como las «paletas cambiadas» de Dragon Quest).
-- **Sombreado en bandas** con luz de arriba a la izquierda: 3–5 tonos por material, sombras hacia violeta, luces hacia crema, brillo puntual en hueso y metal. Sin antialias ni tramas.
+- **Es un dibujo, no un modelo**: sombras y brillos con forma pensada (medialunas del lado contrario a la luz, un brillo en el cráneo, líneas de 1 px para dientes, grietas, pliegues y tablas), no calculados con luz 3D.
+- **Sombreado en bandas** con luz de arriba a la izquierda: 3–5 tonos por material, sombras hacia violeta, luces hacia crema, brillo puntual en hueso y metal. Lo del lado lejano (de perfil) va un tono más oscuro. Sin antialias ni tramas.
 - **Contorno** de 1 px del color oscuro de cada material (no negro), y líneas interiores donde una parte pasa por delante de otra.
 - **Animación** de frente al jugador en combate, con anticipación y estiramiento: el monstruo se acerca un poco al golpear (escala ~1,15) y deja una **estela blanca** del arma; al recibir un golpe retrocede y el juego lo pone blanco un instante.
 - **Escala**: 64 px por metro, igual que las texturas del entorno; el esqueleto mide ~100 px.
@@ -33,21 +34,21 @@ Por especie, tres archivos en `assets/sprites/enemies/` y la ruta del JSON en `d
 	"version": 1,
 	"sheet": "esqueleto_esbirro.png",
 	"glow": "esqueleto_esbirro_glow.png",
-	"frame": [115, 100],
+	"frame": [101, 120],
 	"columns": 16,
-	"pivot": [60, 98],
+	"pivot": [59, 114],
 	"pixels_per_meter": 64,
 	"anims": {
-		"idle":   {"loop": true,  "fps": 4.29, "dirs": {"s": [0, 1, 2, 3, 4, 5], "se": [6, 7, 8, 9, 10, 11], "e": [12, 13, 14, 15, 16, 17], "ne": [18, 19, 20, 21, 22, 23], "n": [24, 25, 26, 27, 28, 29], "nw": [30, 31, 32, 33, 34, 35], "w": [36, 37, 38, 39, 40, 41], "sw": [42, 43, 44, 45, 46, 47]}},
-		"attack": {"loop": false, "fps": 8.89, "dirs": {"s": [118, 119, 120, 121, 122, 123, 124, 125]}},
-		"attack_2": {"loop": false, "fps": 8.89, "dirs": {"s": [126, 127, 128, 129, 130, 131, 132, 133]}}
+		"idle":   {"loop": true,  "fps": 4.29, "dirs": {"s": [0, 1, 2, 3, 4, 5], "e": [6, 7, 8, 9, 10, 11], "n": [12, 13, 14, 15, 16, 17]}},
+		"attack": {"loop": false, "fps": 8.89, "dirs": {"s": [48, 49, 50, 51, 52, 53, 54, 55]}},
+		"attack_2": {"loop": false, "fps": 8.89, "dirs": {"s": [56, 57, 58, 59, 60, 61, 62, 63]}}
 	}
 }
 ```
 
 - `frame`: tamaño de cada celda en píxeles. `columns`: celdas por fila.
 - `pivot`: el punto de la celda (desde arriba a la izquierda) que va **en el piso, entre los pies**.
-- `pixels_per_meter`: escala en el mundo. Con 64 (la densidad de las texturas del entorno: 128 px por celda de 2 m), el esqueleto de prueba mide unos 100 px. En combate, con el preset Clásica, 1 píxel del sprite ≈ 1 píxel de la imagen de 240 líneas.
+- `pixels_per_meter`: escala en el mundo. Con 64 (la densidad de las texturas del entorno: 128 px por celda de 2 m), el esqueleto de prueba mide unos 100 px (la celda es más alta porque al atacar se agranda). En combate, con el preset Clásica, 1 píxel del sprite ≈ 1 píxel de la imagen de 240 líneas.
 - `anims`: una entrada por **papel** de `species.json → visual.anims` (los mismos nombres). Si un papel tiene variantes (por ejemplo dos ataques), van como `attack`, `attack_2`, `attack_3`... y el juego elige una al azar.
   - `loop`: `true` en `idle`, `combat`, `walk` y `dormant`; `false` en el resto (al terminar vuelven solos a la anterior; `death` queda en su último cuadro).
   - `fps`: cuadros por segundo. La duración (cuadros / fps) importa: el combate espera a que termine el ataque o el golpe.
@@ -78,14 +79,30 @@ Después de copiar PNG nuevos: `godot --headless --path . --import` y, en los `.
 
 ## Cómo se generan las hojas de prueba
 
+### El esbirro: dibujado en 2D por piezas
+
 ```
-python3 -I tools/sprites/draw_monsters.py [--only=esqueleto_esbirro] [--preview=/tmp/hoja.png]
+python3 -I tools/sprites/draw_esbirro.py [--preview=/tmp/esbirro.png]
 ```
 
-`draw_monsters.py` (numpy + Pillow, determinista, ~2 min las cuatro) **dibuja cada monstruo por código**, sin modelos ni imágenes de afuera:
+`draw_esbirro.py` (numpy + Pillow, determinista, ~20 s) arma al esqueleto como un **títere de papel**: cada parte es un dibujo plano y la animación solo dice dónde va cada una. La base está en `cutout.py`:
+
+1. **Piezas** (`Frame.piece`): una capa con su color de contorno. Se pinta con formas (elipses, cápsulas, trazos por una polilínea): `fill` agranda la pieza, `shade` pinta solo encima de lo que ya hay (sombras, brillos), `rim` hace la **medialuna** (la forma menos ella misma corrida hacia la luz = el borde en sombra) y `line`/`dot` ponen píxeles sueltos (dientes, grietas, pliegues).
+2. **Píxeles limpios**: cada forma se rasteriza a 4x y cada píxel final es el color más frecuente de sus 4x4 muestras; las líneas de 1 px van directo a la grilla final. Cada pieza lleva su contorno de 1 px, así una parte que pasa delante de otra queda recortada por una línea oscura.
+3. **Dibujos por vista**: calavera de frente (cuencas con ceño, pupilas que brillan, nariz, dos filas de dientes), de perfil (cara que sobresale, mandíbula en L que gira en su bisagra) y de espaldas (nuca); tórax con costillas en arco (de frente con esternón, de espaldas con columna y omóplatos, de perfil bajando al esternón); pelvis, pies, puño, espada, escudo (frente con umbo, dorso con correa) y la bufanda (vuelta al cuello y dos puntas rotas que flamean).
+4. **Pose → rig → dibujo**: `front_rig`/`side_rig` ubican cada parte a partir de pocos datos (cadera, inclinación, manos, pies; codos y rodillas salen por cinemática inversa). La vista de espaldas es el rig de frente espejado (`mirror_rig`). La **estela** del golpe es el área que barre la hoja entre un cuadro y el siguiente (`sweep`). Para **morir**, cada parte cae con su retraso hasta el montón de huesos (`pile_rig`, que también es `dormant`); para **levantarse**, el camino inverso.
+5. **Hoja**: idle y walk de frente (`s`), de perfil (`e`; el juego espeja `w`) y de espaldas (`n`); el resto de frente. Sin vistas de tres cuartos por ahora: el juego usa la más cercana.
+
+### Las demás especies (generador anterior)
+
+```
+python3 -I tools/sprites/draw_monsters.py [--only=esqueleto_picaro] [--preview=/tmp/hoja.png]
+```
+
+`draw_monsters.py` (numpy + Pillow, determinista, ~1,5 min las tres) arma el ballestero, el guardián y el nigromante con formas en 2,5D (se ven más «modelo» que «dibujo»; pasan al estilo del esbirro cuando David lo confirme):
 
 1. **Formas simples en 2,5D**: esferas, elipsoides, huesos (cápsulas con punta redonda, finitas o gruesas) y placas planas (hojas, escudos, la bufanda), en el espacio del personaje. Cada una tiene material y grupo.
-2. **Esqueleto articulado**: `rig()` ubica pelvis, columna, hombros, codos, manos, cadera, rodillas y tobillos a partir de una pose (inclinación, giro, cabeza, mandíbula, ángulos de cada brazo y pierna, giro del arma...). `skeleton_prims()` arma encima el cuerpo de hueso (costillas sueltas sobre un interior oscuro, pelvis con alas, vértebras, radio y cúbito, tibia y peroné, dedos) y `skull_prims()` la calavera; cada monstruo suma su ropa y sus armas (`esbirro()`, `picaro()`, `guardian()`, `nigromante()`).
+2. **Esqueleto articulado**: `rig()` ubica pelvis, columna, hombros, codos, manos, cadera, rodillas y tobillos a partir de una pose (inclinación, giro, cabeza, mandíbula, ángulos de cada brazo y pierna, giro del arma...). `skeleton_prims()` arma encima el cuerpo de hueso (costillas sueltas sobre un interior oscuro, pelvis con alas, vértebras, radio y cúbito, tibia y peroné, dedos) y `skull_prims()` la calavera; cada monstruo suma su ropa y sus armas (`picaro()`, `guardian()`, `nigromante()`).
 3. **Animaciones** = poses clave interpoladas (`keyed`) o ciclos (`breathe`, `walk_cycle`), con la estela del golpe (`smear`) en el cuadro del impacto. El monstruo se apoya solo en el piso (su punto más bajo).
 4. **Render**: cada forma se rasteriza a 4x con profundidad y normal exactas; la luz (arriba a la izquierda) da el tono de la rampa de su material. Cada píxel final es el tono **más frecuente** de sus 4x4 muestras (píxeles limpios, sin mezclas), después van las líneas interiores entre partes y el contorno exterior.
 5. **Hoja**: idle y walk en 8 vistas (0°, ±45°, ±90°, ±135°, 180°), el resto de frente; todo se recorta al rectángulo común y se escribe la hoja, la máscara de brillo y el JSON.

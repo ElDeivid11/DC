@@ -4,7 +4,7 @@ Arma cada monstruo con formas simples (esferas, elipsoides, huesos con punta
 redonda y placas planas) sobre un esqueleto articulado en 2,5D, lo posa
 cuadro por cuadro y lo pasa a pixel art con paletas hechas a mano:
 
-    python3 -I tools/sprites/draw_monsters.py [--only=esqueleto_esbirro] [--preview=/tmp/hoja.png]
+    python3 -I tools/sprites/draw_monsters.py [--only=esqueleto_picaro] [--preview=/tmp/hoja.png]
 
 Escribe, por especie, en assets/sprites/enemies/: <especie>.png (hoja),
 <especie>_glow.png (lo que brilla) y <especie>.json (formato en
@@ -62,7 +62,6 @@ MATERIALS = {
     "tela_verde": (["#0f2219", "#1e4531", "#347548", "#5aa85f", "#8fd17a"], "#08130d", False),
     "tela_morada": (["#170a26", "#311754", "#542a86", "#8350bf", "#b588e4"], "#0c0516", False),
     "oro": (["#48290a", "#875210", "#cc8f22", "#f4cc52", "#fff1a6"], "#251404", True),
-    "rojo": (["#370b13", "#711a22", "#b5312c", "#e6634a", "#ffae88"], "#1d0509", False),
     "bronce": (["#36210f", "#6b421e", "#a66e38", "#d6a158", "#f9e09e"], "#1c1007", True),
     "cuero": (["#26150c", "#4b2a16", "#764324", "#a26638", "#c58a56"], "#140a05", False),
     "orbe": (["#ffffff"] * 5, "#0c0610", False),
@@ -713,27 +712,6 @@ def shield(j, extra, face="bronce", rim="oro", boss="oro", radius=16.0, studs=Tr
     return out
 
 
-def scarf(j, p):
-    """Bufanda roja raída: vuelta al cuello, nudo y dos puntas que flamean
-    hacia la derecha del personaje (y atrás), con el viento de p["wind"]."""
-    k, Rt = j["k"], j["Rt"]
-    top = j["top"] + Rt @ v3(0, 1.0 * k, 0.6 * k)
-    wv = p["wind"] * 2 * math.pi
-    out = [ell(top, v3(10.0, 3.6, 9.0) * k, "rojo", "bufanda", Rt),
-           ell(top + Rt @ v3(-4.5 * k, -2.0 * k, 7.6 * k), v3(2.8, 2.6, 2.2) * k, "rojo", "bufanda", Rt)]
-    for n_, (dy, L, wid, ph) in enumerate(((0.5, 27.0, 5.2, 0.0), (-3.5, 19.0, 4.0, 1.7))):
-        base = top + Rt @ v3(-7.0 * k, dy * k, -2.5 * k)
-        u = Rt @ (v3(-0.86, 0.12, -0.5))
-        u /= np.linalg.norm(u)
-        v = Rt @ v3(0, 1, 0)
-        f = lambda t: math.sin(wv + ph + t * 2.4) * 2.2 * t
-        pts = [(0, wid * 0.6), (L * 0.35 * k, (wid * 0.8 + f(0.35)) * k), (L * 0.7 * k, (wid * 0.9 + f(0.7)) * k),
-               (L * k, (wid * 0.7 + f(1.0)) * k), ((L - 3) * k, (f(0.9) + 0.4) * k), ((L + 1) * k, (f(1.0) - wid * 0.5) * k),
-               (L * 0.7 * k, (f(0.7) - wid * 0.7) * k), (L * 0.35 * k, (f(0.35) - wid * 0.6) * k), (0, -wid * 0.5 * k)]
-        out.append(slab(base, u, v, pts, "rojo", "bufanda_%d" % n_))
-    return out
-
-
 def staff(j, extra, glow):
     """Bastón del nigromante con orbe que brilla (color de ojos en el juego)."""
     k = j["k"]
@@ -779,19 +757,6 @@ def smear(j, p):
 
 # --- Monstruos ----------------------------------------------------------------------
 # Cada uno: función pose -> primitivas. «look» guarda el tamaño de cuadro.
-
-def esbirro(p):
-    """Esqueleto esbirro (según la referencia de David): calavera enorme,
-    bufanda roja raída al viento, espada corta de acero y escudo redondo de
-    madera con aro de metal."""
-    j = rig(p, 1.0)
-    out = skeleton_prims(j, p)
-    out += scarf(j, p)
-    out += sword(j, "r", p["wpn_r"])
-    out += shield(j, p["wpn_l"], face="madera", rim="acero", boss="acero", radius=13.5, studs=False, yaw=-18.0)
-    out += smear(j, p)
-    return out
-
 
 def picaro(p):
     """Esqueleto ballestero: capucha y capa verdes, ballesta."""
@@ -945,33 +910,6 @@ def skeleton_set(STAND, GUARD, attacks, hits):
     return anims
 
 
-def esbirro_anims():
-    # Agachado y con las piernas abiertas, espada baja en diagonal y escudo al
-    # frente (la referencia); en guardia, más bajo y con la espada arriba.
-    STAND = pose(lean=12.0, head=(2.0, 0.0, 0.0), leg_r=(12.0, 28.0, 40.0), leg_l=(12.0, 28.0, 40.0),
-                 arm_r=(16.0, 26.0, 52.0), wpn_r=-20.0, arm_l=(28.0, 20.0, 72.0), wpn_l=0.0, jaw=0.15)
-    GUARD = pose(lean=16.0, head=(4.0, 0.0, 0.0), leg_r=(16.0, 32.0, 50.0), leg_l=(20.0, 32.0, 50.0),
-                 arm_r=(40.0, 34.0, 60.0), wpn_r=0.0, arm_l=(42.0, 14.0, 70.0), wpn_l=0.0, jaw=0.25)
-    # Tajo en diagonal: la espada sube por encima de la cabeza (sigue la línea
-    # del brazo) y baja cruzando el cuerpo con una estela blanca.
-    slash = [(0.0, GUARD),
-             (0.25, dict(GUARD, lean=-8.0, twist=20.0, arm_r=(165.0, 40.0, 10.0), wpn_r=-80.0, head=(-8.0, 0.0, 0.0), jaw=0.4)),
-             (0.42, dict(GUARD, lean=22.0, twist=-25.0, arm_r=(70.0, -35.0, 0.0), wpn_r=-20.0, scale=1.14, jaw=0.8, head=(14.0, 0.0, 0.0),
-                         smear=1.0, smear_arc=(110.0, 250.0), smear_r=40.0, smear_c=(2.0, 6.0))),
-             (0.6, dict(GUARD, lean=18.0, twist=-30.0, arm_r=(30.0, -40.0, 0.0), wpn_r=-10.0, scale=1.08,
-                        smear=0.45, smear_arc=(170.0, 270.0), smear_r=40.0, smear_c=(2.0, 6.0))),
-             (1.0, GUARD)]
-    # Escudazo: se cubre y embiste con el escudo hacia el jugador.
-    bash = [(0.0, GUARD),
-            (0.3, dict(GUARD, twist=25.0, lean=2.0, arm_l=(25.0, 30.0, 95.0), jaw=0.5, head=(-6.0, 0.0, 0.0))),
-            (0.45, dict(GUARD, twist=-18.0, lean=22.0, arm_l=(80.0, 2.0, 12.0), scale=1.16, jaw=0.95, head=(12.0, 0.0, 0.0),
-                        smear=0.6, smear_arc=(-40.0, 40.0), smear_r=24.0, smear_c=(12.0, -2.0))),
-            (0.65, dict(GUARD, twist=-10.0, lean=16.0, arm_l=(65.0, 8.0, 30.0), scale=1.07)),
-            (1.0, GUARD)]
-    side_hit = dict(GUARD, side=16.0, twist=20.0, head=(10.0, -20.0, 15.0), arm_l=(-10.0, 60.0, 20.0), jaw=0.7)
-    return skeleton_set(STAND, GUARD, [slash, bash], [None, side_hit])
-
-
 def picaro_anims():
     STAND = pose(arm_r=(25.0, 12.0, 20.0), arm_l=(20.0, 20.0, 20.0))
     # Apunta al jugador con la ballesta un poco inclinada (así se ve la caja y
@@ -1055,7 +993,6 @@ FRAME = (160, 160)
 FRAME_PIVOT = (80, 156)
 # especie -> (función de primitivas, animaciones)
 MONSTERS = {
-    "esqueleto_esbirro": (esbirro, esbirro_anims),
     "esqueleto_picaro": (picaro, picaro_anims),
     "esqueleto_guardian": (guardian, guardian_anims),
     "nigromante": (nigromante, nigromante_anims),
