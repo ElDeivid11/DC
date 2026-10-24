@@ -10,11 +10,16 @@ extends EnemyBody
 ## Hoy las hojas son de prueba, horneadas desde los modelos 3D por
 ## tools/sprites/; el arte definitivo las reemplaza con el mismo formato.
 ##
-## Direcciones de la hoja: s (mira a la cámara), e (mira a la derecha de la
-## pantalla), n (de espaldas), w (a la izquierda). Si falta w se usa e
-## espejado (y al revés); si falta cualquiera, s.
+## Direcciones de la hoja (hacia dónde mira el enemigo respecto de la
+## cámara): s de frente, se tres cuartos a la derecha de la pantalla, e de
+## perfil a la derecha, ne de espaldas a la derecha, n de espaldas, y nw, w,
+## sw del otro lado. Se usa la más cercana que traiga la hoja, contando las
+## espejadas (w sale de e espejado, sw de se...): una hoja de solo s, e y n
+## también sirve.
 
 const SHADER := preload("res://shaders/enemy_sprite.gdshader")
+## Ángulo de cada dirección (0 = mira a la cámara, + hacia la derecha de la pantalla).
+const DIR_ANGLES := {"s": 0.0, "se": 45.0, "e": 90.0, "ne": 135.0, "n": 180.0, "nw": -135.0, "w": -90.0, "sw": -45.0}
 ## Cuánto dura el destello blanco de un golpe (dos pasos).
 const FLASH_STEP := 0.06
 
@@ -29,7 +34,8 @@ var _anim := ""
 var _then := "idle"
 var _t := 0.0
 var _speed := 1.0
-var _dir := "s"
+## Hacia dónde mira respecto de la cámara, en grados (ver DIR_ANGLES).
+var _angle := 0.0
 var _shown := -1
 var _shown_flip := false
 var _flip := false
@@ -143,23 +149,28 @@ func set_then(role: String) -> void:
 func is_dead() -> bool:
 	return _dead
 
-## Cuadros de la dirección actual (y en _flip, si hay que espejarlos).
+## Cuadros de la dirección más cercana a _angle (y en _flip, si hay que
+## espejarlos). Con empate gana la que no se espeja.
 func _frames(a: Dictionary) -> Array:
 	var dirs: Dictionary = a.get("dirs", {})
 	_flip = false
-	var key := _dir
-	if not dirs.has(key):
-		var mirror := {"e": "w", "w": "e"}
-		if mirror.has(key) and dirs.has(String(mirror[key])):
-			_flip = true
-			key = String(mirror[key])
-		elif dirs.has("s"):
-			key = "s"
-		elif not dirs.is_empty():
-			key = String(dirs.keys()[0])
-		else:
+	var best_key := ""
+	var best_d := 1e9
+	for key: String in dirs.keys():
+		if not DIR_ANGLES.has(key):
+			continue
+		var ang: float = DIR_ANGLES[key]
+		for mirrored: bool in [false, true]:
+			var d := absf(wrapf(_angle - (-ang if mirrored else ang), -180.0, 180.0)) + (0.01 if mirrored else 0.0)
+			if d < best_d:
+				best_d = d
+				best_key = key
+				_flip = mirrored
+	if best_key == "":
+		if dirs.is_empty():
 			return []
-	var frames: Array = dirs[key]
+		best_key = String(dirs.keys()[0])
+	var frames: Array = dirs[best_key]
 	return frames
 
 func _process(delta: float) -> void:
@@ -168,8 +179,8 @@ func _process(delta: float) -> void:
 	_face_camera()
 	_update(delta)
 
-## Billboard en Y y elección de la dirección según adónde mira el enemigo
-## (+Z del nodo) respecto de la cámara.
+## Billboard en Y y ángulo de hacia dónde mira el enemigo (+Z del nodo)
+## respecto de la cámara.
 func _face_camera() -> void:
 	var cam := get_viewport().get_camera_3d()
 	if cam == null:
@@ -182,13 +193,7 @@ func _face_camera() -> void:
 	var fwd := global_basis.z
 	fwd.y = 0.0
 	fwd = fwd.normalized()
-	var d := fwd.dot(to_cam.normalized())
-	if d > 0.7071:
-		_dir = "s"
-	elif d < -0.7071:
-		_dir = "n"
-	else:
-		_dir = "e" if fwd.dot(cam.global_basis.x) > 0.0 else "w"
+	_angle = rad_to_deg(atan2(fwd.dot(cam.global_basis.x), fwd.dot(to_cam.normalized())))
 
 func _update(delta: float) -> void:
 	if _anim == "":

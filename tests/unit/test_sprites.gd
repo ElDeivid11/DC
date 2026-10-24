@@ -4,7 +4,7 @@ extends TestCase
 ## dentro de la hoja y direcciones válidas. Vale igual para las hojas de
 ## prueba y para las del arte definitivo (mismo formato).
 
-const DIRS: Array[String] = ["s", "e", "n", "w"]
+const DIRS: Array[String] = ["s", "se", "e", "ne", "n", "nw", "w", "sw"]
 
 func _species_with_sheet() -> Array[String]:
 	var out: Array[String] = []
