@@ -18,6 +18,7 @@ static func defaults() -> Dictionary:
 		"language": "es",
 		"retro_preset": "clasico",
 		"head_bob": true,
+		"enemy_style": String(DataRegistry.bal("render.enemy_style_default", "sprite")),
 	}
 
 static func apply(settings: Dictionary, tree: SceneTree) -> void:

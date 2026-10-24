@@ -11,6 +11,7 @@
 		"dormant_chance": 0.5,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_esbirro.glb",
+			"sprite": "res://assets/sprites/enemies/esqueleto_esbirro.json",
 			"scale": 0.95,
 			"anim_fps": 12,
 			"anim_speed": {"spawn": 1.5},
@@ -41,6 +42,7 @@
 		"dormant_chance": 0.3,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_picaro.glb",
+			"sprite": "res://assets/sprites/enemies/esqueleto_picaro.json",
 			"scale": 0.95,
 			"anim_fps": 12,
 			"anim_speed": {"spawn": 1.5},
@@ -71,6 +73,7 @@
 		"dormant_chance": 0.0,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_guardian.glb",
+			"sprite": "res://assets/sprites/enemies/esqueleto_guardian.json",
 			"scale": 1.0,
 			"anim_fps": 12,
 			"anim_speed": {"spawn": 1.5},
@@ -103,6 +106,7 @@
 		"dormant_chance": 0.0,
 		"visual": {
 			"model_path": "res://assets/enemies/nigromante.glb",
+			"sprite": "res://assets/sprites/enemies/nigromante.json",
 			"scale": 1.05,
 			"anim_fps": 12,
 			"anim_speed": {"spawn": 1.5},

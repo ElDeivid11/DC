@@ -1,5 +1,5 @@
 class_name EnemyVisual
-extends Node3D
+extends EnemyBody
 ## Modelo 3D animado de un enemigo (esqueleto realista CC0 con el rig y las
 ## animaciones de Quaternius, armado por tools/assets/). Se configura con el
 ## bloque "visual" de data/species.json.
@@ -24,20 +24,14 @@ extends Node3D
 ## Roles de animación (visual.anims): idle, combat, walk, attack (lista),
 ## hit (lista), death, spawn, dormant, ability, taunt.
 
-signal finished_role(role: String)
-
-const LOOPING: Array[String] = ["idle", "combat", "walk", "dormant"]
 ## Huesos por defecto (rig de UAL1/UAL2 de Quaternius, estilo Unreal).
 const DEFAULT_BONES := {"hand_r": "hand_r", "hand_l": "hand_l", "head": "Head"}
 
 var anim: AnimationPlayer
 var skeleton: Skeleton3D
-## Luz propia (solo si visual.light existe; p. ej. el aura del nigromante).
-var light: FlickerLight = null
 var anims: Dictionary = {}
 var fps := 12.0
 var head_scale := 1.0
-var current_role := ""
 ## Velocidad por papel (visual.anim_speed), p. ej. levantarse más rápido.
 var anim_speed: Dictionary = {}
 var _speed := 1.0
@@ -48,8 +42,6 @@ var _bone_scales: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var _dead := false
 
-## def = species.visual (ya validado por DataRegistry); tint = color
-## multiplicador; eye = color de los ojos (y de la luz propia, si tiene).
 func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 	_rng.seed = variant_seed
 	var packed: PackedScene = load(String(def.model_path))
@@ -89,12 +81,7 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 			var n := _anim_name(role)
 			if n != "" and anim.has_animation(n):
 				anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
-	if def.has("light"):
-		var l: Dictionary = def.light
-		light = FlickerLight.make(eye.lerp(l.get("color", eye), 0.5), float(l.get("energy", 1.0)), float(l.get("range", 3.0)), 1.0, 0.1, 8.0)
-		# visual.light.pos (opcional): dónde va la luz, en metros del modelo.
-		light.position = _vec3(l.pos) if l.has("pos") else Vector3(0, 1.4, 0.4)
-		add_child(light)
+	_add_own_light(def, eye)
 
 ## Cada animación nombrada en visual.anims tiene que existir en el modelo (ojo:
 ## el importador de Godot les saca el sufijo "_Loop"). Si falta, aviso: los
@@ -120,41 +107,6 @@ func _attach_weapon(path: Variant, bone: String, mount: Variant, counter_scale :
 	weapon.rotation_degrees = _vec3(m.get("rot", null))
 	weapon.scale = Vector3.ONE * float(m.get("scale", 1.0)) * counter_scale
 	att.add_child(weapon)
-
-## [x, y, z] de los JSON (floats) -> Vector3; cualquier otra cosa, cero.
-static func _vec3(v: Variant) -> Vector3:
-	if typeof(v) != TYPE_ARRAY or (v as Array).size() != 3:
-		return Vector3.ZERO
-	var a: Array = v
-	return Vector3(float(a[0]), float(a[1]), float(a[2]))
-
-## Mancha de sombra redonda con trama Bayer (recorte, sin mezcla alfa: no hay
-## problemas de orden de dibujo, y es como lo hacía PS1).
-static var _shadow_mat: PsxMaterial3D = null
-
-static func _make_blob_shadow(diameter: float) -> MeshInstance3D:
-	if _shadow_mat == null:
-		const SIZE := 16
-		const BAYER: Array[int] = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
-		var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
-		for y in SIZE:
-			for x in SIZE:
-				var d := Vector2(x + 0.5 - SIZE / 2.0, y + 0.5 - SIZE / 2.0).length() / (SIZE / 2.0)
-				var a := clampf(1.0 - d, 0.0, 1.0) * 1.6
-				var on := a > (BAYER[(x % 4) + (y % 4) * 4] + 0.5) / 16.0
-				img.set_pixel(x, y, Color(0, 0, 0, 1.0 if on else 0.0))
-		_shadow_mat = FloorBuilder.make_psx_material(Color(0.02, 0.02, 0.02), ImageTexture.create_from_image(img))
-		_shadow_mat.transparency_mode = 1 # Cutout
-		_shadow_mat.shading_mode = 0 # Unshaded
-		_shadow_mat.refresh_shader()
-	var quad := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(diameter, diameter)
-	quad.mesh = plane
-	quad.material_override = _shadow_mat
-	quad.position.y = 0.02
-	quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	return quad
 
 ## Reemplaza materiales por PSX; los ojos ("*_Eyes") brillan con su color.
 func _apply_materials(node: Node, tint: Color, eye: Color) -> void:

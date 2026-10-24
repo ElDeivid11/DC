@@ -51,6 +51,8 @@
 		"elite_tint": [1.0, 0.9, 0.78],
 		"elite_eye": "#ffb040",
 		"albedo_boost": 1.35,
+		"sprite_albedo": 0.85,
+		"sprite_self_light": 0.12,
 		"boss_stat_mult": 1.5,
 		"wake_radius": 2,
 		"aggro_radius": 5,
@@ -90,6 +92,7 @@
 	},
 	"render": {
 		"preset_default": "clasico",
+		"enemy_style_default": "sprite",
 		"presets": {
 			"clasico": {"lines": 240, "dither_bits": 5, "affine": 0.6, "precision_xy": 160},
 			"crujiente": {"lines": 180, "dither_bits": 5, "affine": 1.0, "precision_xy": 110},

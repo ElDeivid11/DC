@@ -284,8 +284,9 @@ func _validate_species() -> void:
 		else:
 			_err("%s → '%s': necesita visual, model_path o color_a/color_b" % [F, id])
 
-## Bloque "visual" de una especie animada (EnemyVisual): modelo con esqueleto,
-## armas en las manos, color de ojos y qué animación usar para cada papel.
+## Bloque "visual" de una especie animada: modelo con esqueleto, armas en las
+## manos, color de ojos y qué animación usar para cada papel (EnemyVisual), y
+## la hoja de pixel art opcional `sprite` (EnemySprite, tools/sprites/README.md).
 func _validate_visual(F: String, id: String, s: Dictionary) -> void:
 	if typeof(s.visual) != TYPE_DICTIONARY:
 		_err("%s → '%s': 'visual' debe ser un objeto" % [F, id])
@@ -296,6 +297,9 @@ func _validate_visual(F: String, id: String, s: Dictionary) -> void:
 	for w: String in ["weapon_r", "weapon_l"]:
 		if v.has(w) and not ResourceLoader.exists(String(v[w])):
 			_err("%s → '%s': el arma '%s' no existe" % [F, id, v[w]])
+	# Hoja de pixel art (EnemySprite): JSON + PNG, ver tools/sprites/README.md.
+	if v.has("sprite") and not FileAccess.file_exists(String(v.sprite)):
+		_err("%s → '%s': la hoja '%s' no existe" % [F, id, v.sprite])
 	v["scale"] = float(v.get("scale", 1.0))
 	v["head_scale"] = float(v.get("head_scale", 1.0))
 	v["anim_fps"] = maxi(1, int(v.get("anim_fps", 12)))

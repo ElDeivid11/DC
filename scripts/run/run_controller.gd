@@ -354,13 +354,13 @@ func _wake_enemy(e: Dictionary, dist: Dictionary) -> void:
 		_anim(e, "idle")
 	EventBus.hud_message.emit(DataRegistry.t("run.enemy_wakes", [e.display_name]))
 
-## El modelo animado de un enemigo (null si es de los viejos, sin animación,
-## o si ya se liberó).
-func _visual(e: Dictionary) -> EnemyVisual:
+## El cuerpo animado de un enemigo, modelo o sprite (null si es de los viejos,
+## sin animación, o si ya se liberó).
+func _visual(e: Dictionary) -> EnemyBody:
 	var n: Variant = e.get("node")
 	if n == null or not is_instance_valid(n):
 		return null
-	return n as EnemyVisual
+	return n as EnemyBody
 
 ## Reproduce un papel de animación del enemigo. Devuelve su duración (0 = no hay).
 func _anim(e: Dictionary, role: String, then := "idle") -> float:

@@ -6,6 +6,10 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 |---|---|---|
 | ![](docs/capturas/bioma_catacumbas.png) | ![](docs/capturas/bioma_luna.png) | ![](docs/capturas/jefe.png) |
 
+| Enemigos en pixel art (Cisterna Anegada) | Hojas de prueba: frente, costados y espalda |
+|---|---|
+| ![](docs/capturas/pixel_cisterna.png) | ![](docs/capturas/sprites_enemigos.png) |
+
 ![Hub](docs/capturas/hub_demo.png)
 
 ## Cómo jugarlo
@@ -32,7 +36,7 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 
 - **Pisos 1 a 5**, cada uno más grande (25×25 → 45×45) y con enemigos de rango más fuerte. Rango 10 = más débil, 1 = más fuerte.
 - Cada piso es un **bioma** con su paleta, niebla y texturas: Catacumbas del Pozo, Cisterna Anegada, Salones de la Luna, Castillo Carmesí y El Abismo.
-- **Enemigos** (esqueletos de proporciones reales, animados a 12 fps): el **esbirro** y el **ballestero** (básicos), el **guardián** (élite, con hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, color y tamaño piso a piso. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
+- **Enemigos** en **pixel art** dentro del mundo 3D (estilo HD-2D, como *Octopath Traveler*): sprites que miran a la cámara, con frente, espalda y costados, iluminados por las antorchas y con la niebla del entorno. Las hojas actuales son **de prueba** (generadas desde los modelos 3D con `tools/sprites/`) y se reemplazan por arte definitivo con el mismo formato; en Opciones → Enemigos se puede volver a los modelos 3D. Esqueletos de proporciones reales: el **esbirro** y el **ballestero** (básicos), el **guardián** (élite, con hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, color y tamaño piso a piso. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
 - Los enemigos **deambulan y te persiguen**. Si chocas tú primero: **ataque sorpresa** (turno gratis y daño ×1,5). Si te alcanzan **por la espalda o un costado: emboscada** (pegan primero ×1,5).
 - Cada piso tiene un **jefe** que custodia la salida. Al vencerlo eliges: **bajar**, **retirarte con el botín** o quedarte.
 - **Almas**: a veces un enemigo suelta su alma (los jefes siempre). Se revela al pulsar Continuar; recogerla es opcional y eliges quién la lleva (1 activa + pasiva opcional + modificadores). **No salen de la cripta.**
@@ -110,10 +114,11 @@ Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 (lo mis
 - **Sala de pruebas**: la sala 15×9 del prototipo (con techo alto) con un enemigo de cada tipo, uno dormido y el jefe. Se abre desde Opciones (en debug) o con F1. No guarda progreso.
 - **Galería de UI**: todos los componentes del design system en una pantalla (íconos, barras, rangos, nichos, avisos, diálogos, pestañas).
 - `tools/ui/`: generador del kit pixel de la UI (paleta → atlas + manifiesto → Theme). Ver su `README.md`.
-- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, 64 tests unitarios y smoke test de punta a punta, que también usa una poción desde el inventario y reparte puntos en Atributos).
+- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, 67 tests unitarios y smoke test de punta a punta, que también usa una poción desde el inventario y reparte puntos en Atributos).
 - `tools/screenshot.tscn`: capturas con Xvfb (ver el encabezado del script; `--floor=N` y `--test-room` para revisar biomas y enemigos, `--screen=Clase` y `--tab=N` para las pantallas).
 - `tools/enemy_preview.tscn`: todos los enemigos en fila, de frente y de perfil, con líneas de referencia del techo (2 m y 3 m).
 - `tools/assets/`: pipeline que adapta los assets libres al estilo (modelos de enemigos y texturas de cada bioma). Ver su `README.md`.
+- `tools/sprites/`: hojas de pixel art de los enemigos (formato para el arte definitivo, generador de las de prueba y vista previa). Ver su `README.md`.
 - `tools/portraits/`: hornea los retratos de héroes (96×96) y objetos (64×64) como render 3D con el filtro PS1 del juego. Ver su `README.md`.
 
 ## Estructura
@@ -121,7 +126,7 @@ Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 (lo mis
 ```
 autoload/   EventBus, DataRegistry, MetaState, SaveSystem, GameState, Controls, SceneRouter, DebugTools
 data/       species, souls, items, unlocks, upgrades, floors (con los biomas), balance, texts (todo en JSON)
-assets/     enemies/ (esqueletos adaptados), textures/<bioma>/ (paredes, pisos, techos), portraits/ (héroes y objetos), fuentes, props
+assets/     enemies/ (esqueletos adaptados), sprites/enemies/ (hojas de pixel art), textures/<bioma>/ (paredes, pisos, techos), portraits/ (héroes y objetos), fuentes, props
 scenes/     Boot, Hub, Run, RunSummary, ui/UIGallery
 scripts/    run/ (RunController, FloorGenerator, FloorBuilder, reglas, recompensas, desbloqueos)
             combat/ (CombatManager, pasivas) · world/ (GridPlayer, EnemyVisual, RetroView, FlickerLight)

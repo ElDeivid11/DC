@@ -448,16 +448,21 @@ func build_props(fd: FloorData) -> void:
 
 # --- Entidades ----------------------------------------------------------------------------
 
-## Especies con bloque "visual" → EnemyVisual (modelo animado; arranca en
-## "idle" o tirado en el piso si está dormido). Las viejas (model_path o
-## color_a/color_b) siguen funcionando como modelo quieto o caja.
+## Especies con bloque "visual" → EnemySprite (pixel art, si la especie tiene
+## visual.sprite y el ajuste "enemy_style" es "sprite") o EnemyVisual (modelo
+## animado). Arranca en "idle" o tirado en el piso si está dormido. Las viejas
+## (model_path o color_a/color_b) siguen funcionando como modelo quieto o caja.
 func spawn_enemy(e: Dictionary) -> Node3D:
 	var species := DataRegistry.get_species(String(e.species_id))
 	var tint: Color = e.get("tint", Color.WHITE)
 	var scale_mult := float(e.get("scale_mult", 1.0))
 	var node: Node3D
 	if species.has("visual"):
-		var v := EnemyVisual.new()
+		var v: EnemyBody
+		if use_sprites(species.visual):
+			v = EnemySprite.new()
+		else:
+			v = EnemyVisual.new()
 		v.setup(species.visual, tint, e.get("eye_color", Color.WHITE), int(e.get("variant_seed", 0)))
 		v.scale = Vector3.ONE * scale_mult
 		v.position = cell_to_world(e.cell)
@@ -485,6 +490,12 @@ func spawn_enemy(e: Dictionary) -> Node3D:
 	node.rotation_degrees.y = 180.0 - int(e.get("facing", 2)) * 90.0
 	world.add_child(node)
 	return node
+
+## Pixel art o modelo 3D: Opciones → Enemigos (por defecto, balance.json →
+## render.enemy_style_default). Solo especies con hoja (visual.sprite).
+static func use_sprites(visual: Dictionary) -> bool:
+	var style := String(MetaState.settings.get("enemy_style", DataRegistry.bal("render.enemy_style_default", "sprite")))
+	return style == "sprite" and visual.has("sprite")
 
 ## Para cada malla del modelo arma un PsxMaterial3D que reusa la textura
 ## ORIGINAL (no se pierde el dibujo) con el shading/niebla PSX encima.

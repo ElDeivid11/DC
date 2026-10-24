@@ -70,7 +70,12 @@ Todo cambio de escena pasa por `SceneRouter.goto()`, con un fundido a negro de u
 - Columnas: prisma de 8 lados con basa y capitel, con la textura de pared del bioma. Antorchas: modelo de KayKit Dungeon Remastered (CC0) + llama sin sombrear.
 - Los props del pack PSX también reciben material PSX, con la misma niebla y snapping que el resto. LevelBlock sigue habilitado para armar salas a mano en el editor (con su parche de `material: Material`).
 
-### Enemigos — `EnemyVisual` (`scripts/world/enemy_visual.gd`)
+### Enemigos — `EnemyBody`: `EnemySprite` (pixel art) o `EnemyVisual` (3D)
+
+- **Sprites (por defecto)**: `EnemySprite` (`scripts/world/enemy_sprite.gd`) dibuja al enemigo como pixel art en el mundo 3D, estilo HD-2D: un quad que gira en Y para mirar siempre a la cámara, con el cuadro de la hoja según el papel de animación y la dirección (s de frente, e/w de costado, n de espaldas: se elige con el +Z del nodo respecto de la cámara; `w` sale de `e` espejado si falta). Shader `shaders/enemy_sprite.gdshader`: luz del mundo (antorchas), la **misma niebla PSX** que el resto (globals `psx_fog_*`), ojos de la máscara `glow` sin luz ni niebla, destello blanco al recibir un golpe y una luz propia mínima (`enemies.sprite_self_light`); tinte por especie/élite/jefe multiplicado (`enemies.sprite_albedo`). Hoja = PNG + glow + JSON (`species.json → visual.sprite`); el formato, pensado para que el arte definitivo reemplace las hojas de prueba sin tocar código, está en `tools/sprites/README.md`. Las hojas de prueba salen de los modelos 3D: `tools/sprites/bake_enemy_sprites.tscn` (render) + `pixelize_sprites.py` (paleta, contorno, luz de borde). `tests/unit/test_sprites.gd` valida las hojas.
+- Opciones → Enemigos (`settings.enemy_style`: `sprite` | `model`, por defecto `render.enemy_style_default`) elige al crear cada enemigo (`FloorBuilder.use_sprites`); los dos comparten la interfaz `EnemyBody` (papeles, luz propia, `finished_role`, sombra blob), que es lo único que usan `RunController` y el combate.
+
+**Modelo 3D** — `EnemyVisual` (`scripts/world/enemy_visual.gd`):
 
 - Modelos: esqueleto anatómico "Skeleton - Realistic" (Paul Kotelevets, CC0) con skinning rígido estilo PS1 sobre el rig de 65 huesos de la Universal Animation Library de Quaternius (UAL1 + UAL2, CC0). `tools/assets/build_skeletons.py` (Blender como módulo `bpy`) decima las 135 piezas, las encaja en las articulaciones, ata cada pieza a su hueso, hornea oclusión, pone los ojos y arma la túnica del nigromante (Modular Character Outfits - Fantasy, CC0, + una falda cónica). `process_enemies.mjs` deja solo los clips que pide `species.json`, a 12 fps, y `skeleton_textures.py` pinta el hueso a 128 px por especie. ~3,3k triángulos por cuerpo. Armas (KayKit, CC0) en `BoneAttachment3D` sobre los huesos de `visual.bones` (por defecto `hand_r`/`hand_l`/`Head`), con montaje por arma en datos (`weapon_r_mount`/`weapon_l_mount`: pos, rot, scale).
 - Animación **a pasos**: el `AnimationPlayer` va en modo manual y se avanza de a 1/12 s. Cada papel (`idle`, `combat`, `walk`, `attack`, `hit`, `death`, `spawn`, `dormant`, `ability`, `taunt`) se mapea en `species.json → visual.anims` (texto o lista para variar).
@@ -142,7 +147,7 @@ Dirección de arte: grimorio de hierro remachado y vitela oscura, bronce, gótic
 
 ## Gotchas nuevos (además de los de CLAUDE.md)
 
-- Texturas del mundo y de enemigos: `detect_3d/compress_to=0` en su `.import`. Si no, el editor las pasa a VRAM comprimida con mipmaps la primera vez que las ve en 3D y se pierde el píxel limpio.
+- Texturas del mundo, de enemigos y de las hojas de sprites: `detect_3d/compress_to=0` en su `.import`. Si no, el editor las pasa a VRAM comprimida con mipmaps la primera vez que las ve en 3D y se pierde el píxel limpio.
 - El esqueleto mide 1,775 m y el techo normal es de 2 m (escala 0,95–1,05 en `species.json`; la capucha del nigromante llega a ~1,93 m; la sala del jefe tiene 3 m). Revisar con `tools/enemy_preview.tscn` (líneas de 1, 2 y 3 m; `--preview-role`, `--preview-at`, `--preview-cam`, `--preview-only`).
 - `tools/screenshot.gd --call=metodo:arg` pasa el argumento como texto ("true"/"false" se convierten a bool, los enteros a int).
 

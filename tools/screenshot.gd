@@ -11,6 +11,7 @@ extends Node
 ##   --demo               carga datos de ejemplo en MetaState (no se guardan)
 ##   --run                arranca una run de ejemplo (objetos, un alma, nivel 3)
 ##   --ui-scale=1.5       escala de UI (como en Opciones)
+##   --enemies=sprite|model  enemigos en pixel art o modelo 3D (como en Opciones)
 ##   --summary            deja terminada una run de ejemplo (para RunSummary.tscn)
 ##   --test-room          la run arranca en la sala de pruebas (un enemigo de cada)
 ##   --floor=N            la run arranca en el piso N (semilla fija: revisar biomas)
@@ -72,6 +73,8 @@ func _ready() -> void:
 		elif arg.begins_with("--ui-scale="):
 			MetaState.settings["ui_scale"] = float(arg.substr(11))
 			GameSettings.apply(MetaState.settings, get_tree())
+		elif arg.begins_with("--enemies="):
+			MetaState.settings["enemy_style"] = arg.substr(10)
 	var packed: PackedScene = load(_scene_path)
 	_scene = packed.instantiate()
 	get_tree().root.add_child.call_deferred(_scene)

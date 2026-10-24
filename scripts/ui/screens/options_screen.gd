@@ -2,7 +2,8 @@ class_name OptionsScreen
 extends UIScreen
 ## Opciones: volumen, pantalla completa, escala de UI (Compacta / Normal /
 ## Grande, ver GameSettings.ui_factor), estilo de imagen (presets PS1, ver
-## RetroView), balanceo de cámara e idioma. Se guardan y aplican al instante.
+## RetroView), balanceo de cámara, enemigos en pixel art o 3D e idioma.
+## Se guardan y aplican al instante.
 ## A la derecha, pestañas de Controles (teclas en KeyCaps) y Créditos.
 ## Desde el Hub además: reiniciar guardado, y con build de debug la sala de
 ## pruebas y la galería de UI (al pie).
@@ -88,6 +89,15 @@ func _build_general(parent: Control) -> HSlider:
 	bob.toggled.connect(func(on: bool) -> void: _apply_setting("head_bob", on))
 	UITooltip.attach(bob, DataRegistry.t("options.head_bob_tip"))
 	general.body.add_child(_row("options.head_bob", bob))
+
+	# Pixel art o modelo 3D (para comparar mientras el arte es de prueba).
+	var enemies := OptionButton.new()
+	for key: String in ["options.enemies_sprite", "options.enemies_model"]:
+		enemies.add_item(DataRegistry.t(key))
+	enemies.selected = 0 if String(s.get("enemy_style", "sprite")) == "sprite" else 1
+	enemies.item_selected.connect(func(i: int) -> void: _apply_setting("enemy_style", "sprite" if i == 0 else "model"))
+	UITooltip.attach(enemies, DataRegistry.t("options.enemies_tip"))
+	general.body.add_child(_row("options.enemies", enemies))
 
 	var lang := OptionButton.new()
 	lang.add_item(DataRegistry.t("options.language_es"))
