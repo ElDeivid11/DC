@@ -187,7 +187,7 @@ func _run() -> void:
 		_finish()
 		return
 	run = get_tree().current_scene as RunController
-	run.debug_kill_boss()
+	await _check_boss_intro(run)
 	var gross_before := GameState.run_coins()
 	run.end_run("retiro")
 	if not await _wait_scene(SceneRouter.SUMMARY):
@@ -202,6 +202,51 @@ func _run() -> void:
 	# --- Todas las pantallas de UI se abren sin errores ---
 	await _open_all_screens()
 	_finish()
+
+## Sala del jefe: entrar dispara la presentación (rejas, braseros, el jefe
+## que se levanta y se acerca) y termina en un combate con entrada de jefe;
+## al ganarlo suben las rejas y se abre la salida.
+func _check_boss_intro(run: RunController) -> void:
+	var boss: Dictionary = run.call("_boss")
+	check(bool(boss.get("dormant", false)), "el jefe duerme hasta su presentación")
+	var cell := Vector2i(-1, -1)
+	for g: Dictionary in run.fd.boss_gates:
+		if run.fd.enemy_at(g.cell).is_empty():
+			cell = g.cell
+			break
+	check(cell.x >= 0, "hay una entrada libre a la sala del jefe")
+	if cell.x < 0:
+		run.debug_kill_boss()
+		return
+	run.player.call("teleport", cell, 0)
+	Engine.time_scale = 8.0
+	run.call("_on_player_moved", cell)
+	check(bool(run.get("_intro_running")), "entrar a la sala dispara la presentación")
+	for i in TIMEOUT_FRAMES:
+		if run.combat != null:
+			break
+		await get_tree().process_frame
+	Engine.time_scale = 1.0
+	check(run.combat != null, "la presentación termina en combate")
+	if run.combat == null:
+		run.debug_kill_boss()
+		return
+	check(String(run.combat.get("start_mode")) == "boss", "combate con entrada de jefe")
+	check(not bool(boss.get("dormant", true)), "el jefe se levantó")
+	var bc: Vector2i = boss.cell
+	var pc: Vector2i = run.player.get("grid_pos")
+	check(absi(bc.x - pc.x) + absi(bc.y - pc.y) == 1, "el jefe llegó frente al equipo")
+	for f: BrazierFire in run.boss_room.braziers:
+		check(f.is_lit(), "los braseros quedan encendidos")
+	for g: Node3D in run.boss_room.gates:
+		check(is_zero_approx((g.get_node("Bars") as Node3D).position.y), "las rejas quedan cerradas")
+	await _wait_frames(30)
+	var combat := run.combat
+	combat.call("debug_win")
+	await _wait_frames(2)
+	combat.emit_signal("combat_ended", "victory", combat.call("_result"))
+	await _wait_frames(2)
+	check(run.exit_open, "vencer al jefe abre la salida")
 
 ## Inventario fuera de combate: Enter sobre la casilla usa el objeto, se elige
 ## a quién en el diálogo, cura y se gasta. Con todos sanos no se gasta.
@@ -287,6 +332,7 @@ func _open_all_screens() -> void:
 	await _wait_frames(2)
 
 func _finish() -> void:
+	Engine.time_scale = 1.0
 	SaveSystem.reset_save()
 	SaveSystem.save_path = SaveSystem.DEFAULT_PATH
 	if failures.is_empty():

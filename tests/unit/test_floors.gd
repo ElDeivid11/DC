@@ -110,9 +110,38 @@ func test_dormidos_solo_si_la_especie_puede() -> void:
 	for n in range(1, DataRegistry.floor_count() + 1):
 		var fd := _gen(n, 70 + n)
 		for e: Dictionary in fd.enemies:
-			if bool(e.get("dormant", false)):
+			if e.kind == RunRules.BOSS:
+				# El jefe duerme sobre su círculo hasta su presentación.
+				check(bool(e.get("dormant", false)) and bool(e.get("intro", false)), "el jefe espera su presentación")
+			elif bool(e.get("dormant", false)):
 				check(float(DataRegistry.get_species(String(e.species_id)).dormant_chance) > 0.0, "%s no debería dormir" % e.species_id)
-				check(e.kind != RunRules.BOSS, "el jefe nunca duerme")
+
+## Sala del jefe: una reja en cada entrada (borde entre la sala y un pasillo),
+## braseros adentro, el círculo bajo el jefe y nada de cajas ni barriles.
+func test_sala_del_jefe() -> void:
+	for n in range(1, DataRegistry.floor_count() + 1):
+		var fd := _gen(n, 110 + n)
+		var r := fd.boss_room
+		check(not fd.boss_gates.is_empty(), "piso %d: la sala del jefe tiene al menos una reja" % n)
+		for g: Dictionary in fd.boss_gates:
+			var c: Vector2i = g.cell
+			var out: Vector2i = c + FloorGenerator.DIRS[int(g.dir)]
+			check(r.has_point(c) and not fd.is_wall(c), "piso %d: reja desde una celda de la sala" % n)
+			check(not r.has_point(out) and not fd.is_wall(out), "piso %d: reja hacia un pasillo" % n)
+		eq(fd.braziers.size(), 4, "piso %d: un brasero por esquina" % n)
+		for b: Vector3 in fd.braziers:
+			var cell := Vector2i(floori(b.x / FloorBuilder.CELL_SIZE), floori(b.z / FloorBuilder.CELL_SIZE))
+			check(r.has_point(cell), "piso %d: brasero dentro de la sala" % n)
+		var boss: Dictionary = {}
+		for e: Dictionary in fd.enemies:
+			if e.kind == RunRules.BOSS:
+				boss = e
+		eq(fd.boss_circle, boss.get("cell", Vector2i(-2, -2)), "piso %d: el círculo está bajo el jefe" % n)
+		check(String(boss.get("epithet", "")) != "", "piso %d: el jefe tiene epíteto" % n)
+		for p: Dictionary in fd.props:
+			var pos: Vector3 = p.pos
+			var cell := Vector2i(floori(pos.x / FloorBuilder.CELL_SIZE), floori(pos.z / FloorBuilder.CELL_SIZE))
+			check(not r.has_point(cell), "piso %d: sin cajas ni barriles en la sala del jefe" % n)
 
 func test_elite_de_especie_sin_sufijo() -> void:
 	var g := FloorGenerator.make_enemy(Vector2i(1, 1), "esqueleto_guardian", RunRules.ELITE, 4)

@@ -114,6 +114,18 @@ func face_towards(cell: Vector2i) -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "rotation_degrees:y", rotation_degrees.y - step * 90.0, TURN_TIME)
 
+## Gira hacia cualquier celda (no solo una vecina): hacia el eje en el que
+## está más lejos. Devuelve la duración del giro (0 si ya miraba hacia ahí).
+func face_cell(cell: Vector2i) -> float:
+	var d := cell - grid_pos
+	if d == Vector2i.ZERO:
+		return 0.0
+	var step := Vector2i(signi(d.x), 0) if absi(d.x) > absi(d.y) else Vector2i(0, signi(d.y))
+	if DIRS.find(step) == facing:
+		return 0.0
+	face_towards(grid_pos + step)
+	return TURN_TIME
+
 ## Mueve sin animación (saltar de piso, debug).
 func teleport(cell: Vector2i, new_facing: int) -> void:
 	grid_pos = cell

@@ -64,7 +64,9 @@ var party_roster: Array = []
 ## Copia del inventario (ids); se usan solo los que sirven en combate.
 var inventory: Array[String] = []
 ## "surprise" (tú chocaste: turno gratis ×1.5) | "ambush" (te alcanzaron por
-## la espalda/costado: el enemigo pega primero ×1.5) | "normal"
+## la espalda/costado: el enemigo pega primero ×1.5) | "normal" | "boss"
+## (después de la presentación del jefe: el equipo golpea primero, como en
+## "surprise" —el balance cuenta con eso—, y el cartel entra con su barra)
 var start_mode := "normal"
 var flee_chance := 0.5
 ## Alma ya sorteada al empezar ({} = no suelta nada). Se revela al ganar.
@@ -136,14 +138,54 @@ func _ready() -> void:
 		"surprise":
 			surprise_round = true
 			_log(DataRegistry.t("combat.surprise"), "crit")
+		"boss":
+			surprise_round = true
+			_log(DataRegistry.t("combat.boss_initiative"), "crit")
 		"ambush":
 			ambush_pending = true
 			_log(DataRegistry.t("combat.ambush"), "taken")
 	_refresh_ui()
+	if start_mode == "boss":
+		await _boss_entrance()
 	if ambush_pending:
 		_enemy_turn()
 	else:
 		_start_turn()
+
+## Entrada de jefe: primero solo su cartel (nombre y la barra de vida que se
+## llena de a tramos, con el registro), y después entran el equipo y las
+## acciones. Todo a saltos, como el resto de la UI.
+func _boss_entrance() -> void:
+	busy = true
+	var rest: Array[Control] = [bottom, menu_panel, queue_panel]
+	for c in rest:
+		c.modulate.a = 0.0
+	var max_hp := int(enemy.max_hp)
+	enemy_bar.set_values(0, max_hp)
+	enemy_hp_label.text = "0/%d" % max_hp
+	enemy_box.modulate.a = 0.0
+	var tw := create_tween()
+	for a: float in [0.5, 1.0]:
+		var alpha := a
+		tw.tween_callback(func() -> void: enemy_box.modulate.a = alpha)
+		tw.tween_interval(0.05)
+	tw.tween_callback(func() -> void: SceneRouter.play_ui("open"))
+	var steps := 12
+	for i in range(1, steps + 1):
+		var hp := roundi(max_hp * float(i) / steps)
+		tw.tween_callback(func() -> void:
+			enemy_bar.set_values(hp, max_hp)
+			enemy_hp_label.text = "%d/%d" % [hp, max_hp])
+		tw.tween_interval(0.05)
+	tw.tween_interval(0.2)
+	for a: float in [0.5, 1.0]:
+		var alpha := a
+		tw.tween_callback(func() -> void:
+			for c in rest:
+				c.modulate.a = alpha)
+		tw.tween_interval(0.05)
+	await tw.finished
+	busy = false
 
 func _build_party() -> void:
 	for m: Dictionary in party_roster:

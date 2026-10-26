@@ -38,7 +38,7 @@ func test_campo_faltante_se_reporta() -> void:
 	reg.free()
 
 func test_make_soul_usa_el_rango_del_monstruo() -> void:
-	var soul := DataRegistry.make_soul("esqueleto_picaro", 9, "Esqueleto ballestero")
+	var soul := DataRegistry.make_soul("esqueleto_picaro", 9, "Esqueleto arquero")
 	eq(int(soul.active.damage), 3, "daño de la activa en rango 9")
 	eq(int(soul.source_rank), 9, "rango de origen")
 	eq(String(soul.passive.effect.type), "crit_chance", "pasiva")

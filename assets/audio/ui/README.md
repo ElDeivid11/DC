@@ -25,3 +25,13 @@ archivos solo se renombraron.
 | `extra_recompensa_grande.ogg` | RPG Audio / handleCoins | `reward` | Total del resumen, cofre |
 | `extra_bajar_piso_puerta.ogg` | RPG Audio / doorOpen_1 | `descend` | Iniciar expedición, bajar de piso |
 | `extra_equipar_objeto.ogg` | RPG Audio / dropLeather | `item` | Usar o descartar un objeto |
+
+## Sala del jefe (propios)
+
+Sintetizados por código, sin samples (`python3 -I tools/audio/make_boss_sfx.py`): son del proyecto, CC0.
+
+| Archivo | `SceneRouter.play_ui(kind)` | Evento |
+|---|---|---|
+| `extra_jefe_reja.wav` | `gate` | Caen las rejas de la sala del jefe |
+| `extra_jefe_brasero.wav` | `brazier` | Se enciende un brasero |
+| `extra_jefe_entrada.wav` | `boss` | El jefe se levanta (golpe grave, coro y campana) |

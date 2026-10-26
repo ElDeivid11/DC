@@ -166,12 +166,12 @@ func _demo_meta() -> void:
 	MetaState.unlocked = {}
 	MetaState.stats = MetaState.default_stats()
 	MetaState.stats.merge({"runs": 4, "deaths": 3, "retreats": 1, "total_kills": 10, "best_floor": 2, "total_time_sec": 3720.0, "coins_earned_total": 1600,
-		"last_run": {"outcome": "muerte", "floor": 2, "kills": 6, "coins": 86, "cause": "Esqueleto ballestero", "time_sec": 912.0}}, true)
+		"last_run": {"outcome": "muerte", "floor": 2, "kills": 6, "coins": 86, "cause": "Esqueleto arquero", "time_sec": 912.0}}, true)
 
 func _demo_run() -> void:
 	GameState.new_run(777, false)
 	GameState.inventory.append_array(["venda", "antorcha_vieja", "talisman_hueso"])
-	GameState.add_soul("bjorn", DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto ballestero"))
+	GameState.add_soul("bjorn", DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto arquero"))
 	GameState.party[1]["hp"] = 9
 	GameState.add_coins(37, "kills")
 	# Nivel 3 para los dos (y algo de EXP); Bjorn ya repartió algunos puntos.

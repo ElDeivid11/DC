@@ -33,6 +33,13 @@ var torches: Array = []
 ## Celdas con techo más alto que el normal (Vector2i -> metros): la sala del
 ## jefe, para que el nigromante no atraviese el techo.
 var ceilings: Dictionary = {}
+## Sala del jefe (ver RunController._boss_intro): rejas en cada entrada
+## ({cell: celda de la sala, dir: hacia el pasillo, 0 N 1 E 2 S 3 O}),
+## braseros (posición en mundo, apagados hasta la presentación) y la celda
+## del círculo de invocación (donde duerme el jefe).
+var boss_gates: Array = []
+var braziers: Array[Vector3] = []
+var boss_circle := Vector2i(-1, -1)
 var is_test_room := false
 
 func is_wall(cell: Vector2i) -> bool:

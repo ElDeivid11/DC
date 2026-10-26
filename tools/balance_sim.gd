@@ -165,8 +165,9 @@ func _fight(rank: int, kind: String, soul_id: String, _floor_n: int) -> bool:
 	var r := rng.randf()
 	var mode := "surprise" if r < START_SURPRISE else ("ambush" if r < START_SURPRISE + START_AMBUSH else "normal")
 	if kind == RunRules.BOSS:
-		# En el juego el jefe no se mueve (RunController._enemies_act lo salta):
-		# solo se lo pelea chocándolo, o sea siempre con ataque sorpresa.
+		# En el juego el jefe no deambula (RunController._enemies_act lo salta):
+		# se lo pelea después de su presentación, con el turno gratis del equipo
+		# (modo "boss" del CombatManager, igual que un ataque sorpresa).
 		mode = "surprise"
 	var surprise := mode == "surprise"
 	var enemy_turns := 0

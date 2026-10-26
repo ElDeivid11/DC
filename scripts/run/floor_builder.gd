@@ -564,3 +564,142 @@ static func set_exit_open(exit_node: Node3D, open: bool) -> void:
 	(exit_node.get_node("Ring") as CSGCylinder3D).material = mat
 	(exit_node.get_node("Beam") as CSGCylinder3D).material = mat
 	(exit_node.get_node("Beam") as CSGCylinder3D).visible = open
+
+# --- Sala del jefe -------------------------------------------------------------------------
+
+const GATE_IRON := Color(0.3, 0.28, 0.27)
+const BRAZIER_IRON := Color(0.26, 0.23, 0.22)
+## Alto al que esperan las rejas abiertas: escondidas sobre el dintel.
+const GATE_RAISED := 2.3
+const CIRCLE_TEXTURE := "res://assets/sprites/enemies/nigromante_circulo.png"
+## Brillo del círculo apagado (se adivina grabado en el piso) y encendido.
+const CIRCLE_DIM := 0.12
+
+## Rejas (abiertas), braseros (apagados) y círculo de invocación (apagado) de
+## la sala del jefe; el fuego y el círculo toman el color de ojos del jefe.
+## -> {gates: [Node3D], braziers: [BrazierFire], circle: MeshInstance3D o null}
+func build_boss_room(fd: FloorData, color: Color) -> Dictionary:
+	var out := {"gates": [], "braziers": [], "circle": null}
+	var iron := make_psx_material(GATE_IRON)
+	for g: Dictionary in fd.boss_gates:
+		(out.gates as Array).append(_make_gate(g.cell, int(g.dir), iron))
+	var stand := make_psx_material(BRAZIER_IRON)
+	for pos: Vector3 in fd.braziers:
+		(out.braziers as Array).append(_make_brazier(pos, color, stand))
+	if fd.boss_circle.x >= 0 and ResourceLoader.exists(CIRCLE_TEXTURE):
+		out.circle = _make_circle(fd.boss_circle, color)
+	return out
+
+## Reja de barrotes en el borde entre `cell` y su vecina hacia DIRS[dir],
+## apenas del lado del pasillo. Los barrotes (nodo "Bars") esperan arriba.
+func _make_gate(cell: Vector2i, d: int, mat: Material) -> Node3D:
+	var dir := DIRS[d]
+	var holder := Node3D.new()
+	holder.position = cell_to_world(cell) + Vector3(dir.x, 0, dir.y) * (CELL_SIZE / 2.0 + 0.04)
+	holder.rotation_degrees.y = -d * 90.0
+	var bars := Node3D.new()
+	bars.name = "Bars"
+	bars.position.y = GATE_RAISED
+	holder.add_child(bars)
+	var n := 7
+	for i in n:
+		var x := lerpf(-0.86, 0.86, float(i) / (n - 1))
+		var bar := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.07, WALL_HEIGHT, 0.07)
+		bar.mesh = box
+		bar.position = Vector3(x, WALL_HEIGHT / 2.0 + 0.1, 0)
+		bar.material_override = mat
+		bars.add_child(bar)
+		# Punta de lanza abajo: las rejas se clavan en el piso.
+		var tip := MeshInstance3D.new()
+		var prism := PrismMesh.new()
+		prism.size = Vector3(0.1, 0.16, 0.1)
+		tip.mesh = prism
+		tip.rotation_degrees.z = 180.0
+		tip.position = Vector3(x, 0.03, 0)
+		tip.material_override = mat
+		bars.add_child(tip)
+	for y: float in [0.62, 1.55]:
+		var cross := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(1.9, 0.08, 0.09)
+		cross.mesh = box
+		cross.position = Vector3(0, y, 0)
+		cross.material_override = mat
+		bars.add_child(cross)
+	world.add_child(holder)
+	return holder
+
+## Las rejas caen de golpe (rebotan un poco) o suben despacio.
+static func set_gate_closed(gate: Node3D, closed: bool, animate := true) -> void:
+	var bars := gate.get_node_or_null("Bars") as Node3D
+	if bars == null:
+		return
+	if not animate:
+		bars.position.y = 0.0 if closed else GATE_RAISED
+		return
+	var tw := bars.create_tween()
+	if closed:
+		tw.tween_property(bars, "position:y", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_property(bars, "position:y", 0.07, 0.06)
+		tw.tween_property(bars, "position:y", 0.0, 0.06)
+	else:
+		tw.tween_property(bars, "position:y", GATE_RAISED, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+## Brasero de hierro (pie, columna y cuenco) con el fuego apagado.
+func _make_brazier(pos: Vector3, color: Color, mat: Material) -> BrazierFire:
+	var holder := Node3D.new()
+	holder.position = pos
+	for part: Array in [[0.24, 0.26, 0.08, 0.04], [0.06, 0.06, 0.72, 0.44], [0.32, 0.17, 0.2, 0.9]]:
+		var m := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = float(part[0])
+		cyl.bottom_radius = float(part[1])
+		cyl.height = float(part[2])
+		cyl.radial_segments = 8
+		cyl.rings = 1
+		m.mesh = cyl
+		m.position.y = float(part[3])
+		m.material_override = mat
+		holder.add_child(m)
+	world.add_child(holder)
+	var fire := BrazierFire.new()
+	fire.position.y = 1.0
+	holder.add_child(fire)
+	fire.setup(color, make_glow_material(color.lightened(0.3)), make_glow_material(color.darkened(0.45)))
+	return fire
+
+## Círculo de runas en el piso, bajo el jefe (textura de draw_nigromante.py).
+func _make_circle(cell: Vector2i, color: Color) -> MeshInstance3D:
+	var m := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	var side := DataRegistry.bal_f("boss_room.circle_size", 3.4)
+	plane.size = Vector2(side, side)
+	m.mesh = plane
+	m.position = cell_to_world(cell, 0.02)
+	var mat := make_psx_material(color * CIRCLE_DIM, load(CIRCLE_TEXTURE))
+	mat.transparency_mode = 1 # recorte: los píxeles vacíos no se dibujan
+	mat.shading_mode = 0
+	mat.refresh_shader()
+	m.material_override = mat
+	m.set_meta("color", color)
+	world.add_child(m)
+	return m
+
+## Enciende (o apaga) el círculo de a pasos, como las luces PS1.
+static func set_circle_lit(circle: MeshInstance3D, lit: bool, animate := true) -> void:
+	if circle == null:
+		return
+	var mat := circle.material_override as PsxMaterial3D
+	var color: Color = circle.get_meta("color", Color.WHITE)
+	var to := 1.0 if lit else CIRCLE_DIM
+	if not animate:
+		mat.albedo_color = color * to
+		return
+	var tw := circle.create_tween()
+	var from := CIRCLE_DIM if lit else 1.0
+	for i in range(1, 5):
+		var k := lerpf(from, to, i / 4.0)
+		tw.tween_callback(func() -> void: mat.albedo_color = Color(color.r * k, color.g * k, color.b * k, 1.0))
+		tw.tween_interval(0.09)

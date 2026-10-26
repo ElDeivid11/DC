@@ -169,6 +169,7 @@ static func _apply_boss_def(boss: Dictionary, b: Dictionary) -> void:
 	boss["soul_id"] = String(b.get("soul_id", boss.soul_id))
 	boss["scale_mult"] = float(b.get("scale_mult", 1.0))
 	boss["tint"] = b.get("tint", Color.WHITE)
+	boss["epithet"] = String(b.get("epiteto", ""))
 	if b.has("eye_color"):
 		boss["eye_color"] = b.eye_color
 
@@ -290,7 +291,36 @@ static func _place_boss_and_exit(fd: FloorData, dist: Dictionary, def: Dictionar
 		if int(dist.get(boss_cell + DIRS[i], -1)) == int(dist.get(boss_cell, 0)) - 1:
 			boss["facing"] = i
 			break
+	# Duerme (un montón de túnica sobre su círculo) hasta que el equipo entra
+	# a la sala: ahí se cierran las rejas y empieza la presentación.
+	boss["dormant"] = true
+	boss["intro"] = true
 	fd.enemies.append(boss)
+	_dress_boss_room(fd, boss_cell)
+
+## Rejas en cada entrada de la sala del jefe, un brasero en cada esquina,
+## columnas si la sala es grande y el círculo de invocación bajo el jefe.
+static func _dress_boss_room(fd: FloorData, boss_cell: Vector2i) -> void:
+	var r := fd.boss_room
+	fd.boss_circle = boss_cell
+	for y in range(r.position.y, r.end.y):
+		for x in range(r.position.x, r.end.x):
+			var c := Vector2i(x, y)
+			if fd.is_wall(c):
+				continue
+			for d in DIRS.size():
+				var n := c + DIRS[d]
+				if not r.has_point(n) and not fd.is_wall(n):
+					fd.boss_gates.append({"cell": c, "dir": d})
+	var inset := DataRegistry.bal_f("boss_room.brazier_inset", 0.42)
+	for corner: Vector2i in [r.position, Vector2i(r.end.x - 1, r.position.y), Vector2i(r.position.x, r.end.y - 1), r.end - Vector2i.ONE]:
+		var ox := inset if corner.x == r.position.x else FloorBuilder.CELL_SIZE - inset
+		var oz := inset if corner.y == r.position.y else FloorBuilder.CELL_SIZE - inset
+		fd.braziers.append(Vector3(corner.x * FloorBuilder.CELL_SIZE + ox, 0, corner.y * FloorBuilder.CELL_SIZE + oz))
+	if r.size.x >= 5 and r.size.y >= 5:
+		for p: Vector2 in [Vector2(r.position.x + 1, r.position.y + 1), Vector2(r.end.x - 1, r.position.y + 1),
+				Vector2(r.position.x + 1, r.end.y - 1), Vector2(r.end.x - 1, r.end.y - 1)]:
+			fd.pillars.append(Vector3(p.x * FloorBuilder.CELL_SIZE, 0, p.y * FloorBuilder.CELL_SIZE))
 
 static func _is_connected(fd: FloorData, blocked: Dictionary) -> bool:
 	var reach := fd.distances_from(fd.start_cell, blocked)
@@ -385,6 +415,9 @@ static func _place_items(fd: FloorData, rng: RandomNumberGenerator, count: int, 
 
 static func _place_decor(fd: FloorData, rng: RandomNumberGenerator, per_room: float, blocked: Dictionary) -> void:
 	for r in fd.rooms:
+		# La sala del jefe tiene su propia decoración (_dress_boss_room).
+		if r == fd.boss_room:
+			continue
 		var n := int(per_room) + (1 if rng.randf() < fmod(per_room, 1.0) else 0)
 		var corners: Array[Vector2i] = [r.position, Vector2i(r.end.x - 1, r.position.y), Vector2i(r.position.x, r.end.y - 1), r.end - Vector2i.ONE]
 		var offsets: Array[Vector2] = [Vector2(0.5, 0.5), Vector2(1.5, 0.5), Vector2(0.5, 1.5), Vector2(1.5, 1.5)]

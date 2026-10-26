@@ -461,6 +461,7 @@ func _validate_floors() -> void:
 			if _req(F, id, b, "rank", TYPE_FLOAT):
 				b["rank"] = int(b.rank)
 			b["scale_mult"] = float(b.get("scale_mult", 1.0))
+			b["epiteto"] = String(b.get("epiteto", ""))
 			b["tint"] = _to_color(b.get("tint", [1, 1, 1]))
 			if b.has("eye_color"):
 				b["eye_color"] = _to_color(b.eye_color)

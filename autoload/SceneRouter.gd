@@ -27,6 +27,10 @@ const SFX := {
 	"level_up": ["extra_subir_nivel.ogg", -4.0, false],
 	"reward": ["extra_recompensa_grande.ogg", -4.0, false],
 	"descend": ["extra_bajar_piso_puerta.ogg", -6.0, false],
+	# Sala del jefe (sintetizados: tools/audio/make_boss_sfx.py).
+	"gate": ["extra_jefe_reja.wav", -4.0, false],
+	"brazier": ["extra_jefe_brasero.wav", -8.0, true],
+	"boss": ["extra_jefe_entrada.wav", -3.0, false],
 	"item": ["extra_equipar_objeto.ogg", -6.0, false],
 }
 const SFX_DIR := "res://assets/audio/ui/"

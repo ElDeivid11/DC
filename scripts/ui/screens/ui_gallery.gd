@@ -90,7 +90,7 @@ func _ready() -> void:
 	# Almas
 	var souls := UIPanel.new(DataRegistry.t("gallery.souls"), "PanelAlt")
 	mid.add_child(souls)
-	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto ballestero")))
+	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto arquero")))
 	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_guardian", 4, "Esqueleto guardián"), true))
 	# Retratos y hexágono de estadísticas (contorno verde = reparto pendiente).
 	var hero_row := HBoxContainer.new()
@@ -142,6 +142,7 @@ func _ready() -> void:
 	UITooltip.attach(tip, DataRegistry.t("gallery.tooltip_text"))
 	feedback.body.add_child(tip)
 	feedback.body.add_child(UIButton.make(DataRegistry.t("gallery.confirm_button"), _demo_confirm))
+	feedback.body.add_child(UIButton.make(DataRegistry.t("gallery.boss_button"), _demo_boss_title))
 	var toasts := HFlowContainer.new()
 	feedback.body.add_child(toasts)
 	for kind: String in ["info", "good", "danger", "coin", "soul", "level"]:
@@ -182,6 +183,15 @@ func _column(parent: Container) -> VBoxContainer:
 	c.add_theme_constant_override("separation", UIStyle.SPACE * 4)
 	parent.add_child(c)
 	return c
+
+## La presentación de un jefe: franjas de cine y su cartel.
+func _demo_boss_title() -> void:
+	var boss: Dictionary = DataRegistry.get_floor(1).get("boss", {})
+	var cine := UICinematic.open(self)
+	cine.show_title(DataRegistry.t("boss.card_floor", [UIFormat.roman(1)]), String(boss.get("display_name", "")),
+		String(boss.get("epiteto", "")), 1.6)
+	await cine.title_done
+	cine.close()
 
 func _demo_confirm() -> void:
 	var d := UIConfirmDialog.ask(self, DataRegistry.t("gallery.confirm_title"), DataRegistry.t("gallery.confirm_text"), DataRegistry.t("ui.yes"), DataRegistry.t("ui.no"), true)

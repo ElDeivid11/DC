@@ -99,7 +99,7 @@
 	},
 	"esqueleto_picaro": {
 		"species": "esqueleto_picaro",
-		"active": {"name": "Virote Certero"},
+		"active": {"name": "Flecha Certera"},
 		"passive": {
 			"name": "Ojo de Tirador",
 			"description": "Probabilidad de golpe crítico (daño doble)",

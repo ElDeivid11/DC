@@ -2,8 +2,10 @@
 // un quad que mira a la cámara. Lo iluminan las luces del mundo (antorchas)
 // como a un HD-2D, con la MISMA niebla PSX que el resto (globals psx_fog_*,
 // ver addons/psx/shaders/psx.gdshaderinc): a lo lejos se funde con el fondo.
-// Los ojos (máscara `glow`) brillan con su color sin luz ni niebla: dos puntos
-// en la oscuridad que se ven antes que el cuerpo.
+// Los ojos (máscara `glow` a 1) brillan con su color sin luz ni niebla: dos
+// puntos en la oscuridad que se ven antes que el cuerpo. Lo «espiritual»
+// (máscara a 0,5: un espectro, una llama, un aura) brilla igual pero con su
+// gris por el color de ojos, así tiene tonos.
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_lambert, specular_disabled, shadows_disabled, fog_disabled;
 
@@ -19,6 +21,8 @@ uniform bool flip_h = false;
 uniform vec4 tint : source_color = vec4(1.0);
 uniform vec3 eye_color : source_color = vec3(1.0);
 uniform float eye_energy = 1.4;
+// Lo espiritual (máscara a 0,5) brilla menos que los ojos: se ve, pero no tapa.
+uniform float spirit_energy = 0.6;
 // Golpe recibido: el sprite se pone blanco (0..1).
 uniform float flash = 0.0;
 // Luz propia mínima: que la silueta se lea aunque no la alumbre nada.
@@ -86,7 +90,7 @@ vec3 sprite_light(vec2 uv, out vec3 spec) {
 float eye_halo(vec2 uv) {
 	for (int dy = -2; dy <= 2; dy++) {
 		for (int dx = -2; dx <= 2; dx++) {
-			if (texture(glow, uv + vec2(float(dx), float(dy)) * texel).r > 0.5) {
+			if (texture(glow, uv + vec2(float(dx), float(dy)) * texel).r > 0.75) {
 				return 0.12;
 			}
 		}
@@ -121,9 +125,13 @@ void fragment() {
 		ALBEDO = albedo * (1.0 - v_fog);
 		EMISSION = (albedo * self_light + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
 	}
-	if (texture(glow, uv).r > 0.5) {
+	float g = texture(glow, uv).r;
+	if (g > 0.75) {
 		ALBEDO = vec3(0.0);
 		EMISSION = eye_color * eye_energy;
+	} else if (g > 0.25) {
+		ALBEDO = vec3(0.0);
+		EMISSION = dot(c.rgb, vec3(1.0 / 3.0)) * eye_color * eye_energy * spirit_energy + vec3(flash) * 0.5;
 	}
 	SPECULAR = 0.0;
 	ROUGHNESS = 1.0;

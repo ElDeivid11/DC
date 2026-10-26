@@ -101,6 +101,9 @@
 		},
 		"fov": 64.0,
 		"combat_fov": 58.0,
+		"combat_fov_boss": 72.0,
+		"combat_boss_lift": 0.15,
+		"combat_boss_pitch": -1.0,
 		"player_light_color": "#ffc98a",
 		"player_light_energy": 1.5,
 		"player_light_range": 8.5,
@@ -108,6 +111,16 @@
 		"flicker_amount": 0.05,
 		"flicker_hz": 10.0,
 		"head_bob": 0.04,
-		"boss_room_height": 3.0
+		"boss_room_height": 3.5
+	},
+	"boss_room": {
+		"brazier_inset": 0.42,
+		"brazier_energy": 2.0,
+		"brazier_range": 6.0,
+		"circle_size": 3.4,
+		"intro_step": 0.3,
+		"approach_step": 0.24,
+		"title_hold": 2.2,
+		"skip_speed": 4.0
 	}
 }

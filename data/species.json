@@ -31,7 +31,7 @@
 		}
 	},
 	"esqueleto_picaro": {
-		"display_name": "Esqueleto ballestero",
+		"display_name": "Esqueleto arquero",
 		"rank": 8,
 		"rank_range": [3, 8],
 		"tier": "basico",
@@ -109,7 +109,7 @@
 			"sprite": "res://assets/sprites/enemies/nigromante.json",
 			"scale": 1.05,
 			"anim_fps": 12,
-			"anim_speed": {"spawn": 1.5},
+			"anim_speed": {"spawn": 1.0},
 			"weapon_r": "res://assets/enemies/weapons/baculo.glb",
 			"weapon_r_mount": {"pos": [-0.025, 0.085, 0.0], "rot": [0, 90, 90], "scale": 0.65},
 			"eye_color": "#c77dff",
