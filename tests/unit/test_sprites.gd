@@ -26,6 +26,11 @@ func test_hojas_completas() -> void:
 			continue
 		var m: Dictionary = data.meta
 		var sheet: Texture2D = data.sheet
+		if m.has("normal"):
+			var normal: Texture2D = data.normal
+			check(normal != null, "%s: el mapa de normales carga" % id)
+			if normal != null:
+				check(normal.get_size() == sheet.get_size(), "%s: el mapa de normales mide lo mismo que la hoja" % id)
 		var frame: Array = m.frame
 		var columns := int(m.columns)
 		var rows := floori(float(sheet.get_height()) / float(frame[1]))

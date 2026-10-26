@@ -51,6 +51,8 @@ var _frame_uv := Vector2.ONE
 var _columns := 1
 ## Luz pareja (meta.flat_light): todo el cuadro con la misma luz.
 var _flat := false
+## Luz por píxel del sprite con su mapa de normales (meta.normal).
+var _normals := false
 var _rng := RandomNumberGenerator.new()
 
 ## Carga (una vez) el JSON de una hoja y sus texturas. Vacío si algo falla.
@@ -67,7 +69,10 @@ static func load_sheet(json_path: String) -> Dictionary:
 	var glow: Texture2D = null
 	if m.has("glow") and ResourceLoader.exists(dir.path_join(String(m.glow))):
 		glow = load(dir.path_join(String(m.glow)))
-	var data := {"meta": m, "sheet": sheet, "glow": glow}
+	var normal: Texture2D = null
+	if m.has("normal") and ResourceLoader.exists(dir.path_join(String(m.normal))):
+		normal = load(dir.path_join(String(m.normal)))
+	var data := {"meta": m, "sheet": sheet, "glow": glow, "normal": normal}
 	_cache[json_path] = data
 	return data
 
@@ -107,6 +112,12 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 	mat.set_shader_parameter("self_light", float(meta.get("self_light", DataRegistry.bal_f("enemies.sprite_self_light", 0.12))))
 	_flat = bool(meta.get("flat_light", false))
 	mat.set_shader_parameter("flat_light", _flat)
+	_normals = data.normal != null
+	if _normals:
+		mat.set_shader_parameter("use_normals", true)
+		mat.set_shader_parameter("normal_tex", data.normal)
+		mat.set_shader_parameter("texel", Vector2(1.0 / sheet.get_width(), 1.0 / sheet.get_height()))
+		mat.set_shader_parameter("tint_amount", DataRegistry.bal_f("enemies.sprite_flat_tint", 0.5))
 	quad.material_override = mat
 	add_child(quad)
 	add_child(_make_blob_shadow(float(def.get("shadow", 0.9))))
@@ -188,21 +199,24 @@ func _process(delta: float) -> void:
 	if quad == null:
 		return
 	_face_camera()
-	if _flat:
+	if _normals:
+		_update_sprite_light()
+	elif _flat:
 		_update_flat_light()
 	_update(delta)
 
-## Luz pareja: lo que recibe el centro del sprite (ambiente del bioma + luces
-## del grupo LIGHTS_GROUP, con la atenuación de Godot y su parpadeo). La cara
-## que mira a la cámara recibe más; las luces de atrás, un poco.
-func _update_flat_light() -> void:
-	var c := Color(0, 0, 0)
+## Luces que le llegan al centro del sprite: [ambiente del bioma, lista de
+## [dirección hacia la luz (mundo), color por energía y atenuación]], en
+## lineal. Suma las luces del grupo LIGHTS_GROUP con la atenuación de Godot (y
+## su parpadeo, porque se lee cada cuadro).
+func _lights_here() -> Array:
+	var ambient := Color(0, 0, 0)
 	var world := get_world_3d()
 	var env: Environment = world.environment if world != null else null
 	if env != null and env.ambient_light_source == Environment.AMBIENT_SOURCE_COLOR:
-		c = env.ambient_light_color.srgb_to_linear() * env.ambient_light_energy
+		ambient = env.ambient_light_color.srgb_to_linear() * env.ambient_light_energy
 	var p := global_position + Vector3(0.0, LIGHT_PROBE_Y, 0.0)
-	var n := quad.global_basis.z
+	var found: Array = []
 	for node: Node in get_tree().get_nodes_in_group(LIGHTS_GROUP):
 		var l := node as Light3D
 		if l == null or not l.is_visible_in_tree():
@@ -222,13 +236,53 @@ func _update_flat_light() -> void:
 			dir = l.global_basis.z
 		else:
 			continue
-		var facing := 0.35 + 0.65 * maxf(n.dot(dir), 0.0)
-		c += l.light_color.srgb_to_linear() * (l.light_energy * att * facing)
+		found.append([dir, l.light_color.srgb_to_linear() * (l.light_energy * att)])
+	return [ambient, found]
+
+## Luz pareja: todo el cuadro con la luz del centro. La cara que mira a la
+## cámara recibe más; las luces de atrás, un poco.
+func _update_flat_light() -> void:
+	var here := _lights_here()
+	var c: Color = here[0]
+	var n := quad.global_basis.z
+	for entry: Array in here[1]:
+		var dir: Vector3 = entry[0]
+		var col: Color = entry[1]
+		c += col * (0.35 + 0.65 * maxf(n.dot(dir), 0.0))
 	# El sprite toma solo parte del color de la luz: conserva su paleta y se
 	# recorta contra el entorno (1 = todo el color de la luz).
 	var lum := (c.r + c.g + c.b) / 3.0
 	c = Color(lum, lum, lum).lerp(c, DataRegistry.bal_f("enemies.sprite_flat_tint", 0.5))
 	mat.set_shader_parameter("flat_color", Vector3(c.r, c.g, c.b))
+
+## Luz por píxel (mapa de normales): el ambiente y las 4 luces más fuertes,
+## con la dirección pasada al espacio del sprite (x derecha, y arriba, z hacia
+## la cámara). El shader sombrea cada píxel del sprite en bandas.
+func _update_sprite_light() -> void:
+	var here := _lights_here()
+	var found: Array = here[1]
+	found.sort_custom(func(a: Array, b: Array) -> bool:
+		var ca: Color = a[1]
+		var cb: Color = b[1]
+		return ca.r + ca.g + ca.b > cb.r + cb.g + cb.b)
+	var inv := quad.global_basis.inverse()
+	var dirs := PackedVector3Array()
+	var cols := PackedVector3Array()
+	for i in 4:
+		if i < found.size():
+			var entry: Array = found[i]
+			var dir: Vector3 = entry[0]
+			var col: Color = entry[1]
+			dirs.append((inv * dir).normalized())
+			cols.append(Vector3(col.r, col.g, col.b))
+		else:
+			dirs.append(Vector3.BACK)
+			cols.append(Vector3.ZERO)
+	var ambient: Color = here[0]
+	mat.set_shader_parameter("ambient", Vector3(ambient.r, ambient.g, ambient.b))
+	mat.set_shader_parameter("light_dir", dirs)
+	mat.set_shader_parameter("light_col", cols)
+	mat.set_shader_parameter("light_count", mini(found.size(), 4))
 
 ## Billboard en Y y ángulo de hacia dónde mira el enemigo (+Z del nodo)
 ## respecto de la cámara.

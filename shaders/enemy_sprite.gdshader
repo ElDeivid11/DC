@@ -28,6 +28,21 @@ uniform float self_light = 0.12;
 // en lineal. Así cada color queda plano, como en un sprite de 8/16 bits.
 uniform bool flat_light = false;
 uniform vec3 flat_color = vec3(1.0);
+// Luz por píxel del sprite con su mapa de normales (RGB: x derecha, y arriba,
+// z hacia la cámara; alfa < 0,75 = metal). EnemySprite pasa el ambiente y
+// las luces más fuertes ya en el espacio del sprite (dirección hacia la luz y
+// color por energía y atenuación, en lineal). La luz va en bandas, como un
+// sombreado de pixel art, y cada píxel del sprite recibe una sola.
+uniform bool use_normals = false;
+uniform sampler2D normal_tex : hint_default_black, filter_nearest, repeat_disable;
+uniform vec3 ambient = vec3(0.2);
+uniform vec3 light_dir[4];
+uniform vec3 light_col[4];
+uniform int light_count = 0;
+// Cuánto del color de la luz toma el sprite (1 = todo; 0 = solo cuánta luz).
+uniform float tint_amount = 0.5;
+// 1 / tamaño de la hoja en píxeles (para el halo de los ojos).
+uniform vec2 texel = vec2(0.0);
 
 varying float v_fog;
 
@@ -36,6 +51,47 @@ void vertex() {
 	v_fog = psx_fog_near != psx_fog_far ?
 		psx_fog_color.a * clamp((d - psx_fog_near) / (psx_fog_far - psx_fog_near), 0.0, 1.0) :
 		0.0;
+}
+
+// Bandas de luz: a pleno, media, poca, nada.
+float band(float x) {
+	return x > 0.7 ? 1.0 : (x > 0.35 ? 0.65 : (x > 0.08 ? 0.35 : 0.0));
+}
+
+vec3 sprite_light(vec2 uv, out vec3 spec) {
+	vec4 nm = texture(normal_tex, uv);
+	vec3 n = normalize(nm.rgb * 2.0 - 1.0);
+	if (flip_h) {
+		n.x = -n.x;
+	}
+	bool metal = nm.a < 0.75;
+	vec3 lit = ambient;
+	spec = vec3(0.0);
+	for (int i = 0; i < 4; i++) {
+		if (i >= light_count) {
+			break;
+		}
+		lit += light_col[i] * band(dot(n, light_dir[i]));
+		// Destello del metal: el píxel que refleja la luz hacia la cámara.
+		if (metal && dot(n, normalize(light_dir[i] + vec3(0.0, 0.0, 1.0))) > 0.93) {
+			spec += light_col[i] * 0.8;
+		}
+	}
+	float lum = dot(lit, vec3(1.0 / 3.0));
+	return mix(vec3(lum), lit, tint_amount);
+}
+
+// Reflejo de los ojos: el hueso a 1-2 píxeles de una pupila toma un poco de
+// su luz (las cuencas, negras, siguen negras).
+float eye_halo(vec2 uv) {
+	for (int dy = -2; dy <= 2; dy++) {
+		for (int dx = -2; dx <= 2; dx++) {
+			if (texture(glow, uv + vec2(float(dx), float(dy)) * texel).r > 0.5) {
+				return 0.12;
+			}
+		}
+	}
+	return 0.0;
 }
 
 void fragment() {
@@ -50,9 +106,15 @@ void fragment() {
 	vec3 albedo = mix(c.rgb * tint.rgb, vec3(1.0), flash);
 	// Igual que el material PSX sombreado: con niebla total el color es
 	// exactamente el de la niebla (el albedo se apaga y entra por emisión).
-	if (flat_light) {
+	if (use_normals) {
 		// Sin albedo las luces de la escena no suman nada: todo entra por
-		// emisión con la luz que calculó EnemySprite.
+		// emisión con la luz que se calcula acá.
+		vec3 spec;
+		vec3 lit = sprite_light(uv, spec);
+		vec3 halo = albedo * eye_color * eye_energy * eye_halo(uv);
+		ALBEDO = vec3(0.0);
+		EMISSION = (albedo * (lit + vec3(self_light)) + spec + halo + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
+	} else if (flat_light) {
 		ALBEDO = vec3(0.0);
 		EMISSION = (albedo * (flat_color + vec3(self_light)) + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
 	} else {
