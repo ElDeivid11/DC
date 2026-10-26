@@ -1,6 +1,7 @@
 extends Node
-## Herramienta de desarrollo: hornea los retratos de héroes y objetos en estilo
+## Herramienta de desarrollo: hornea los retratos de objetos en estilo
 ## "render 3D con filtro PS1" (modelos y fuentes: tools/portraits/README.md).
+## (Los héroes, en pixel art: tools/portraits/draw_hero_parts.py.)
 ## Necesita display real o virtual (con --headless no renderiza):
 ##   xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 \
 ##     res://tools/portraits/bake_portraits.tscn [-- --only=bjorn,venda --preview=RUTA.png --debug]
@@ -60,28 +61,11 @@ const MODELS := "res://tools/portraits/models/"
 ## focus: punto que mira la cámara, relativo al hueso de la cabeza (que en
 ## estos modelos está en el cuello). key / fill: luces, relativas al foco.
 ## tints: franja del atlas -> color (conserva el degradé de la franja).
-const HEROES: Array[Dictionary] = [
-	{
-		"id": "bjorn", "model": MODELS + "bjorn.glb", "anim": "Idle", "time": 0.0,
-		# Cámara un poco más baja que los ojos: se lo ve más grande.
-		"yaw": 22.0, "focus": Vector3(0, 0.3, 0), "distance": 3.7, "fov": 26.0, "pitch": 2.0,
-		"key": Vector3(1.6, 1.0, 1.8), "key_energy": 2.4, "key_range": 6.0,
-		"fill": Vector3(-2.2, 0.1, 0.9), "fill_energy": 1.3, "fill_range": 6.0,
-		# Colmillos y piel blanca del gorro de oso: casi del marrón del gorro
-		# (en blanco, a 96 px enmarcan los ojos como anteojos). Barba castaño
-		# rojiza: con la gris original la cara se lavaba bajo la luz cálida.
-		"tints": {Vector2i(2, 1): Color("#7a6852"), Vector2i(1, 0): Color("#64382a")},
-	},
-	{
-		"id": "elena", "model": MODELS + "elena.glb", "anim": "Idle", "time": 0.0,
-		"yaw": 28.0, "focus": Vector3(0, 0.3, 0), "distance": 3.7, "fov": 26.0, "pitch": -5.0,
-		"key": Vector3(1.6, 1.0, 1.8), "key_energy": 2.4, "key_range": 6.0,
-		"fill": Vector3(-2.2, 0.1, 0.9), "fill_energy": 1.3, "fill_range": 6.0,
-		# Capucha y capa índigo apagado (arcana) y túnica pizarra: el verde
-		# original es demasiado vivo para la paleta de catacumba.
-		"tints": {Vector2i(1, 1): Color("#4b3f78"), Vector2i(0, 1): Color("#2f4a52")},
-	},
-]
+## Los héroes ya no se hornean: son pixel art armado por capas según su
+## apariencia (tools/portraits/draw_hero_parts.py y HeroPortrait). La
+## configuración de los renders de Bjorn y Elena quedó en la historia del
+## repositorio.
+const HEROES: Array[Dictionary] = []
 
 ## Objetos: lista de piezas (modelo o primitiva low-poly), giro de 3/4 y
 ## cuánto del cuadro ocupan ("fill"). En modelos: swaps (franja del atlas ->

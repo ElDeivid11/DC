@@ -1,9 +1,12 @@
 class_name FloorGenerator
 extends RefCounted
 ## Genera pisos con semilla (misma semilla + mismo piso = mismo mapa, para
-## reproducir bugs). Algoritmo: salas rectangulares sin solaparse + pasillos
-## en L que las unen (árbol de "sala más cercana" + algunos lazos extra).
-## La salida va en la sala más lejana del inicio, custodiada por el jefe.
+## reproducir bugs). Algoritmo: primero la sala del jefe, hecha a mano
+## (floors.json → sala_jefe), apoyada contra un borde con la puerta hacia
+## adentro; después salas rectangulares sin solaparse + pasillos en L que las
+## unen (árbol de "sala más cercana" + algunos lazos extra; si una L pisaría
+## la sala del jefe, el pasillo la rodea), y un pasillo hasta su puerta. El
+## inicio va en la sala más lejana de esa puerta.
 ## Los cofres bloquean su celda, así que solo se aceptan si no cortan ningún
 ## camino (se comprueba con BFS).
 ##
@@ -26,15 +29,18 @@ static func generate(floor_n: int, run_seed: int, item_pool: Array[String]) -> F
 	var size := int(def.get("size", 25))
 	fd.fill(size, size, FloorData.WALL)
 
+	var porch := _place_boss_room(fd, rng)
 	_place_rooms(fd, rng, gen)
 	_connect_rooms(fd, rng)
+	_carve_path(fd, porch, _nearest_floor(fd, porch))
+	_pick_start_room(fd, porch)
 
 	var start_room := fd.rooms[0]
 	fd.start_cell = _center(start_room)
 	fd.start_facing = _best_facing(fd, fd.start_cell)
 
 	var dist := fd.distances_from(fd.start_cell)
-	_place_boss_and_exit(fd, dist, def)
+	_place_boss(fd, def)
 	var blocked := {fd.exit_cell: true}
 	_place_chests(fd, rng, int(def.get("chests", 2)), blocked)
 	for c in fd.chests:
@@ -187,7 +193,7 @@ static func _place_rooms(fd: FloorData, rng: RandomNumberGenerator, gen: Diction
 		var x := rng.randi_range(1, fd.width - w - 1)
 		var y := rng.randi_range(1, fd.height - h - 1)
 		var rect := Rect2i(x, y, w, h)
-		var ok := true
+		var ok := not fd.boss_room.grow(1).intersects(rect)
 		for other in fd.rooms:
 			if other.grow(1).intersects(rect):
 				ok = false
@@ -218,17 +224,84 @@ static func _connect_rooms(fd: FloorData, rng: RandomNumberGenerator) -> void:
 		if a != b:
 			_carve_corridor(fd, rng, _center(fd.rooms[a]), _center(fd.rooms[b]))
 
+## Pasillo en L de a hasta b (el codo, al azar). Si las dos L pisarían la
+## sala del jefe, el pasillo la rodea (_carve_path).
 static func _carve_corridor(fd: FloorData, rng: RandomNumberGenerator, a: Vector2i, b: Vector2i) -> void:
-	var corner := Vector2i(b.x, a.y) if rng.randf() < 0.5 else Vector2i(a.x, b.y)
+	var corners: Array[Vector2i] = [Vector2i(b.x, a.y), Vector2i(a.x, b.y)]
+	if rng.randf() < 0.5:
+		corners.reverse()
+	for corner in corners:
+		var cells := _l_cells(a, corner, b)
+		if cells.all(func(c: Vector2i) -> bool: return not fd.boss_room.has_point(c)):
+			for c in cells:
+				fd.set_cell(c, FloorData.FLOOR)
+			return
+	_carve_path(fd, a, b)
+
+static func _l_cells(a: Vector2i, corner: Vector2i, b: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = [a]
 	for seg: Array in [[a, corner], [corner, b]]:
-		var from: Vector2i = seg[0]
+		var c: Vector2i = seg[0]
 		var to: Vector2i = seg[1]
-		var step := Vector2i(signi(to.x - from.x), signi(to.y - from.y))
-		var c := from
-		fd.set_cell(c, FloorData.FLOOR)
+		var step := Vector2i(signi(to.x - c.x), signi(to.y - c.y))
 		while c != to:
 			c += step
-			fd.set_cell(c, FloorData.FLOOR)
+			out.append(c)
+	return out
+
+## Pasillo por el camino más corto de a hasta b (BFS por cualquier celda que
+## no sea el borde del mapa ni la sala del jefe), prefiriendo lo ya cavado.
+static func _carve_path(fd: FloorData, a: Vector2i, b: Vector2i) -> void:
+	var prev := {a: a}
+	var queue: Array[Vector2i] = [a]
+	var head := 0
+	while head < queue.size():
+		var c := queue[head]
+		head += 1
+		if c == b:
+			break
+		for d in DIRS:
+			var n := c + d
+			if prev.has(n) or n.x < 1 or n.y < 1 or n.x > fd.width - 2 or n.y > fd.height - 2:
+				continue
+			if fd.boss_room.has_point(n) and n != b:
+				continue
+			prev[n] = c
+			queue.append(n)
+	if not prev.has(b):
+		return
+	var cur := b
+	while cur != a:
+		fd.set_cell(cur, FloorData.FLOOR)
+		cur = prev[cur]
+	fd.set_cell(a, FloorData.FLOOR)
+
+## La celda de piso (fuera de la sala del jefe) más cerca de `from`.
+static func _nearest_floor(fd: FloorData, from: Vector2i) -> Vector2i:
+	var best := from
+	var best_d := 1 << 30
+	for c in fd.floor_cells():
+		if fd.boss_room.has_point(c) or c == from:
+			continue
+		var d := absi(c.x - from.x) + absi(c.y - from.y)
+		if d < best_d:
+			best_d = d
+			best = c
+	return best
+
+## El inicio va en la sala más lejana (por camino) de la puerta del jefe.
+static func _pick_start_room(fd: FloorData, porch: Vector2i) -> void:
+	var dist := fd.distances_from(porch)
+	var best := 0
+	var best_d := -1
+	for i in fd.rooms.size():
+		var d := int(dist.get(_center(fd.rooms[i]), -1))
+		if d > best_d:
+			best_d = d
+			best = i
+	var tmp := fd.rooms[0]
+	fd.rooms[0] = fd.rooms[best]
+	fd.rooms[best] = tmp
 
 static func _center(r: Rect2i) -> Vector2i:
 	return r.get_center()
@@ -254,78 +327,104 @@ static func _room_index_of(fd: FloorData, cell: Vector2i) -> int:
 			return i
 	return -1
 
-static func _place_boss_and_exit(fd: FloorData, dist: Dictionary, def: Dictionary) -> void:
-	var boss_i := 1 if fd.rooms.size() > 1 else 0
-	var far := -1
-	for i in range(1, fd.rooms.size()):
-		var d := int(dist.get(_center(fd.rooms[i]), -1))
-		if d > far:
-			far = d
-			boss_i = i
-	fd.boss_room = fd.rooms[boss_i]
-	var tall := DataRegistry.bal_f("render.boss_room_height", 3.0)
-	for y in range(fd.boss_room.position.y, fd.boss_room.end.y):
-		for x in range(fd.boss_room.position.x, fd.boss_room.end.x):
-			fd.ceilings[Vector2i(x, y)] = tall
-	var exit := _center(fd.boss_room)
-	var exit_d := -1
-	for y in range(fd.boss_room.position.y, fd.boss_room.end.y):
-		for x in range(fd.boss_room.position.x, fd.boss_room.end.x):
-			var c := Vector2i(x, y)
-			if int(dist.get(c, -1)) > exit_d:
-				exit_d = int(dist.get(c, -1))
-				exit = c
-	fd.exit_cell = exit
-	# El jefe se para en la celda anterior a la salida, sobre el camino.
-	var boss_cell := exit
-	for d in DIRS:
-		var n := exit + d
-		if not fd.is_wall(n) and int(dist.get(n, -1)) == exit_d - 1:
-			boss_cell = n
-			break
+## La sala del jefe girada `turns` cuartos de vuelta en sentido horario.
+static func boss_room_rows(turns: int) -> Array[String]:
+	var rows: Array[String] = []
+	for r: Variant in DataRegistry.boss_room.get("mapa", []):
+		rows.append(String(r))
+	for _k in posmod(turns, 4):
+		var h := rows.size()
+		var w := rows[0].length()
+		var out: Array[String] = []
+		for y in w:
+			var line := ""
+			for x in h:
+				line += rows[h - 1 - x][y]
+			out.append(line)
+		rows = out
+	return rows
+
+## Estampa la sala del jefe contra un borde del mapa al azar, girada para que
+## la puerta mire hacia adentro (en el dibujo mira al sur: arriba no se gira,
+## a la derecha un cuarto de vuelta, abajo media, a la izquierda tres
+## cuartos). Pone piso, techo alto, salida, braseros, columnas, alfombra,
+## antorchas y la celda del jefe. -> la celda de afuera de la puerta.
+static func _place_boss_room(fd: FloorData, rng: RandomNumberGenerator) -> Vector2i:
+	var side := rng.randi_range(0, 3)
+	var rows := boss_room_rows(side)
+	var h := rows.size()
+	var w := rows[0].length()
+	var pos := Vector2i.ZERO
+	match side:
+		0:
+			pos = Vector2i(rng.randi_range(1, fd.width - w - 1), 1)
+		1:
+			pos = Vector2i(fd.width - w - 1, rng.randi_range(1, fd.height - h - 1))
+		2:
+			pos = Vector2i(rng.randi_range(1, fd.width - w - 1), fd.height - h - 1)
+		_:
+			pos = Vector2i(1, rng.randi_range(1, fd.height - h - 1))
+	fd.boss_room = Rect2i(pos, Vector2i(w, h))
+	var tall := float(DataRegistry.boss_room.get("techo", 3.5))
+	var torch_walls: Array[Vector2i] = []
+	for y in h:
+		for x in w:
+			var c := pos + Vector2i(x, y)
+			var ch := rows[y][x]
+			if ch == "#":
+				continue
+			if ch == "T":
+				torch_walls.append(c)
+				continue
+			fd.set_cell(c, FloorData.FLOOR)
+			fd.ceilings[c] = tall
+			var center := Vector3(c.x * FloorBuilder.CELL_SIZE + 1.0, 0, c.y * FloorBuilder.CELL_SIZE + 1.0)
+			match ch:
+				"=":
+					fd.carpet.append(c)
+				"b":
+					fd.braziers.append(center)
+					fd.solid[c] = true
+				"p":
+					fd.pillars.append(center)
+					fd.solid[c] = true
+				"S":
+					fd.boss_circle = c
+				"X":
+					fd.exit_cell = c
+					fd.ceilings[c] = float(DataRegistry.boss_room.get("techo_salida", 2.5))
+				"D":
+					fd.boss_door = c
+					fd.ceilings.erase(c)
+	# La puerta: hacia adentro está la celda de la sala; hacia afuera, el pasillo.
+	for d in DIRS.size():
+		var n := fd.boss_door + DIRS[d]
+		if fd.boss_room.has_point(n) and not fd.is_wall(n):
+			fd.boss_door_dir = d
+	# Antorchas: en cada pared marcada, mirando a la celda de piso de al lado.
+	for t in torch_walls:
+		for d in DIRS.size():
+			var n := t - DIRS[d]
+			if fd.boss_room.has_point(n) and not fd.is_wall(n):
+				fd.torches.append({"cell": n, "dir": d})
+				break
+	return fd.boss_door - DIRS[fd.boss_door_dir]
+
+## El jefe duerme (un montón de túnica sobre su círculo) hasta que el equipo
+## entra a su sala, mirando hacia la puerta.
+static func _place_boss(fd: FloorData, def: Dictionary) -> void:
 	var b: Dictionary = def.get("boss", {})
-	var boss := make_enemy(boss_cell, String(b.species), RunRules.BOSS)
+	var boss := make_enemy(fd.boss_circle, String(b.species), RunRules.BOSS)
 	_apply_boss_def(boss, b)
-	# Mira hacia el camino por el que llega el equipo.
-	for i in DIRS.size():
-		if int(dist.get(boss_cell + DIRS[i], -1)) == int(dist.get(boss_cell, 0)) - 1:
-			boss["facing"] = i
-			break
-	# Duerme (un montón de túnica sobre su círculo) hasta que el equipo entra
-	# a la sala: ahí se cierran las rejas y empieza la presentación.
+	boss["facing"] = posmod(fd.boss_door_dir + 2, 4)
 	boss["dormant"] = true
 	boss["intro"] = true
 	fd.enemies.append(boss)
-	_dress_boss_room(fd, boss_cell)
-
-## Rejas en cada entrada de la sala del jefe, un brasero en cada esquina,
-## columnas si la sala es grande y el círculo de invocación bajo el jefe.
-static func _dress_boss_room(fd: FloorData, boss_cell: Vector2i) -> void:
-	var r := fd.boss_room
-	fd.boss_circle = boss_cell
-	for y in range(r.position.y, r.end.y):
-		for x in range(r.position.x, r.end.x):
-			var c := Vector2i(x, y)
-			if fd.is_wall(c):
-				continue
-			for d in DIRS.size():
-				var n := c + DIRS[d]
-				if not r.has_point(n) and not fd.is_wall(n):
-					fd.boss_gates.append({"cell": c, "dir": d})
-	var inset := DataRegistry.bal_f("boss_room.brazier_inset", 0.42)
-	for corner: Vector2i in [r.position, Vector2i(r.end.x - 1, r.position.y), Vector2i(r.position.x, r.end.y - 1), r.end - Vector2i.ONE]:
-		var ox := inset if corner.x == r.position.x else FloorBuilder.CELL_SIZE - inset
-		var oz := inset if corner.y == r.position.y else FloorBuilder.CELL_SIZE - inset
-		fd.braziers.append(Vector3(corner.x * FloorBuilder.CELL_SIZE + ox, 0, corner.y * FloorBuilder.CELL_SIZE + oz))
-	if r.size.x >= 5 and r.size.y >= 5:
-		for p: Vector2 in [Vector2(r.position.x + 1, r.position.y + 1), Vector2(r.end.x - 1, r.position.y + 1),
-				Vector2(r.position.x + 1, r.end.y - 1), Vector2(r.end.x - 1, r.end.y - 1)]:
-			fd.pillars.append(Vector3(p.x * FloorBuilder.CELL_SIZE, 0, p.y * FloorBuilder.CELL_SIZE))
 
 static func _is_connected(fd: FloorData, blocked: Dictionary) -> bool:
 	var reach := fd.distances_from(fd.start_cell, blocked)
 	for c in fd.floor_cells():
-		if not blocked.has(c) and not reach.has(c):
+		if not blocked.has(c) and not fd.solid.has(c) and not reach.has(c):
 			return false
 	return true
 
@@ -333,8 +432,6 @@ static func _place_chests(fd: FloorData, rng: RandomNumberGenerator, count: int,
 	var candidates: Array[Vector2i] = []
 	for i in range(1, fd.rooms.size()):
 		var r := fd.rooms[i]
-		if r == fd.boss_room:
-			continue
 		for c: Vector2i in [r.position, Vector2i(r.end.x - 1, r.position.y), Vector2i(r.position.x, r.end.y - 1), r.end - Vector2i.ONE]:
 			candidates.append(c)
 	_shuffle(candidates, rng)
@@ -415,9 +512,6 @@ static func _place_items(fd: FloorData, rng: RandomNumberGenerator, count: int, 
 
 static func _place_decor(fd: FloorData, rng: RandomNumberGenerator, per_room: float, blocked: Dictionary) -> void:
 	for r in fd.rooms:
-		# La sala del jefe tiene su propia decoración (_dress_boss_room).
-		if r == fd.boss_room:
-			continue
 		var n := int(per_room) + (1 if rng.randf() < fmod(per_room, 1.0) else 0)
 		var corners: Array[Vector2i] = [r.position, Vector2i(r.end.x - 1, r.position.y), Vector2i(r.position.x, r.end.y - 1), r.end - Vector2i.ONE]
 		var offsets: Array[Vector2] = [Vector2(0.5, 0.5), Vector2(1.5, 0.5), Vector2(0.5, 1.5), Vector2(1.5, 1.5)]
@@ -439,21 +533,18 @@ static func _place_decor(fd: FloorData, rng: RandomNumberGenerator, per_room: fl
 			fd.pillars.append(Vector3((r.end.x - 2) * 2.0 + 1.4, 0, (r.end.y - 2) * 2.0 + 1.4))
 
 ## Antorchas en las paredes, separadas al menos `every` pasos (Manhattan).
-## Primero una en la sala de inicio y otra en la del jefe (que el comienzo y
-## el final se vean), después el resto.
+## Primero una en la sala de inicio (que el comienzo se vea), después el
+## resto. La sala del jefe trae las suyas (las T de su dibujo).
 static func _place_torches(fd: FloorData, rng: RandomNumberGenerator, every: int) -> void:
 	var start_room := fd.rooms[0] if not fd.rooms.is_empty() else Rect2i()
-	var groups: Array = [[], [], []]
+	var groups: Array = [[], []]
 	for c in fd.floor_cells():
+		if fd.boss_room.has_point(c):
+			continue
 		for d in DIRS.size():
 			if not fd.is_wall(c + DIRS[d]):
 				continue
-			var g := 2
-			if start_room.has_point(c):
-				g = 0
-			elif fd.boss_room.has_point(c):
-				g = 1
-			(groups[g] as Array).append({"cell": c, "dir": d})
+			(groups[0 if start_room.has_point(c) else 1] as Array).append({"cell": c, "dir": d})
 	for g: Array in groups:
 		_shuffle(g, rng)
 		for t: Dictionary in g:

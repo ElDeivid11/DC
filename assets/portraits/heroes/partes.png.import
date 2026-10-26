@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://diyjk5qhphhw6"
-path="res://.godot/imported/elena.png-40ac3f46e0e5c27a8793e44753f7e478.ctex"
+uid="uid://7j5ts8egyj05"
+path="res://.godot/imported/partes.png-2df9e34f65c021fca7c998099fdb2246.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/portraits/heroes/elena.png"
-dest_files=["res://.godot/imported/elena.png-40ac3f46e0e5c27a8793e44753f7e478.ctex"]
+source_file="res://assets/portraits/heroes/partes.png"
+dest_files=["res://.godot/imported/partes.png-2df9e34f65c021fca7c998099fdb2246.ctex"]
 
 [params]
 
@@ -37,4 +37,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

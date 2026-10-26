@@ -206,8 +206,8 @@ func update_map(fd: FloorData, cell: Vector2i, facing: int, markers: Dictionary)
 	if debug_label.visible:
 		debug_label.text = DataRegistry.t("hud.debug", [GameState.run_seed, cell.x, cell.y, Engine.get_frames_per_second()])
 
-## Qué pasa si se avanza: abrir el cofre, recoger, atacar, salir o la salida
-## sellada.
+## Qué pasa si se avanza: abrir el cofre, recoger, atacar, salir, la salida
+## sellada o abrir la puerta del jefe.
 func _update_interaction(fd: FloorData, cell: Vector2i, facing: int, markers: Dictionary) -> void:
 	var front: Vector2i = cell + DIRS[posmod(facing, 4)]
 	var key := ""
@@ -222,6 +222,8 @@ func _update_interaction(fd: FloorData, cell: Vector2i, facing: int, markers: Di
 			key = "hud.act_descend"
 		"exit":
 			key = "hud.act_sealed"
+		"door":
+			key = "hud.act_door"
 	if key == "" and not fd.enemy_at(front).is_empty():
 		key = "hud.act_fight"
 	interact_panel.visible = key != ""

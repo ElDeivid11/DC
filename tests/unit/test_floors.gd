@@ -33,7 +33,7 @@ func test_todo_es_alcanzable_con_cofres_bloqueando() -> void:
 				blocked[c] = true
 			var reach := fd.distances_from(fd.start_cell, blocked)
 			for c in fd.floor_cells():
-				if not blocked.has(c):
+				if not blocked.has(c) and not fd.solid.has(c):
 					check(reach.has(c), "semilla %d piso %d: celda %s inalcanzable" % [s, n, c])
 			check(reach.has(fd.exit_cell), "semilla %d piso %d: salida alcanzable" % [s, n])
 
@@ -116,32 +116,60 @@ func test_dormidos_solo_si_la_especie_puede() -> void:
 			elif bool(e.get("dormant", false)):
 				check(float(DataRegistry.get_species(String(e.species_id)).dormant_chance) > 0.0, "%s no debería dormir" % e.species_id)
 
-## Sala del jefe: una reja en cada entrada (borde entre la sala y un pasillo),
-## braseros adentro, el círculo bajo el jefe y nada de cajas ni barriles.
+## Sala del jefe hecha a mano: está entera (el dibujo de floors.json, girado),
+## apoyada en el mapa, con la puerta hacia un pasillo alcanzable desde el
+## inicio; puerta, jefe y salida en el mismo eje; y adentro solo lo suyo.
 func test_sala_del_jefe() -> void:
+	var sides := {}
 	for n in range(1, DataRegistry.floor_count() + 1):
-		var fd := _gen(n, 110 + n)
-		var r := fd.boss_room
-		check(not fd.boss_gates.is_empty(), "piso %d: la sala del jefe tiene al menos una reja" % n)
-		for g: Dictionary in fd.boss_gates:
-			var c: Vector2i = g.cell
-			var out: Vector2i = c + FloorGenerator.DIRS[int(g.dir)]
-			check(r.has_point(c) and not fd.is_wall(c), "piso %d: reja desde una celda de la sala" % n)
-			check(not r.has_point(out) and not fd.is_wall(out), "piso %d: reja hacia un pasillo" % n)
-		eq(fd.braziers.size(), 4, "piso %d: un brasero por esquina" % n)
-		for b: Vector3 in fd.braziers:
-			var cell := Vector2i(floori(b.x / FloorBuilder.CELL_SIZE), floori(b.z / FloorBuilder.CELL_SIZE))
-			check(r.has_point(cell), "piso %d: brasero dentro de la sala" % n)
-		var boss: Dictionary = {}
-		for e: Dictionary in fd.enemies:
-			if e.kind == RunRules.BOSS:
-				boss = e
-		eq(fd.boss_circle, boss.get("cell", Vector2i(-2, -2)), "piso %d: el círculo está bajo el jefe" % n)
-		check(String(boss.get("epithet", "")) != "", "piso %d: el jefe tiene epíteto" % n)
-		for p: Dictionary in fd.props:
-			var pos: Vector3 = p.pos
-			var cell := Vector2i(floori(pos.x / FloorBuilder.CELL_SIZE), floori(pos.z / FloorBuilder.CELL_SIZE))
-			check(not r.has_point(cell), "piso %d: sin cajas ni barriles en la sala del jefe" % n)
+		for seed_i in 6:
+			var fd := _gen(n, 110 + n * 13 + seed_i)
+			var tag := "piso %d semilla %d" % [n, seed_i]
+			var r := fd.boss_room
+			check(Rect2i(0, 0, fd.width, fd.height).encloses(r), tag + ": la sala entra en el mapa")
+			var turns := posmod(fd.boss_door_dir - 0, 4)
+			sides[turns] = true
+			# El dibujo mira al norte (se entra hacia el norte); girado `turns`
+			# cuartos de vuelta, se entra hacia DIRS[turns].
+			var rows := FloorGenerator.boss_room_rows(turns)
+			eq(Vector2i(rows[0].length(), rows.size()), r.size, tag + ": tamaño del dibujo girado")
+			var braziers := 0
+			for y in rows.size():
+				for x in rows[y].length():
+					var ch := rows[y][x]
+					var c := r.position + Vector2i(x, y)
+					eq(fd.is_wall(c), ch == "#" or ch == "T", "%s: celda %s ('%s')" % [tag, c, ch])
+					if ch == "b":
+						braziers += 1
+					if ch == "b" or ch == "p":
+						check(fd.solid.has(c), tag + ": brasero o columna bloquean")
+			eq(fd.braziers.size(), braziers, tag + ": un brasero por cada b del dibujo")
+			var inward: Vector2i = FloorGenerator.DIRS[fd.boss_door_dir]
+			var porch := fd.boss_door - inward
+			check(not r.has_point(porch) and not fd.is_wall(porch), tag + ": la puerta da a un pasillo")
+			var reach := fd.distances_from(fd.start_cell)
+			check(reach.has(porch), tag + ": la puerta se alcanza desde el inicio")
+			check(int(reach.get(porch, 0)) >= 6, tag + ": el inicio queda lejos de la puerta")
+			var boss: Dictionary = {}
+			for e: Dictionary in fd.enemies:
+				if e.kind == RunRules.BOSS:
+					boss = e
+				else:
+					check(not r.has_point(e.cell), tag + ": ningún otro enemigo en la sala")
+			var bc: Vector2i = boss.get("cell", Vector2i(-9, -9))
+			eq(bc, fd.boss_circle, tag + ": el jefe duerme sobre el círculo")
+			eq(fd.exit_cell, bc + inward, tag + ": la salida, justo detrás del jefe")
+			var axis := bc - fd.boss_door
+			check(axis.x * inward.y - axis.y * inward.x == 0, tag + ": puerta y jefe en el mismo eje")
+			check(String(boss.get("epithet", "")) != "", tag + ": el jefe tiene epíteto")
+			for c in fd.chests:
+				check(not r.has_point(c), tag + ": sin cofres en la sala")
+			for it: Dictionary in fd.items:
+				check(not r.has_point(it.cell), tag + ": sin objetos sueltos en la sala")
+			for p: Dictionary in fd.props:
+				var pos: Vector3 = p.pos
+				check(not r.has_point(Vector2i(floori(pos.x / FloorBuilder.CELL_SIZE), floori(pos.z / FloorBuilder.CELL_SIZE))), tag + ": sin cajas ni barriles en la sala")
+	eq(sides.size(), 4, "la sala aparece en las cuatro orientaciones")
 
 func test_elite_de_especie_sin_sufijo() -> void:
 	var g := FloorGenerator.make_enemy(Vector2i(1, 1), "esqueleto_guardian", RunRules.ELITE, 4)
@@ -162,6 +190,9 @@ func test_antorchas_en_paredes_y_separadas() -> void:
 			var c: Vector2i = t.cell
 			check(not fd.is_wall(c), "antorcha en una celda de piso")
 			check(fd.is_wall(c + FloorGenerator.DIRS[int(t.dir)]), "antorcha sobre una pared")
+			# Las de la sala del jefe van donde dice su dibujo (las T).
+			if fd.boss_room.has_point(c):
+				continue
 			for j in range(i + 1, fd.torches.size()):
 				var o: Vector2i = (fd.torches[j] as Dictionary).cell
 				check(absi(o.x - c.x) + absi(o.y - c.y) >= every, "piso %d: antorchas demasiado juntas" % n)

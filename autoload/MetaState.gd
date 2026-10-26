@@ -1,7 +1,7 @@
 extends Node
 ## Estado PERSISTENTE entre runs: monedas, niveles de mejora, desbloqueos,
-## bestiario, contadores para las condiciones de desbloqueo, estadísticas y
-## ajustes. SaveSystem lo guarda/carga (user://save.json).
+## bestiario, contadores para las condiciones de desbloqueo, estadísticas,
+## ajustes y el nombre y la apariencia de cada héroe (Hub → Héroes). SaveSystem lo guarda/carga (user://save.json).
 ##
 ## Regla de oro: durante la run NADIE escribe acá. GameState acumula lo que
 ## pasa en la expedición y, al terminar, RunSummary calcula las recompensas
@@ -22,6 +22,9 @@ var bestiary: Dictionary = {}      # species_id -> {seen, kills, first_kill_run,
 var progress: Dictionary = {}      # contadores acumulados para las condiciones
 var stats: Dictionary = {}         # estadísticas globales (pantalla Estadísticas)
 var settings: Dictionary = {}
+## member_id -> {name, look: {clave de apariencia: índice}}; lo que falte sale
+## de balance.json → party (nombre y apariencia de arranque).
+var heroes: Dictionary = {}
 
 func _ready() -> void:
 	reset()
@@ -35,6 +38,7 @@ func reset() -> void:
 	stats = default_stats()
 	settings = GameSettings.defaults()
 	settings["retro_preset"] = String(DataRegistry.bal("render.preset_default", "clasico"))
+	heroes = {}
 	changed.emit()
 
 func default_progress() -> Dictionary:
@@ -71,6 +75,7 @@ func to_dict() -> Dictionary:
 		"progress": progress.duplicate(true),
 		"stats": stats.duplicate(true),
 		"settings": settings.duplicate(true),
+		"heroes": heroes.duplicate(true),
 	}
 
 ## Carga desde un dict ya migrado a SAVE_VERSION. Los campos que falten toman
@@ -89,6 +94,7 @@ func from_dict(d: Dictionary) -> void:
 		saved["retro_preset"] = "limpio"
 	saved.erase("pixelated")
 	settings = _merge(settings, saved)
+	heroes = _dict_or_empty(d.get("heroes", {}))
 	changed.emit()
 
 ## Desbloqueos renombrados entre versiones (los goblins quedaron inactivos y
@@ -123,6 +129,34 @@ static func _merge(base: Dictionary, over: Dictionary) -> Dictionary:
 	return out
 
 # --- Mejoras ------------------------------------------------------------------
+
+# --- Héroes ---------------------------------------------------------------------
+
+## Nombre de un héroe: el que le pusieron en el Hub o el de balance.json.
+func hero_name(member_id: String) -> String:
+	var saved := String((heroes.get(member_id, {}) as Dictionary).get("name", "")).strip_edges()
+	if saved != "":
+		return saved
+	for m: Variant in DataRegistry.bal("party", []):
+		var md: Dictionary = m
+		if String(md.get("id", "")) == member_id:
+			return String(md.get("name", member_id))
+	return member_id
+
+## Apariencia de un héroe: la de arranque con lo que se eligió en el Hub
+## encima (índices dentro de rango).
+func hero_look(member_id: String) -> Dictionary:
+	var look := DataRegistry.default_look(member_id)
+	var saved: Dictionary = (heroes.get(member_id, {}) as Dictionary).get("look", {})
+	for key in DataRegistry.look_keys():
+		if saved.has(key):
+			look[key] = clampi(int(saved[key]), 0, DataRegistry.look_options(key) - 1)
+	return look
+
+func set_hero(member_id: String, p_name: String, look: Dictionary) -> void:
+	heroes[member_id] = {"name": p_name.strip_edges().left(16), "look": look.duplicate()}
+	HeroPortrait.clear_cache()
+	changed.emit()
 
 func upgrade_level(id: String) -> int:
 	return int(upgrades.get(id, 0))

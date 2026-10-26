@@ -33,13 +33,19 @@ var torches: Array = []
 ## Celdas con techo más alto que el normal (Vector2i -> metros): la sala del
 ## jefe, para que el nigromante no atraviese el techo.
 var ceilings: Dictionary = {}
-## Sala del jefe (ver RunController._boss_intro): rejas en cada entrada
-## ({cell: celda de la sala, dir: hacia el pasillo, 0 N 1 E 2 S 3 O}),
-## braseros (posición en mundo, apagados hasta la presentación) y la celda
-## del círculo de invocación (donde duerme el jefe).
-var boss_gates: Array = []
+## Sala del jefe, hecha a mano (floors.json → sala_jefe; ver
+## FloorGenerator._place_boss_room y RunController._boss_intro): su puerta
+## (celda y dirección hacia adentro, 0 N 1 E 2 S 3 O), los braseros
+## (posición en mundo, apagados hasta la presentación), la celda del círculo
+## de invocación (donde duerme el jefe) y la alfombra.
+var boss_door := Vector2i(-1, -1)
+var boss_door_dir := 0
 var braziers: Array[Vector3] = []
 var boss_circle := Vector2i(-1, -1)
+var carpet: Array[Vector2i] = []
+## Celdas de piso ocupadas por muebles que no se atraviesan (braseros y
+## columnas de la sala del jefe): se ven como piso, pero bloquean el paso.
+var solid: Dictionary = {}
 var is_test_room := false
 
 func is_wall(cell: Vector2i) -> bool:
@@ -83,7 +89,7 @@ func distances_from(from: Vector2i, blocked: Dictionary = {}) -> Dictionary:
 		head += 1
 		for d: Vector2i in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
 			var n := c + d
-			if is_wall(n) or dist.has(n) or blocked.has(n):
+			if is_wall(n) or dist.has(n) or blocked.has(n) or solid.has(n):
 				continue
 			dist[n] = int(dist[c]) + 1
 			queue.append(n)

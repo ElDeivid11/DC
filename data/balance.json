@@ -1,7 +1,11 @@
 {
 	"party": [
-		{"id": "bjorn", "name": "Bjorn", "base_hp": 20, "base_atk": 5, "retrato": "res://assets/portraits/heroes/bjorn.png"},
-		{"id": "elena", "name": "Elena", "base_hp": 16, "base_atk": 4, "retrato": "res://assets/portraits/heroes/elena.png"}
+		{"id": "bjorn", "name": "Bjorn", "base_hp": 20, "base_atk": 5,
+			"apariencia": {"cara": 1, "ojos": 1, "boca": 0, "marca": 0, "pelo": 1, "barba": 2, "tocado": 2, "ropa": 1,
+				"color_piel": 1, "color_pelo": 1, "color_ojos": 0, "color_ropa": 0, "color_capa": 6}},
+		{"id": "elena", "name": "Elena", "base_hp": 16, "base_atk": 4,
+			"apariencia": {"cara": 2, "ojos": 0, "boca": 1, "marca": 0, "pelo": 3, "barba": 0, "tocado": 1, "ropa": 0,
+				"color_piel": 0, "color_pelo": 0, "color_ojos": 1, "color_ropa": 1, "color_capa": 0}}
 	],
 	"stats_for_rank": {
 		"hp_base": 7,

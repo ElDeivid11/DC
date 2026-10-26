@@ -69,7 +69,7 @@ func _build_background() -> void:
 
 ## Íconos del menú (game-icons.net, ver tools/ui/src/icons.json).
 const MENU := [
-	["hub.start", "iniciar"], ["hub.upgrades", "mejoras"], ["hub.unlocks", "desbloqueos"],
+	["hub.start", "iniciar"], ["hub.heroes", "estado"], ["hub.upgrades", "mejoras"], ["hub.unlocks", "desbloqueos"],
 	["hub.bestiary", "bestiario"], ["hub.stats", "estadisticas"], ["hub.options", "opciones"],
 	["hub.quit", "salir"],
 ]
@@ -135,6 +135,7 @@ func _build_ui() -> void:
 	left.add_child(menu)
 	var actions: Array[Callable] = [
 		_start_run,
+		func() -> void: _open(HeroesScreen.new()),
 		func() -> void: _open(UpgradesScreen.new()),
 		func() -> void: _open(UnlocksScreen.new()),
 		func() -> void: _open(BestiaryScreen.new()),

@@ -57,6 +57,8 @@ func _run() -> void:
 		_finish()
 		return
 
+	await _check_heroes()
+
 	# --- Run 1: combate ganado con alma, jefe, piso 2, muerte ---
 	(get_tree().current_scene as HubScreen).call("_start_run")
 	if not await _wait_scene(SceneRouter.RUN):
@@ -64,6 +66,7 @@ func _run() -> void:
 		return
 	var run := get_tree().current_scene as RunController
 	check(GameState.active and GameState.floor_n == 1, "la run empieza en el piso 1")
+	check(String(GameState.get_member("bjorn").name) == "Bjornar", "la run usa el nombre elegido en Héroes")
 	check(GameState.run_seed == SEED, "usa la semilla fija")
 	check(run.fd.enemies.size() > 1, "hay enemigos en el piso")
 	check(run.fd.exit_cell.x >= 0, "hay salida")
@@ -203,22 +206,42 @@ func _run() -> void:
 	await _open_all_screens()
 	_finish()
 
-## Sala del jefe: entrar dispara la presentación (rejas, braseros, el jefe
-## que se levanta y se acerca) y termina en un combate con entrada de jefe;
-## al ganarlo suben las rejas y se abre la salida.
+## Héroes (Hub): cambiar el nombre y una parte se guarda al instante y
+## cambia el retrato.
+func _check_heroes() -> void:
+	var before := HeroPortrait.for_member("bjorn", 48).get_image().get_data()
+	var screen := HeroesScreen.new()
+	get_tree().root.add_child(screen)
+	await _wait_frames(2)
+	var ed: Dictionary = screen.call("_editor_of", "bjorn")
+	var name_edit: LineEdit = ed.name
+	name_edit.text = "Bjornar"
+	name_edit.text_changed.emit(name_edit.text)
+	var sel: UISelector = (ed.selectors as Dictionary)["color_pelo"]
+	sel.set_index(sel.index + 1)
+	await _wait_frames(2)
+	check(MetaState.hero_name("bjorn") == "Bjornar", "Héroes guarda el nombre")
+	check(int(MetaState.hero_look("bjorn").color_pelo) == sel.index, "Héroes guarda la apariencia")
+	check(HeroPortrait.for_member("bjorn", 48).get_image().get_data() != before, "el retrato cambia con la apariencia")
+	screen.close()
+	await _wait_frames(2)
+
+## Sala del jefe: la puerta está cerrada y bloquea; chocarla la abre;
+## entrar dispara la presentación (portazo, braseros, el jefe que se levanta
+## y se acerca por la alfombra) y termina en un combate con entrada de jefe;
+## al ganarlo se abre la puerta y la salida.
 func _check_boss_intro(run: RunController) -> void:
 	var boss: Dictionary = run.call("_boss")
 	check(bool(boss.get("dormant", false)), "el jefe duerme hasta su presentación")
-	var cell := Vector2i(-1, -1)
-	for g: Dictionary in run.fd.boss_gates:
-		if run.fd.enemy_at(g.cell).is_empty():
-			cell = g.cell
-			break
-	check(cell.x >= 0, "hay una entrada libre a la sala del jefe")
-	if cell.x < 0:
-		run.debug_kill_boss()
-		return
-	run.player.call("teleport", cell, 0)
+	var door := run.fd.boss_door
+	var inward: Vector2i = FloorGenerator.DIRS[run.fd.boss_door_dir]
+	check(run.is_wall(door), "la puerta del jefe empieza cerrada")
+	run.player.call("teleport", door - inward, run.fd.boss_door_dir)
+	run.player.call("_try_move", 1)
+	await _wait_frames(2)
+	check(not run.is_wall(door), "chocar la puerta la abre")
+	var cell := door + inward
+	run.player.call("teleport", cell, run.fd.boss_door_dir)
 	Engine.time_scale = 8.0
 	run.call("_on_player_moved", cell)
 	check(bool(run.get("_intro_running")), "entrar a la sala dispara la presentación")
@@ -235,18 +258,21 @@ func _check_boss_intro(run: RunController) -> void:
 	check(not bool(boss.get("dormant", true)), "el jefe se levantó")
 	var bc: Vector2i = boss.cell
 	var pc: Vector2i = run.player.get("grid_pos")
-	check(absi(bc.x - pc.x) + absi(bc.y - pc.y) == 1, "el jefe llegó frente al equipo")
+	eq_cell(bc, pc + inward, "el jefe llegó por la alfombra hasta quedar enfrente")
 	for f: BrazierFire in run.boss_room.braziers:
 		check(f.is_lit(), "los braseros quedan encendidos")
-	for g: Node3D in run.boss_room.gates:
-		check(is_zero_approx((g.get_node("Bars") as Node3D).position.y), "las rejas quedan cerradas")
+	check(run.is_wall(door), "la puerta se cerró detrás del equipo")
 	await _wait_frames(30)
 	var combat := run.combat
 	combat.call("debug_win")
 	await _wait_frames(2)
 	combat.emit_signal("combat_ended", "victory", combat.call("_result"))
 	await _wait_frames(2)
+	check(not run.is_wall(door), "vencer al jefe abre la puerta")
 	check(run.exit_open, "vencer al jefe abre la salida")
+
+func eq_cell(a: Vector2i, b: Vector2i, msg: String) -> void:
+	check(a == b, "%s (%s, esperado %s)" % [msg, a, b])
 
 ## Inventario fuera de combate: Enter sobre la casilla usa el objeto, se elige
 ## a quién en el diálogo, cura y se gasta. Con todos sanos no se gasta.
@@ -316,7 +342,7 @@ func _check_attributes() -> void:
 
 func _open_all_screens() -> void:
 	var screens: Array = [
-		UpgradesScreen.new(), UnlocksScreen.new(), BestiaryScreen.new(), StatsScreen.new(),
+		HeroesScreen.new(), UpgradesScreen.new(), UnlocksScreen.new(), BestiaryScreen.new(), StatsScreen.new(),
 		OptionsScreen.new(true), OptionsScreen.new(false), StatusScreen.new(),
 		InventoryScreen.new(null), PauseMenu.new(null),
 	]

@@ -91,7 +91,7 @@ func new_run(p_seed: int, p_test_room := false) -> void:
 		var md: Dictionary = m
 		var member := {
 			"id": String(md.id),
-			"name": String(md.name),
+			"name": MetaState.hero_name(String(md.id)),
 			"base_hp": int(md.base_hp) + hp_bonus,
 			"base_atk": int(md.base_atk) + atk_bonus,
 			"souls": [],

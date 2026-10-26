@@ -31,8 +31,10 @@ var exit_node: Node3D = null
 var exit_open := false
 var chest_nodes: Dictionary = {}     # Vector2i -> Node3D
 var item_nodes: Dictionary = {}      # Vector2i -> {node, item_id}
-## Sala del jefe (FloorBuilder.build_boss_room): {gates, braziers, circle}.
+## Sala del jefe (FloorBuilder.build_boss_room): {door, braziers, circle}.
 var boss_room: Dictionary = {}
+## La puerta de la sala del jefe está cerrada (bloquea el paso).
+var _door_closed := false
 ## La presentación del jefe está en curso (sin control ni menús).
 var _intro_running := false
 var _time := 0.0
@@ -88,6 +90,7 @@ func _build_floor() -> void:
 	var boss := _boss()
 	if not boss.is_empty():
 		boss_room = builder.build_boss_room(fd, boss.get("eye_color", Color.WHITE))
+		_door_closed = fd.boss_door.x >= 0
 		# Dormido sobre su círculo: el aura se enciende cuando se levanta.
 		var v := _visual(boss)
 		if v and v.light and bool(boss.get("dormant", false)):
@@ -139,7 +142,7 @@ func _process(delta: float) -> void:
 # --- Interfaz que usa GridPlayer -------------------------------------------------------
 
 func is_wall(cell: Vector2i) -> bool:
-	return fd.is_wall(cell) or chest_nodes.has(cell)
+	return fd.is_wall(cell) or fd.solid.has(cell) or chest_nodes.has(cell) or (_door_closed and cell == fd.boss_door)
 
 func get_enemy_at(cell: Vector2i) -> bool:
 	return not fd.enemy_at(cell).is_empty()
@@ -148,6 +151,9 @@ func get_enemy_at(cell: Vector2i) -> bool:
 func try_interact(cell: Vector2i, _p: Node3D) -> bool:
 	if chest_nodes.has(cell):
 		_open_chest(cell)
+		return true
+	if cell == fd.boss_door and _door_closed:
+		_open_boss_door()
 		return true
 	if cell == fd.exit_cell and not exit_open:
 		EventBus.hud_message.emit(DataRegistry.t("run.exit_sealed"))
@@ -205,6 +211,8 @@ func map_markers() -> Dictionary:
 		var ec: Vector2i = e.cell
 		if GameState.visited.has(ec) and absi(ec.x - pc.x) + absi(ec.y - pc.y) <= 4:
 			m[ec] = "boss" if e.kind == RunRules.BOSS else "enemy"
+	if _door_closed and (GameState.visited.has(fd.boss_door) or _touches_visited(fd.boss_door)):
+		m[fd.boss_door] = "door"
 	if fd.exit_cell.x >= 0 and GameState.visited.has(fd.exit_cell):
 		m[fd.exit_cell] = "exit_open" if exit_open else "exit"
 	return m
@@ -267,6 +275,8 @@ func _enemies_act() -> void:
 	var blocked := {}
 	for c: Vector2i in chest_nodes.keys():
 		blocked[c] = true
+	if _door_closed:
+		blocked[fd.boss_door] = true
 	var dist := fd.distances_from(pc, blocked)
 	var aggro := DataRegistry.bal_i("enemies.aggro_radius", 5)
 	var wake := DataRegistry.bal_i("enemies.wake_radius", 2)
@@ -585,7 +595,7 @@ func _on_boss_defeated() -> void:
 	if exit_node:
 		FloorBuilder.set_exit_open(exit_node, true)
 	EventBus.hud_message.emit(DataRegistry.t("run.boss_down"))
-	_open_boss_gates()
+	_reopen_boss_room()
 
 # --- Sala del jefe -------------------------------------------------------------------------
 
@@ -600,16 +610,17 @@ func _boss() -> Dictionary:
 func _wants_boss_intro(cell: Vector2i) -> bool:
 	if _intro_running or combat != null or bool(GameState.floor_flags.get("boss_intro", false)):
 		return false
-	if not fd.boss_room.has_point(cell):
+	if not fd.boss_room.has_point(cell) or cell == fd.boss_door:
 		return false
 	var e := _boss()
 	return not e.is_empty() and bool(e.get("intro", false))
 
-## La presentación del jefe: caen las rejas, el equipo se vuelve hacia él,
-## los braseros se encienden de a uno (de la entrada hacia el fondo) y después
+## La presentación del jefe: la puerta se cierra de un portazo detrás del
+## equipo, el equipo mira al jefe (la sala está centrada en ese eje), los
+## braseros se encienden de a pares (de la entrada hacia el fondo) y después
 ## el círculo; el jefe se levanta de su montón, aparece su cartel, se burla y
-## se desliza hasta el equipo. Recién ahí empieza el combate, con su propia
-## entrada (modo "boss"). Enter / Esc la aceleran.
+## se desliza por la alfombra hasta el equipo. Recién ahí empieza el combate,
+## con su propia entrada (modo "boss"). Enter / Esc la aceleran.
 func _boss_intro() -> void:
 	var e := _boss()
 	_intro_running = true
@@ -619,10 +630,11 @@ func _boss_intro() -> void:
 	var cine := UICinematic.open(self)
 	var step := DataRegistry.bal_f("boss_room.intro_step", 0.3)
 	await _wait(step)
-	for g: Node3D in boss_room.get("gates", []):
-		FloorBuilder.set_gate_closed(g, true)
-	SceneRouter.play_ui("gate")
-	_shake(0.3, 0.05)
+	_door_closed = true
+	FloorBuilder.set_door_open(boss_room.get("door"), false)
+	await _wait(0.16)
+	SceneRouter.play_ui("door_slam")
+	_shake(0.35, 0.06)
 	await _wait(step * 2.0)
 	var turn: float = player.call("face_cell", e.cell)
 	await _wait(maxf(turn, step))
@@ -630,10 +642,15 @@ func _boss_intro() -> void:
 	var pp := (player as Node3D).global_position
 	fires.sort_custom(func(a: BrazierFire, b: BrazierFire) -> bool:
 		return a.global_position.distance_squared_to(pp) < b.global_position.distance_squared_to(pp))
-	for f: BrazierFire in fires:
-		f.light_up()
+	# De a pares: los que quedan a la misma distancia se encienden juntos.
+	var i := 0
+	while i < fires.size():
+		var d0 := (fires[i] as BrazierFire).global_position.distance_to(pp)
+		while i < fires.size() and absf((fires[i] as BrazierFire).global_position.distance_to(pp) - d0) < 0.5:
+			(fires[i] as BrazierFire).light_up()
+			i += 1
 		SceneRouter.play_ui("brazier")
-		await _wait(step)
+		await _wait(step * 1.4)
 	FloorBuilder.set_circle_lit(boss_room.get("circle"), true)
 	await _wait(step)
 	SceneRouter.play_ui("boss")
@@ -725,8 +742,8 @@ func _light_boss_aura(e: Dictionary, animate := true) -> void:
 ## La sala como queda después de la presentación, sin ella (debug, capturas).
 func _dress_boss_room_now() -> void:
 	GameState.floor_flags["boss_intro"] = true
-	for g: Node3D in boss_room.get("gates", []):
-		FloorBuilder.set_gate_closed(g, true, false)
+	_door_closed = fd.boss_door.x >= 0
+	FloorBuilder.set_door_open(boss_room.get("door"), false, false)
 	for f: BrazierFire in boss_room.get("braziers", []):
 		if not f.is_lit():
 			f.light_up(false)
@@ -735,16 +752,23 @@ func _dress_boss_room_now() -> void:
 	if not e.is_empty():
 		_light_boss_aura(e, false)
 
-## Muerto el jefe: suben las rejas y se apaga el círculo (los braseros quedan).
-func _open_boss_gates() -> void:
+## Abre la puerta de la sala del jefe (chocándola desde el pasillo).
+func _open_boss_door() -> void:
+	_door_closed = false
+	FloorBuilder.set_door_open(boss_room.get("door"), true)
+	SceneRouter.play_ui("descend")
+	EventBus.hud_message.emit(DataRegistry.t("run.boss_door_open"))
+	_after_move()
+
+## Muerto el jefe: se abre la puerta y se apaga el círculo (los braseros quedan).
+func _reopen_boss_room() -> void:
 	if boss_room.is_empty():
 		return
-	for g: Node3D in boss_room.get("gates", []):
-		FloorBuilder.set_gate_closed(g, false)
 	FloorBuilder.set_circle_lit(boss_room.get("circle"), false)
-	if not (boss_room.get("gates", []) as Array).is_empty():
+	if _door_closed:
+		_door_closed = false
+		FloorBuilder.set_door_open(boss_room.get("door"), true)
 		SceneRouter.play_ui("descend")
-		EventBus.hud_message.emit(DataRegistry.t("run.gates_open"))
 
 # --- Salida, retiro, fin ------------------------------------------------------------------
 
@@ -1001,20 +1025,19 @@ func debug_fight_boss() -> void:
 				start_combat(target_cell, player, "normal")
 				return
 
-## Pone al equipo en una entrada de la sala del jefe, mirando hacia adentro
-## (capturas). `intro`: además arranca la presentación.
+## Capturas: abre la puerta de la sala del jefe y pone al equipo en el
+## umbral mirando hacia adentro. `intro`: un paso más (ya adentro) y arranca
+## la presentación.
 func debug_boss_entrance(intro := false) -> void:
-	for g: Dictionary in fd.boss_gates:
-		var c: Vector2i = g.cell
-		if not fd.enemy_at(c).is_empty():
-			continue
-		player.call("teleport", c, posmod(int(g.dir) + 2, 4))
-		_after_move()
-		if intro:
-			_boss_intro()
-		elif not _boss().is_empty():
-			player.call("face_cell", _boss().cell)
+	if fd.boss_door.x < 0:
 		return
+	_door_closed = false
+	FloorBuilder.set_door_open(boss_room.get("door"), true, false)
+	var cell := fd.boss_door + DIRS[fd.boss_door_dir] if intro else fd.boss_door
+	player.call("teleport", cell, fd.boss_door_dir)
+	_after_move()
+	if intro:
+		_boss_intro()
 
 func debug_heal_party() -> void:
 	for m: Dictionary in GameState.party:

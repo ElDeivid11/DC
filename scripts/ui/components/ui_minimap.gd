@@ -10,7 +10,8 @@ var floor_data: FloorData
 var visited: Dictionary = {}
 var player_cell := Vector2i.ZERO
 var facing := 1
-## Marcadores conocidos: {Vector2i: "chest"|"item"|"enemy"|"boss"|"exit"|"exit_open"}
+## Marcadores conocidos: {Vector2i: "chest"|"item"|"enemy"|"boss"|"exit"|"exit_open"|"door"}
+## ("door", la puerta cerrada del jefe, no lleva marcador: solo la usa el HUD).
 var markers: Dictionary = {}
 var full_view := false
 var radius := 5

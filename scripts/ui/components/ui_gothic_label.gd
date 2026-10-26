@@ -11,7 +11,7 @@ extends Control
 ## acá figuran en FIXED_KEYS y tests/unit/test_ui_kit.gd las revisa.
 
 const FIXED_KEYS: Array[String] = [
-	"app.subtitle", "hub.start", "hub.upgrades", "hub.unlocks", "hub.bestiary", "hub.stats",
+	"app.subtitle", "hub.start", "hub.heroes", "heroes.title", "hub.upgrades", "hub.unlocks", "hub.bestiary", "hub.stats",
 	"hub.options", "hub.quit", "hub.no_runs", "pause.title", "pause.continue", "pause.status",
 	"pause.inventory", "pause.map", "pause.options", "pause.abandon", "summary.epitaph_death",
 	"summary.epitaph_victory", "summary.epitaph_retire", "summary.epitaph_abandon",

@@ -221,7 +221,7 @@ func _select(index: int) -> void:
 	current = clampi(index, 0, GameState.party.size() - 1)
 	var m := _member()
 	name_label.text = String(m.name)
-	portrait.set_texture(UIPortrait.hero_texture(String(m.id)))
+	portrait.set_hero(String(m.id))
 	portrait.set_fallen(int(m.hp) <= 0)
 	# ← desde la grilla vuelve al personaje elegido (sin cambiar de personaje).
 	for id in RunRules.STATS:

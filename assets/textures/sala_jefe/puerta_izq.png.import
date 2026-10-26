@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bqjie2brl1jkk"
-path="res://.godot/imported/bjorn.png-f7081a63072d6c9758d392d7836edffa.ctex"
+uid="uid://cjfeqpdx8v6pp"
+path="res://.godot/imported/puerta_izq.png-a0a0a46ac3ca74952047b9b57a98f5da.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/portraits/heroes/bjorn.png"
-dest_files=["res://.godot/imported/bjorn.png-f7081a63072d6c9758d392d7836edffa.ctex"]
+source_file="res://assets/textures/sala_jefe/puerta_izq.png"
+dest_files=["res://.godot/imported/puerta_izq.png-a0a0a46ac3ca74952047b9b57a98f5da.ctex"]
 
 [params]
 
@@ -37,4 +37,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

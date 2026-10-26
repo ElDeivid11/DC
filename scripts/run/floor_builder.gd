@@ -567,85 +567,124 @@ static func set_exit_open(exit_node: Node3D, open: bool) -> void:
 
 # --- Sala del jefe -------------------------------------------------------------------------
 
-const GATE_IRON := Color(0.3, 0.28, 0.27)
 const BRAZIER_IRON := Color(0.26, 0.23, 0.22)
-## Alto al que esperan las rejas abiertas: escondidas sobre el dintel.
-const GATE_RAISED := 2.3
+const DOOR_FRAME := Color(0.2, 0.15, 0.12)
+const ROOM_TEX := "res://assets/textures/sala_jefe/"
 const CIRCLE_TEXTURE := "res://assets/sprites/enemies/nigromante_circulo.png"
 ## Brillo del círculo apagado (se adivina grabado en el piso) y encendido.
 const CIRCLE_DIM := 0.12
+## La puerta: ancho de cada hoja y alto (bajo el dintel del marco).
+const LEAF_W := 0.88
+const LEAF_H := 1.88
 
-## Rejas (abiertas), braseros (apagados) y círculo de invocación (apagado) de
-## la sala del jefe; el fuego y el círculo toman el color de ojos del jefe.
-## -> {gates: [Node3D], braziers: [BrazierFire], circle: MeshInstance3D o null}
+## Puerta (cerrada), braseros (apagados), círculo de invocación (apagado) y
+## alfombra de la sala del jefe; el fuego y el círculo toman el color de ojos
+## del jefe. -> {door: Node3D o null, braziers: [BrazierFire], circle:
+## MeshInstance3D o null}
 func build_boss_room(fd: FloorData, color: Color) -> Dictionary:
-	var out := {"gates": [], "braziers": [], "circle": null}
-	var iron := make_psx_material(GATE_IRON)
-	for g: Dictionary in fd.boss_gates:
-		(out.gates as Array).append(_make_gate(g.cell, int(g.dir), iron))
+	var out := {"door": null, "braziers": [], "circle": null}
+	if fd.boss_door.x >= 0:
+		out.door = _make_door(fd.boss_door, fd.boss_door_dir)
 	var stand := make_psx_material(BRAZIER_IRON)
 	for pos: Vector3 in fd.braziers:
 		(out.braziers as Array).append(_make_brazier(pos, color, stand))
 	if fd.boss_circle.x >= 0 and ResourceLoader.exists(CIRCLE_TEXTURE):
 		out.circle = _make_circle(fd.boss_circle, color)
+	_make_carpet(fd)
 	return out
 
-## Reja de barrotes en el borde entre `cell` y su vecina hacia DIRS[dir],
-## apenas del lado del pasillo. Los barrotes (nodo "Bars") esperan arriba.
-func _make_gate(cell: Vector2i, d: int, mat: Material) -> Node3D:
-	var dir := DIRS[d]
+## Puerta de dos hojas en el medio de la celda `cell`, con marco; se abre
+## hacia `d` (adentro de la sala). Cada hoja cuelga de su bisagra (nodos
+## "HingeL"/"HingeR"); de cada lado se ve su mitad del dibujo.
+func _make_door(cell: Vector2i, d: int) -> Node3D:
 	var holder := Node3D.new()
-	holder.position = cell_to_world(cell) + Vector3(dir.x, 0, dir.y) * (CELL_SIZE / 2.0 + 0.04)
+	holder.position = cell_to_world(cell)
+	# +Z local mira hacia afuera (el pasillo); -Z, hacia la sala.
 	holder.rotation_degrees.y = -d * 90.0
-	var bars := Node3D.new()
-	bars.name = "Bars"
-	bars.position.y = GATE_RAISED
-	holder.add_child(bars)
-	var n := 7
-	for i in n:
-		var x := lerpf(-0.86, 0.86, float(i) / (n - 1))
-		var bar := MeshInstance3D.new()
+	var frame := make_psx_material(DOOR_FRAME)
+	for part: Array in [[Vector3(-0.94, WALL_HEIGHT / 2.0, 0), Vector3(0.12, WALL_HEIGHT, 0.3)],
+			[Vector3(0.94, WALL_HEIGHT / 2.0, 0), Vector3(0.12, WALL_HEIGHT, 0.3)],
+			[Vector3(0, LEAF_H + 0.06, 0), Vector3(1.9, 0.12, 0.3)]]:
+		var m := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = Vector3(0.07, WALL_HEIGHT, 0.07)
-		bar.mesh = box
-		bar.position = Vector3(x, WALL_HEIGHT / 2.0 + 0.1, 0)
-		bar.material_override = mat
-		bars.add_child(bar)
-		# Punta de lanza abajo: las rejas se clavan en el piso.
-		var tip := MeshInstance3D.new()
-		var prism := PrismMesh.new()
-		prism.size = Vector3(0.1, 0.16, 0.1)
-		tip.mesh = prism
-		tip.rotation_degrees.z = 180.0
-		tip.position = Vector3(x, 0.03, 0)
-		tip.material_override = mat
-		bars.add_child(tip)
-	for y: float in [0.62, 1.55]:
-		var cross := MeshInstance3D.new()
+		box.size = part[1]
+		m.mesh = box
+		m.position = part[0]
+		m.material_override = frame
+		holder.add_child(m)
+	var tex_l: Texture2D = load(ROOM_TEX + "puerta_izq.png")
+	var tex_r: Texture2D = load(ROOM_TEX + "puerta_der.png")
+	for side: int in [-1, 1]:
+		var hinge := Node3D.new()
+		hinge.name = "HingeL" if side < 0 else "HingeR"
+		hinge.position = Vector3(side * LEAF_W, 0, 0)
+		holder.add_child(hinge)
+		var leaf_x := -side * LEAF_W / 2.0
+		# Cara de afuera con su mitad; la de adentro, con la otra (desde la
+		# sala la hoja izquierda queda a la derecha).
+		for face: int in [1, -1]:
+			var q := MeshInstance3D.new()
+			var quad := QuadMesh.new()
+			quad.size = Vector2(LEAF_W, LEAF_H)
+			q.mesh = quad
+			q.position = Vector3(leaf_x, LEAF_H / 2.0, face * 0.045)
+			if face < 0:
+				q.rotation_degrees.y = 180.0
+			var left_half := (side < 0) == (face > 0)
+			q.material_override = make_psx_material(Color.WHITE, tex_l if left_half else tex_r)
+			hinge.add_child(q)
+		var edge := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = Vector3(1.9, 0.08, 0.09)
-		cross.mesh = box
-		cross.position = Vector3(0, y, 0)
-		cross.material_override = mat
-		bars.add_child(cross)
+		box.size = Vector3(LEAF_W - 0.02, LEAF_H - 0.02, 0.08)
+		edge.mesh = box
+		edge.position = Vector3(leaf_x, LEAF_H / 2.0, 0)
+		edge.material_override = frame
+		hinge.add_child(edge)
 	world.add_child(holder)
 	return holder
 
-## Las rejas caen de golpe (rebotan un poco) o suben despacio.
-static func set_gate_closed(gate: Node3D, closed: bool, animate := true) -> void:
-	var bars := gate.get_node_or_null("Bars") as Node3D
-	if bars == null:
+## Abre la puerta (las hojas giran hacia adentro, despacio) o la cierra de un
+## portazo (con un rebote chico).
+static func set_door_open(door: Node3D, open: bool, animate := true) -> void:
+	if door == null:
 		return
+	var hl := door.get_node("HingeL") as Node3D
+	var hr := door.get_node("HingeR") as Node3D
+	var to := 90.0 if open else 0.0
 	if not animate:
-		bars.position.y = 0.0 if closed else GATE_RAISED
+		hl.rotation_degrees.y = to
+		hr.rotation_degrees.y = -to
 		return
-	var tw := bars.create_tween()
-	if closed:
-		tw.tween_property(bars, "position:y", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.tween_property(bars, "position:y", 0.07, 0.06)
-		tw.tween_property(bars, "position:y", 0.0, 0.06)
+	var tw := door.create_tween()
+	if open:
+		tw.tween_property(hl, "rotation_degrees:y", to, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(hr, "rotation_degrees:y", -to, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	else:
-		tw.tween_property(bars, "position:y", GATE_RAISED, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(hl, "rotation_degrees:y", 0.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.parallel().tween_property(hr, "rotation_degrees:y", 0.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_property(hl, "rotation_degrees:y", 4.0, 0.05)
+		tw.parallel().tween_property(hr, "rotation_degrees:y", -4.0, 0.05)
+		tw.tween_property(hl, "rotation_degrees:y", 0.0, 0.06)
+		tw.parallel().tween_property(hr, "rotation_degrees:y", 0.0, 0.06)
+
+## Alfombra de la puerta al jefe: un tramo por celda, a lo largo de la sala.
+func _make_carpet(fd: FloorData) -> void:
+	if fd.carpet.is_empty() or not ResourceLoader.exists(ROOM_TEX + "alfombra.png"):
+		return
+	var mat := make_psx_material(Color.WHITE, load(ROOM_TEX + "alfombra.png"))
+	for c in fd.carpet:
+		var m := MeshInstance3D.new()
+		var plane := PlaneMesh.new()
+		plane.size = Vector2(1.2, CELL_SIZE)
+		# Subdividida (la luz PS1 va por vértice) y un poco alta: con el
+		# temblor de los vértices, a 1 cm el piso la tapaba.
+		plane.subdivide_width = 1
+		plane.subdivide_depth = 3
+		m.mesh = plane
+		m.position = cell_to_world(c, 0.05)
+		m.rotation_degrees.y = -fd.boss_door_dir * 90.0
+		m.material_override = mat
+		world.add_child(m)
 
 ## Brasero de hierro (pie, columna y cuenco) con el fuego apagado.
 func _make_brazier(pos: Vector3, color: Color, mat: Material) -> BrazierFire:

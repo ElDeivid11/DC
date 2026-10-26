@@ -1,14 +1,50 @@
 # Retratos (héroes y objetos)
 
-Retratos en estilo "render 3D con filtro PS1" para la UI: héroes de 96x96
-(cabeza y hombros, 3/4, mirando hacia la derecha del cuadro) y objetos de
-64x64 con fondo transparente y contorno oscuro de 1 px. Salida:
+## Héroes: pixel art por capas
 
-- `assets/portraits/heroes/<id>.png`: RGB, 96x96 (ids de `data/balance.json` → `party`).
+Los retratos de los héroes son **pixel art grueso** (como los enemigos),
+48x48, de frente, armados en el juego por capas según la apariencia que se
+elige en el Hub → Héroes (`HeroPortrait`, `scripts/ui/hero_portrait.gd`).
+
+```
+python3 -I tools/portraits/draw_hero_parts.py [--preview=/tmp/heroes.png]
+```
+
+`draw_hero_parts.py` (numpy + Pillow, determinista) dibuja cada opción de
+cada parte (cara, ojos, boca, marca, pelo, barba, tocado, ropa) con
+**materiales** en vez de colores (piel, pelo, ojos, ropa, capa y fijos como
+cuero, metal o la piel de oso, en tres tonos, más la tinta del contorno):
+formas por máscaras sombreadas con luz de arriba a la izquierda y detalles a
+mano en ASCII, cada capa con su contorno de 1 px. Escribe
+`assets/portraits/heroes/partes.png` (cada píxel guarda material en R / 16 y
+tono en G / 80) y `partes.json` (por parte, sus opciones y de cada una sus
+capas: rectángulo del atlas y posición en el retrato; el orden de las capas;
+y qué tocados esconden el pelo). `--preview` arma retratos de muestra con la
+misma cuenta que el juego.
+
+En el juego, `HeroPortrait` pinta cada capa con las paletas de
+`data/apariencia.json` (nombres de las opciones, colores de piel, pelo,
+ojos, ropa y capa, y los fijos) y lo entrega a escala entera (96 = ×2, 192 =
+×4) o, en huecos de menos de 48 px (HUD, tarjetas de combate, listas),
+recortado alrededor de la cara: el píxel nunca se achica. La apariencia de
+arranque de cada héroe está en `balance.json → party[].apariencia`; la
+elegida, en `MetaState.heroes`. `DataRegistry` revisa que las opciones de
+`apariencia.json` sean las mismas (ids y orden) que las piezas dibujadas.
+
+Para sumar una opción: dibujarla en `draw_hero_parts.py` (en su lista de la
+parte), correr el script y agregar su nombre en `apariencia.json`.
+
+## Objetos: render 3D con filtro PS1
+
+Retratos de objetos de 64x64 en estilo "render 3D con filtro PS1", con fondo
+transparente y contorno oscuro de 1 px:
+
 - `assets/portraits/items/<id>.png`: RGBA, 64x64, alfa binaria (ids de `data/items.json`).
 
 El juego solo usa los PNG. Los modelos de `tools/portraits/models/` los
-carga únicamente la herramienta de horneado.
+carga únicamente la herramienta de horneado. (Los héroes también salían de
+acá, como render de los personajes de KayKit Adventurers; eso quedó en la
+historia del repositorio.)
 
 ## Regenerar
 
@@ -71,8 +107,6 @@ Todos los packs son de Kay Lousberg (www.kaylousberg.com), **CC0 1.0**
 
 | Retrato | Modelo | Pack | Ajustes |
 |---|---|---|---|
-| `heroes/bjorn` | `Barbarian.glb` → `models/bjorn.glb` | Adventurers 1.0 | Pose `Idle` (cuadro 0), sin hacha/escudo/jarra. Colmillos y pieles blancas del gorro de oso casi del marrón del gorro (en blanco parecían anteojos) y barba castaño rojiza. Cámara un poco por debajo de los ojos. |
-| `heroes/elena` | `Rogue_Hooded.glb` → `models/elena.glb` | Adventurers 1.0 | Pose `Idle`, sin ballestas/cuchillos. Capucha y capa índigo apagado `#4b3f78` (lo arcano) y túnica pizarra `#2f4a52`, en vez del verde vivo original. |
 | `items/pocion_menor` | `bottle_C_green.gltf.glb` | Dungeon Remastered 1.0 (`addons/kaykit_dungeon_remastered`) | Vidrio: franja verde → roja. Ocupa el 66 % del cuadro (más chica). |
 | `items/pocion_mayor` | `bottle_A_labeled_brown.gltf.glb` | Dungeon Remastered 1.0 | Botella alta con etiqueta; líquido → carmesí/magenta. Ocupa el 90 %. |
 | `items/antorcha_vieja` | `torch.gltf.glb` + llama de dos prismas | Dungeon Remastered 1.0 + primitivas | Mango más grueso, madera envejecida; llama sin sombrear como las antorchas del juego. En diagonal. |

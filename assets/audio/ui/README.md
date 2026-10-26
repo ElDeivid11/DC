@@ -32,6 +32,6 @@ Sintetizados por código, sin samples (`python3 -I tools/audio/make_boss_sfx.py`
 
 | Archivo | `SceneRouter.play_ui(kind)` | Evento |
 |---|---|---|
-| `extra_jefe_reja.wav` | `gate` | Caen las rejas de la sala del jefe |
+| `extra_jefe_portazo.wav` | `door_slam` | La puerta de la sala del jefe se cierra de golpe detrás del equipo |
 | `extra_jefe_brasero.wav` | `brazier` | Se enciende un brasero |
 | `extra_jefe_entrada.wav` | `boss` | El jefe se levanta (golpe grave, coro y campana) |

@@ -49,10 +49,9 @@ const OUT = path.resolve(args.out ?? path.join(HERE, 'models'));
 // Nodos que se borran (armas, escudos, jarras: el retrato es de cabeza y hombros).
 const PROPS = /^(1H_|2H_|Barbarian_Round_Shield|Mug|Knife|Throwable|Spellbook|Wand|Staff|Badge_Shield|Rectangle_Shield|Round_Shield|Spike_Shield)/;
 
-const CHARACTERS = [
-  { id: 'bjorn', src: 'Barbarian', anims: ['Idle'] },
-  { id: 'elena', src: 'Rogue_Hooded', anims: ['Idle'] },
-];
+// Los héroes ya no se hornean (son pixel art por capas: draw_hero_parts.py);
+// Bjorn (Barbarian) y Elena (Rogue_Hooded) quedaron en la historia del repo.
+const CHARACTERS = [];
 const CANDIDATES = [
   { id: 'cand_rogue', src: 'Rogue', anims: ['Idle'] },
   { id: 'cand_mage', src: 'Mage', anims: ['Idle'] },

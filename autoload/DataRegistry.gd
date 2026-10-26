@@ -32,9 +32,18 @@ var upgrades: Dictionary = {}
 var unlocks: Dictionary = {}
 var floors: Array = []
 var floor_generation: Dictionary = {}
+## La sala del jefe hecha a mano (floors.json → sala_jefe): {mapa: [filas], techo, techo_salida}.
+var boss_room: Dictionary = {}
 ## Biomas (floors.json → themes): niebla, ambiente, texturas, antorchas.
 var floor_themes: Dictionary = {}
 var balance: Dictionary = {}
+## Apariencia de los héroes (apariencia.json): partes, colores y fijos.
+var appearance: Dictionary = {}
+## Piezas de los retratos (assets/portraits/heroes/partes.json, generado).
+const HERO_PARTS_MANIFEST := "res://assets/portraits/heroes/partes.json"
+## Partes y colores de la apariencia, en el orden en que se eligen.
+const LOOK_PARTS: Array[String] = ["cara", "ojos", "boca", "marca", "pelo", "barba", "tocado", "ropa"]
+const LOOK_COLORS: Array[String] = ["piel", "pelo", "ojos", "ropa", "capa"]
 var texts: Dictionary = {}
 
 ## Problemas encontrados al cargar/validar. Vacío = datos OK.
@@ -52,9 +61,11 @@ func reload() -> void:
 	unlocks = _load_dict("unlocks.json")
 	balance = _load_dict("balance.json")
 	texts = _load_dict("texts.json")
+	appearance = _load_dict("apariencia.json")
 	var floors_file := _load_dict("floors.json")
 	floors = floors_file.get("floors", [])
 	floor_generation = floors_file.get("generation", {})
+	boss_room = floors_file.get("sala_jefe", {})
 	floor_themes = floors_file.get("themes", {})
 
 	_validate_species()
@@ -63,6 +74,7 @@ func reload() -> void:
 	_validate_unlocks()
 	_validate_upgrades()
 	_validate_floors()
+	_validate_appearance()
 	_validate_balance()
 	_validate_texts()
 
@@ -389,6 +401,109 @@ func _check_portrait(file: String, id: String, d: Dictionary) -> void:
 	elif not ResourceLoader.exists(String(d.retrato)):
 		_err("%s → '%s': retrato '%s' no existe" % [file, id, d.retrato])
 
+## Apariencia: cada parte con su nombre y una opción por pieza dibujada (los
+## mismos ids, en el mismo orden que partes.json); cada color con sus tonos.
+func _validate_appearance() -> void:
+	const F := "apariencia.json"
+	var manifest := {}
+	if FileAccess.file_exists(HERO_PARTS_MANIFEST):
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(HERO_PARTS_MANIFEST))
+		if parsed is Dictionary:
+			manifest = (parsed as Dictionary).get("categories", {})
+	else:
+		_err("%s: falta %s (correr tools/portraits/draw_hero_parts.py)" % [F, HERO_PARTS_MANIFEST])
+	var parts: Dictionary = appearance.get("partes", {})
+	for cat in LOOK_PARTS:
+		if not parts.has(cat):
+			_err("%s → partes: falta '%s'" % [F, cat])
+			continue
+		var part: Dictionary = parts[cat]
+		_req(F, cat, part, "nombre", TYPE_STRING)
+		if not _req(F, cat, part, "opciones", TYPE_DICTIONARY):
+			continue
+		var ids: Array = (part.opciones as Dictionary).keys()
+		if manifest.has(cat):
+			var drawn: Array = (manifest[cat] as Array).map(func(o: Dictionary) -> String: return String(o.get("id", "")))
+			if ids != drawn:
+				_err("%s → partes.%s: las opciones %s no coinciden con las piezas dibujadas %s" % [F, cat, ids, drawn])
+	var colors: Dictionary = appearance.get("colores", {})
+	for key in LOOK_COLORS:
+		if not colors.has(key):
+			_err("%s → colores: falta '%s'" % [F, key])
+			continue
+		var c: Dictionary = colors[key]
+		_req(F, key, c, "nombre", TYPE_STRING)
+		if not _req(F, key, c, "opciones", TYPE_ARRAY) or (c.opciones as Array).is_empty():
+			_err("%s → colores.%s: sin opciones" % [F, key])
+			continue
+		for o: Variant in c.opciones:
+			var od: Dictionary = o
+			_req(F, key, od, "nombre", TYPE_STRING)
+			if not _req(F, key, od, "tonos", TYPE_ARRAY) or (od.tonos as Array).is_empty():
+				_err("%s → colores.%s: '%s' sin tonos" % [F, key, od.get("nombre", "?")])
+	var fixed: Dictionary = appearance.get("fijos", {})
+	for key: String in ["tinta", "blanco", "cuero", "metal", "oso", "dientes", "pintura"]:
+		if not fixed.has(key) or typeof(fixed[key]) != TYPE_ARRAY or (fixed[key] as Array).is_empty():
+			_err("%s → fijos: falta '%s'" % [F, key])
+
+## Apariencia de un héroe: un índice por parte y por color (color_<clave>),
+## dentro de rango; lo que falte, 0.
+func _normalize_look(F: String, id: String, raw: Variant) -> Dictionary:
+	var look := {}
+	if typeof(raw) != TYPE_DICTIONARY:
+		_err("%s → '%s': 'apariencia' debe ser un objeto" % [F, id])
+		raw = {}
+	var d: Dictionary = raw
+	for key in look_keys():
+		look[key] = clampi(int(d.get(key, 0)), 0, look_options(key) - 1)
+	return look
+
+## Claves de una apariencia: las partes y los colores (color_piel, ...).
+func look_keys() -> Array[String]:
+	var out: Array[String] = []
+	out.append_array(LOOK_PARTS)
+	for c in LOOK_COLORS:
+		out.append("color_" + c)
+	return out
+
+## Cuántas opciones tiene una clave de apariencia.
+func look_options(key: String) -> int:
+	if key.begins_with("color_"):
+		var c: Dictionary = (appearance.get("colores", {}) as Dictionary).get(key.substr(6), {})
+		return maxi((c.get("opciones", []) as Array).size(), 1)
+	var p: Dictionary = (appearance.get("partes", {}) as Dictionary).get(key, {})
+	return maxi((p.get("opciones", {}) as Dictionary).size(), 1)
+
+## Nombre visible de una clave de apariencia ("Pelo", "Color de pelo").
+func look_label(key: String) -> String:
+	if key.begins_with("color_"):
+		return String(((appearance.get("colores", {}) as Dictionary).get(key.substr(6), {}) as Dictionary).get("nombre", key))
+	return String(((appearance.get("partes", {}) as Dictionary).get(key, {}) as Dictionary).get("nombre", key))
+
+## Nombre visible de la opción i de una clave ("Corto", "Castaño").
+func look_value_name(key: String, i: int) -> String:
+	if key.begins_with("color_"):
+		var opts: Array = ((appearance.get("colores", {}) as Dictionary).get(key.substr(6), {}) as Dictionary).get("opciones", [])
+		return String((opts[clampi(i, 0, opts.size() - 1)] as Dictionary).get("nombre", "")) if not opts.is_empty() else ""
+	var names: Array = (((appearance.get("partes", {}) as Dictionary).get(key, {}) as Dictionary).get("opciones", {}) as Dictionary).values()
+	return String(names[clampi(i, 0, names.size() - 1)]) if not names.is_empty() else ""
+
+## Tonos (claro, medio, oscuro) de la opción i de un color, o de un fijo.
+func look_tones(color_key: String, i := 0) -> Array:
+	var c: Dictionary = (appearance.get("colores", {}) as Dictionary).get(color_key, {})
+	if c.is_empty():
+		return (appearance.get("fijos", {}) as Dictionary).get(color_key, ["#ff00ff"])
+	var opts: Array = c.get("opciones", [])
+	return ((opts[clampi(i, 0, opts.size() - 1)] as Dictionary).get("tonos", ["#ff00ff"])) if not opts.is_empty() else ["#ff00ff"]
+
+## Apariencia de arranque de un héroe (balance.json → party[].apariencia).
+func default_look(member_id: String) -> Dictionary:
+	for m: Variant in bal("party", []):
+		var md: Dictionary = m
+		if String(md.get("id", "")) == member_id:
+			return (md.get("apariencia", {}) as Dictionary).duplicate()
+	return _normalize_look("balance.json", member_id, {})
+
 func _validate_unlocks() -> void:
 	const F := "unlocks.json"
 	for id: String in unlocks.keys():
@@ -430,6 +545,7 @@ func _validate_floors() -> void:
 	if floors.is_empty():
 		_err("%s: no hay pisos definidos en 'floors'" % F)
 	_validate_themes(F)
+	_validate_boss_room(F)
 	for i in floors.size():
 		var fl: Dictionary = floors[i]
 		var id := "piso %d" % (i + 1)
@@ -465,6 +581,34 @@ func _validate_floors() -> void:
 			b["tint"] = _to_color(b.get("tint", [1, 1, 1]))
 			if b.has("eye_color"):
 				b["eye_color"] = _to_color(b.eye_color)
+
+## La sala del jefe: filas del mismo ancho, solo caracteres conocidos, un
+## jefe, una salida y una puerta, la puerta en la fila de abajo y con piso
+## justo arriba (por ahí se entra).
+func _validate_boss_room(F: String) -> void:
+	const ID := "sala_jefe"
+	const CHARS := "#T.=bpSXD"
+	if not _req(F, ID, boss_room, "mapa", TYPE_ARRAY):
+		return
+	var rows: Array = boss_room.mapa
+	var counts := {"S": 0, "X": 0, "D": 0}
+	for y in rows.size():
+		var row := String(rows[y])
+		if row.length() != String(rows[0]).length():
+			_err("%s → %s: la fila %d no tiene el mismo ancho que la primera" % [F, ID, y + 1])
+		for x in row.length():
+			var ch := row[x]
+			if not CHARS.contains(ch):
+				_err("%s → %s: carácter '%s' desconocido en la fila %d" % [F, ID, ch, y + 1])
+			if counts.has(ch):
+				counts[ch] = int(counts[ch]) + 1
+			if ch == "D" and (y != rows.size() - 1 or y == 0 or String(rows[y - 1])[x] == "#"):
+				_err("%s → %s: la puerta va en la fila de abajo, con piso arriba" % [F, ID])
+	for ch: String in counts.keys():
+		if int(counts[ch]) != 1:
+			_err("%s → %s: tiene que haber exactamente un '%s' (hay %d)" % [F, ID, ch, counts[ch]])
+	boss_room["techo"] = float(boss_room.get("techo", 3.5))
+	boss_room["techo_salida"] = float(boss_room.get("techo_salida", 2.5))
 
 func _validate_themes(F: String) -> void:
 	for id: String in floor_themes.keys():
@@ -514,7 +658,7 @@ func _validate_balance() -> void:
 				md["base_hp"] = int(md.base_hp)
 			if _req(F, mid, md, "base_atk", TYPE_FLOAT):
 				md["base_atk"] = int(md.base_atk)
-			_check_portrait(F, mid, md)
+			md["apariencia"] = _normalize_look(F, mid, md.get("apariencia", {}))
 	for path: String in ["floors_per_run", "inventory_capacity", "soul_capacity", "coins.kill_base", "coins.coin_keep_on_death", "soul_drop.normal_base"]:
 		if bal(path) == null:
 			_err("%s: falta '%s'" % [F, path])

@@ -7,6 +7,22 @@
 		"min_enemy_distance_from_start": 5,
 		"props_per_room": 1.2
 	},
+	"sala_jefe": {
+		"nota": "Sala del jefe dibujada a mano: la misma en todos los pisos, con las texturas y la luz del bioma. Está mirando al norte (la puerta abajo, el jefe arriba); el generador la gira y la apoya contra un borde del mapa con la puerta hacia adentro. # pared, T pared con antorcha, . piso, = alfombra, b brasero (bloquea), p columna (bloquea), S jefe (sobre el círculo), X salida (nicho detrás del jefe), D puerta (cerrada hasta que se la abre).",
+		"mapa": [
+			"#########",
+			"###TXT###",
+			"##b.S.b##",
+			"#.p.=.p.#",
+			"T...=...T",
+			"#.p.=.p.#",
+			"#b..=..b#",
+			"###.=.###",
+			"####D####"
+		],
+		"techo": 3.5,
+		"techo_salida": 2.5
+	},
 	"themes": {
 		"catacumbas": {
 			"nombre": "Catacumbas del Pozo",

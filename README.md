@@ -38,11 +38,19 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 - Cada piso es un **bioma** con su paleta, niebla y texturas: Catacumbas del Pozo, Cisterna Anegada, Salones de la Luna, Castillo Carmesí y El Abismo.
 - **Enemigos** en **pixel art grueso** dentro del mundo 3D (estilo Dragon Quest HD-2D): monstruos caricaturescos de calavera enorme, de píxeles gordos, pocos colores y contorno negro (contraste duro con el entorno 3D), con luz con volumen (mapa de normales, sombreado en bandas) y animaciones con anticipación y compresión; miran a la cámara, con vistas de frente, perfil y espalda, y llevan la niebla del entorno. Las hojas se generan por código (`tools/sprites/draw_*.py`, ver su README) y el arte definitivo puede reemplazarlas con el mismo formato; en Opciones → Enemigos se puede volver a los modelos 3D. Los esqueletos: el **esbirro** y el **arquero** (básicos), el **guardián** (élite, con casco de cuernos, hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, epíteto, color y tamaño piso a piso y trae un espectro y dos esqueletitos. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
 - Los enemigos **deambulan y te persiguen**. Si chocas tú primero: **ataque sorpresa** (turno gratis y daño ×1,5). Si te alcanzan **por la espalda o un costado: emboscada** (pegan primero ×1,5).
-- Cada piso tiene un **jefe** que custodia la salida, dormido en su sala (un montón de túnica sobre un círculo de runas). Al entrar a la **sala del jefe** empieza su **presentación**: caen las rejas detrás del equipo, los braseros se encienden de a uno con el color del jefe, se enciende el círculo, el jefe se levanta, aparece su cartel (nombre y epíteto), se burla y se desliza hasta el equipo; el combate entra con su barra de vida que se llena (Enter o Esc aceleran la presentación). Al vencerlo suben las rejas y eliges: **bajar**, **retirarte con el botín** o quedarte.
+- Cada piso tiene un **jefe** que custodia la salida, en su **sala hecha a mano** (la misma en todos los pisos, con las texturas del bioma; el generador la apoya contra un borde y la gira para que la puerta mire al resto del piso): una nave simétrica con alfombra, columnas, braseros y antorchas, el jefe dormido al fondo (un montón de túnica sobre un círculo de runas) y la salida en un nicho detrás. Se entra por una **puerta cerrada** que se abre chocándola; al pasar, la puerta se cierra de un portazo detrás del equipo y empieza la **presentación**, todo sobre el eje de la sala: los braseros se encienden de a pares con el color del jefe, se enciende el círculo, el jefe se levanta, aparece su cartel (nombre y epíteto), se burla y viene por la alfombra hasta el equipo; el combate entra con su barra de vida que se llena (Enter o Esc aceleran la presentación). Al vencerlo se abre la puerta y eliges: **bajar**, **retirarte con el botín** o quedarte.
+
+![La presentación del jefe](docs/capturas/jefe_presentacion.gif)
 - **Almas**: a veces un enemigo suelta su alma (los jefes siempre). Se revela al pulsar Continuar; recogerla es opcional y eliges quién la lleva (1 activa + pasiva opcional + modificadores). **No salen de la cripta.**
 - **Niveles** (solo durante la expedición): cada enemigo da EXP a todo el equipo en pie. Cada nivel da **3 puntos** para repartir en **Estado → Atributos** entre VIT, ATQ, DEF, ESP, AGI y SUE (hexágono con el reparto antes de confirmar), y **cada 2 niveles** un personaje puede llevar **un alma más**. El HUD marca con ▲ quién tiene puntos sin repartir.
 - **Objetos**: en cofres y en el suelo. Solo aparecen los ya desbloqueados. Fuera de combate se usan desde el Inventario (las curas solo se ofrecen a los heridos).
 - **Morir** conserva el 50% de las monedas; **retirarse** o **ganar**, el 100%.
+
+## Héroes
+
+En el Hub, **Héroes** permite cambiar el **nombre** y la **apariencia** de cada personaje (una pestaña por héroe, Q/E): cara, piel, ojos y su color, boca, marcas (cicatriz, pintura de guerra, pecas), pelo y su color, barba, tocado (capucha, cabeza de oso, cinta, casco) y su color, y ropa (túnica, coraza de cuero, armadura, harapos) y su color, más **Al azar** y **Como al principio**. Es solo apariencia (no cambia estadísticas) y se guarda entre expediciones. Los **retratos** son **pixel art grueso**, como los enemigos, armados por capas en el juego (48×48, a escala entera o recortados a la cara en los huecos chicos: HUD, combate, Estado).
+
+![Héroes](docs/capturas/heroes.png)
 
 ## Entre expediciones (Hub)
 
@@ -114,12 +122,13 @@ Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 (lo mis
 - **Sala de pruebas**: la sala 15×9 del prototipo (con techo alto) con un enemigo de cada tipo, uno dormido y el jefe. Se abre desde Opciones (en debug) o con F1. No guarda progreso.
 - **Galería de UI**: todos los componentes del design system en una pantalla (íconos, barras, rangos, nichos, avisos, diálogos, pestañas).
 - `tools/ui/`: generador del kit pixel de la UI (paleta → atlas + manifiesto → Theme). Ver su `README.md`.
-- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, 67 tests unitarios y smoke test de punta a punta, que también usa una poción desde el inventario y reparte puntos en Atributos).
+- `tools/verify.sh`: verificación completa (import, lint con warnings como errores, arranque, tests unitarios y smoke test de punta a punta, que también usa una poción desde el inventario y reparte puntos en Atributos).
 - `tools/screenshot.tscn`: capturas con Xvfb (ver el encabezado del script; `--floor=N` y `--test-room` para revisar biomas y enemigos, `--screen=Clase` y `--tab=N` para las pantallas).
 - `tools/enemy_preview.tscn`: todos los enemigos en fila, de frente y de perfil, con líneas de referencia del techo (2 m y 3 m).
 - `tools/assets/`: pipeline que adapta los assets libres al estilo (modelos de enemigos y texturas de cada bioma). Ver su `README.md`.
 - `tools/sprites/`: hojas de pixel art de los enemigos (guía de estilo, formato para el arte definitivo, generador de las de prueba y vista previa). Ver su `README.md`.
-- `tools/portraits/`: hornea los retratos de héroes (96×96) y objetos (64×64) como render 3D con el filtro PS1 del juego. Ver su `README.md`.
+- `tools/portraits/`: las piezas de los retratos de héroes en pixel art (`draw_hero_parts.py`) y el horneado de los de objetos (64×64, render 3D con el filtro PS1 del juego). Ver su `README.md`.
+- `tools/audio/make_boss_sfx.py`: sintetiza los sonidos de la sala del jefe (portazo, brasero, entrada).
 
 ## Estructura
 
@@ -145,7 +154,7 @@ docs/       GUIA_CLAUDE_CODE.md, ESTADO_TECNICO_PROTOTIPO.md, capturas/
 - **Sonidos de la UI**: Kenney (kenney.nl), UI Audio, RPG Audio e Interface Sounds, CC0 (`assets/audio/ui/`).
 - **Enemigos**: esqueleto "Skeleton - Realistic" de Paul Kotelevets (Blender Human Base Meshes, CC0), animado con Universal Animation Library 1 y 2 de Quaternius (CC0); la túnica del nigromante sale de Modular Character Outfits - Fantasy de Quaternius (CC0). Las armas son de KayKit Character Pack: Skeletons, de Kay Lousberg (CC0). Licencias, repos y commits exactos en `assets/enemies/LICENSE_*.txt`; el armado, en `tools/assets/` (Blender por `bpy` + Node).
 - **Antorchas**: KayKit Dungeon Remastered, de Kay Lousberg (CC0, `addons/kaykit_dungeon_remastered/Assets/LICENSE.txt`).
-- **Retratos**: héroes de KayKit Character Pack: Adventurers (Barbarian y Rogue con capucha, recoloreados) y objetos de KayKit Dungeon Remastered y Halloween Bits, más algunos hechos con primitivas; todo de Kay Lousberg, CC0 (`assets/portraits/LICENSE_KayKit_*.txt`). Detalle por retrato en `tools/portraits/README.md`.
+- **Retratos**: los de héroes son propios (pixel art por código, `tools/portraits/draw_hero_parts.py`); los de objetos, de KayKit Dungeon Remastered y Halloween Bits, más algunos hechos con primitivas; todo de Kay Lousberg, CC0 (`assets/portraits/LICENSE_KayKit_*.txt`). Detalle por retrato en `tools/portraits/README.md`.
 - **Texturas de los biomas**: WRAD Textures, de wriks (CC0, `assets/textures/LICENSE_WRAD.txt`), reducidas y recoloreadas con `tools/assets/make_textures.py`.
 - Pack PSX de cajas/barriles (Games by McSteeg): `assets/psx_boxes_barrels/Licence.txt`. Permite usarlo en juegos, **pero prohíbe redistribuirlo**: si el repo es público, conviene sacarlo del repo o pasar a props CC0 antes de publicar.
 - PSX Visuals y LevelBlock: ver sus carpetas en `addons/`.

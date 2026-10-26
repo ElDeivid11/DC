@@ -3,7 +3,7 @@
     python3 -I tools/audio/make_boss_sfx.py
 
 Escribe en assets/audio/ui/ (los reproduce SceneRouter.play_ui):
-  extra_jefe_reja.wav     "gate"     las rejas que caen y traban
+  extra_jefe_portazo.wav  "door_slam" la puerta de la sala que se cierra de golpe
   extra_jefe_brasero.wav  "brazier"  un brasero que se enciende de golpe
   extra_jefe_entrada.wav  "boss"     el golpe grave cuando el jefe se levanta
 """
@@ -49,17 +49,22 @@ def clang(sec, base, decay, amp=1.0):
     return amp * (out + 0.6 * click)
 
 
-def gate():
-    buf = np.zeros(int(RATE * 1.4))
-    t = t_axis(0.5)
-    # el golpe contra el piso: grave que cae de tono y un soplo de polvo
-    thud = np.sin(2 * np.pi * (70 * t - 40 * t * t)) * np.exp(-t * 9)
-    dust = lowpass(RNG.normal(0, 1, len(t)), 500) * np.exp(-t * 12) * 2.5
-    place(buf, 1.2 * thud + dust, 0.0)
-    place(buf, clang(1.3, 310, 4.5), 0.0)
-    # rebotes y traqueteo de los barrotes
-    for at, amp, base in ((0.11, 0.45, 290), (0.19, 0.3, 335), (0.24, 0.22, 300), (0.31, 0.12, 320)):
-        place(buf, clang(0.8, base, 7, amp), at)
+def door_slam():
+    """Portazo de una puerta pesada de madera: golpe grave, el choque de las
+    tablas, el pestillo de hierro y un eco corto de la sala."""
+    buf = np.zeros(int(RATE * 1.5))
+    t = t_axis(0.7)
+    boom = np.sin(2 * np.pi * (62 * t - 30 * t * t)) * np.exp(-t * 7)
+    wood = lowpass(RNG.normal(0, 1, len(t)), 900) * np.exp(-t * 28) * 3.0
+    knock = np.sin(2 * np.pi * 190 * t) * np.exp(-t * 22) * 0.6
+    place(buf, 1.3 * boom + wood + knock, 0.0)
+    # el pestillo y un traqueteo de los herrajes
+    place(buf, clang(0.6, 820, 11, 0.35), 0.07)
+    place(buf, clang(0.4, 760, 16, 0.15), 0.13)
+    # eco de la sala: el mismo golpe, más bajo y apagado
+    echo = lowpass(buf[:int(RATE * 0.6)].copy(), 500) * 0.35
+    place(buf, echo, 0.18)
+    place(buf, echo * 0.4, 0.36)
     return buf
 
 
@@ -119,6 +124,6 @@ def write(name, x):
 
 
 if __name__ == "__main__":
-    write("extra_jefe_reja.wav", gate())
+    write("extra_jefe_portazo.wav", door_slam())
     write("extra_jefe_brasero.wav", brazier())
     write("extra_jefe_entrada.wav", boss())

@@ -1,14 +1,17 @@
 class_name UIPortrait
 extends PanelContainer
 ## Retrato en un nicho con marco de bronce (héroes y objetos). Píxel nítido: filtro nearest y la
-## imagen centrada sin deformar. Los PNG salen de tools/portraits (render 3D
-## con filtro PS1); la ruta va en los datos: items.json → retrato y
-## balance.json → party[].retrato.
+## imagen centrada sin deformar. Objetos: PNG de tools/portraits (render 3D
+## con filtro PS1), la ruta en items.json → retrato. Héroes: pixel art armado
+## por capas según su apariencia (HeroPortrait), a escala entera o recortado
+## alrededor de la cara si el hueco es más chico.
 
 var texture_rect: TextureRect
+var side := 64
 var _skull: UIIcon
 
-func _init(texture: Texture2D = null, side := 64) -> void:
+func _init(texture: Texture2D = null, p_side := 64) -> void:
+	side = p_side
 	theme_type_variation = "PortraitFrame"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -52,19 +55,23 @@ static func _load(path: String) -> Texture2D:
 	var tex: Texture2D = load(path)
 	return tex
 
-## Retrato de un personaje del equipo (por id, de balance.json → party).
-static func hero_texture(member_id: String) -> Texture2D:
-	for m: Variant in DataRegistry.bal("party", []):
-		var md: Dictionary = m
-		if String(md.get("id", "")) == member_id:
-			return _load(String(md.get("retrato", "")))
-	return null
+## Retrato de un personaje del equipo para un hueco de `p_side` px.
+static func hero_texture(member_id: String, p_side := UIStyle.ICON_SIZE) -> Texture2D:
+	return HeroPortrait.for_member(member_id, p_side)
+
+## Muestra el retrato de un héroe del equipo, sin escalar (ya viene a escala
+## entera o recortado al tamaño del hueco).
+func set_hero(member_id: String) -> void:
+	texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	set_texture(HeroPortrait.for_member(member_id, side))
 
 static func item_texture(item_id: String) -> Texture2D:
 	return _load(String(DataRegistry.get_item(item_id).get("retrato", "")))
 
-static func for_hero(member_id: String, side := 64) -> UIPortrait:
-	return UIPortrait.new(hero_texture(member_id), side)
+static func for_hero(member_id: String, p_side := 64) -> UIPortrait:
+	var p := UIPortrait.new(null, p_side)
+	p.set_hero(member_id)
+	return p
 
-static func for_item(item_id: String, side := 64) -> UIPortrait:
-	return UIPortrait.new(item_texture(item_id), side)
+static func for_item(item_id: String, p_side := 64) -> UIPortrait:
+	return UIPortrait.new(item_texture(item_id), p_side)
