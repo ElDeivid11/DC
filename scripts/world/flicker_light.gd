@@ -24,6 +24,8 @@ static func make(color: Color, energy: float, light_range: float, attenuation :=
 	return l
 
 func _ready() -> void:
+	# Los sprites con luz pareja (EnemySprite) suman las luces de este grupo.
+	add_to_group(EnemySprite.LIGHTS_GROUP)
 	_rng.seed = hash(get_instance_id())
 	_acc = _rng.randf() / maxf(hz, 0.1)
 

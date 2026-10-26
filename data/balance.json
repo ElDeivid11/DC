@@ -53,6 +53,7 @@
 		"albedo_boost": 1.35,
 		"sprite_albedo": 0.85,
 		"sprite_self_light": 0.12,
+		"sprite_flat_tint": 0.5,
 		"boss_stat_mult": 1.5,
 		"wake_radius": 2,
 		"aggro_radius": 5,

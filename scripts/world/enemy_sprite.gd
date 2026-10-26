@@ -1,14 +1,15 @@
 class_name EnemySprite
 extends EnemyBody
-## Enemigo como sprite de pixel art en el mundo 3D (estilo HD-2D): un quad que
-## siempre mira a la cámara, con el cuadro de la hoja que toca según el papel
-## de animación y hacia dónde mira el enemigo respecto del jugador (de frente,
-## de espaldas o de costado). Lo iluminan las antorchas y le llega la niebla
-## PSX como al resto (shaders/enemy_sprite.gdshader).
+## Enemigo como sprite de pixel art en el mundo 3D: un quad que siempre mira a
+## la cámara, con el cuadro de la hoja que toca según el papel de animación y
+## hacia dónde mira el enemigo respecto del jugador (de frente, de espaldas o
+## de costado). Lo iluminan las antorchas píxel por píxel o, si la hoja pide
+## `flat_light`, con una sola luz para todo el cuadro (colores planos); le
+## llega la niebla PSX como al resto (shaders/enemy_sprite.gdshader).
 ##
 ## La hoja sale de visual.sprite (JSON + PNG; formato en tools/sprites/README.md).
-## Hoy las hojas son de prueba, horneadas desde los modelos 3D por
-## tools/sprites/; el arte definitivo las reemplaza con el mismo formato.
+## Hoy las hojas son de prueba, generadas por código en tools/sprites/; el
+## arte definitivo las reemplaza con el mismo formato.
 ##
 ## Direcciones de la hoja (hacia dónde mira el enemigo respecto de la
 ## cámara): s de frente, se tres cuartos a la derecha de la pantalla, e de
@@ -22,6 +23,10 @@ const SHADER := preload("res://shaders/enemy_sprite.gdshader")
 const DIR_ANGLES := {"s": 0.0, "se": 45.0, "e": 90.0, "ne": 135.0, "n": 180.0, "nw": -135.0, "w": -90.0, "sw": -45.0}
 ## Cuánto dura el destello blanco de un golpe (dos pasos).
 const FLASH_STEP := 0.06
+## Luces que suman los sprites con luz pareja (antorchas, lámpara, luna...).
+const LIGHTS_GROUP := "luces"
+## Altura (m) del punto donde se mide la luz pareja: el centro del cuerpo.
+const LIGHT_PROBE_Y := 0.8
 
 ## Hojas ya cargadas: ruta del JSON -> {meta, sheet, glow}.
 static var _cache: Dictionary = {}
@@ -44,6 +49,8 @@ var _done := false
 var _flash_t := 0.0
 var _frame_uv := Vector2.ONE
 var _columns := 1
+## Luz pareja (meta.flat_light): todo el cuadro con la misma luz.
+var _flat := false
 var _rng := RandomNumberGenerator.new()
 
 ## Carga (una vez) el JSON de una hoja y sus texturas. Vacío si algo falla.
@@ -95,7 +102,11 @@ func setup(def: Dictionary, tint: Color, eye: Color, variant_seed: int) -> void:
 	var boost := DataRegistry.bal_f("enemies.sprite_albedo", 1.0)
 	mat.set_shader_parameter("tint", Color(tint.r * boost, tint.g * boost, tint.b * boost, 1.0))
 	mat.set_shader_parameter("eye_color", eye)
-	mat.set_shader_parameter("self_light", DataRegistry.bal_f("enemies.sprite_self_light", 0.12))
+	# La hoja puede pedir más luz propia (sprites de píxel gordo que tienen
+	# que recortarse contra el entorno aunque el pasillo esté oscuro).
+	mat.set_shader_parameter("self_light", float(meta.get("self_light", DataRegistry.bal_f("enemies.sprite_self_light", 0.12))))
+	_flat = bool(meta.get("flat_light", false))
+	mat.set_shader_parameter("flat_light", _flat)
 	quad.material_override = mat
 	add_child(quad)
 	add_child(_make_blob_shadow(float(def.get("shadow", 0.9))))
@@ -177,7 +188,47 @@ func _process(delta: float) -> void:
 	if quad == null:
 		return
 	_face_camera()
+	if _flat:
+		_update_flat_light()
 	_update(delta)
+
+## Luz pareja: lo que recibe el centro del sprite (ambiente del bioma + luces
+## del grupo LIGHTS_GROUP, con la atenuación de Godot y su parpadeo). La cara
+## que mira a la cámara recibe más; las luces de atrás, un poco.
+func _update_flat_light() -> void:
+	var c := Color(0, 0, 0)
+	var world := get_world_3d()
+	var env: Environment = world.environment if world != null else null
+	if env != null and env.ambient_light_source == Environment.AMBIENT_SOURCE_COLOR:
+		c = env.ambient_light_color.srgb_to_linear() * env.ambient_light_energy
+	var p := global_position + Vector3(0.0, LIGHT_PROBE_Y, 0.0)
+	var n := quad.global_basis.z
+	for node: Node in get_tree().get_nodes_in_group(LIGHTS_GROUP):
+		var l := node as Light3D
+		if l == null or not l.is_visible_in_tree():
+			continue
+		var att := 1.0
+		var dir := Vector3.ZERO
+		if l is OmniLight3D:
+			var o := l as OmniLight3D
+			var to_light := o.global_position - p
+			var dist := to_light.length()
+			if dist >= o.omni_range:
+				continue
+			var nd := pow(dist / o.omni_range, 4.0)
+			att = pow(maxf(1.0 - nd, 0.0), 2.0) * pow(maxf(dist, 0.0001), -o.omni_attenuation)
+			dir = to_light / maxf(dist, 0.0001)
+		elif l is DirectionalLight3D:
+			dir = l.global_basis.z
+		else:
+			continue
+		var facing := 0.35 + 0.65 * maxf(n.dot(dir), 0.0)
+		c += l.light_color.srgb_to_linear() * (l.light_energy * att * facing)
+	# El sprite toma solo parte del color de la luz: conserva su paleta y se
+	# recorta contra el entorno (1 = todo el color de la luz).
+	var lum := (c.r + c.g + c.b) / 3.0
+	c = Color(lum, lum, lum).lerp(c, DataRegistry.bal_f("enemies.sprite_flat_tint", 0.5))
+	mat.set_shader_parameter("flat_color", Vector3(c.r, c.g, c.b))
 
 ## Billboard en Y y ángulo de hacia dónde mira el enemigo (+Z del nodo)
 ## respecto de la cámara.

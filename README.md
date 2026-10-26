@@ -6,7 +6,7 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 |---|---|---|
 | ![](docs/capturas/bioma_catacumbas.png) | ![](docs/capturas/bioma_luna.png) | ![](docs/capturas/jefe.png) |
 
-| Enemigos en pixel art (Cisterna Anegada) | El esbirro dibujado: frente, perfil, espalda, tajo, golpe y dormido |
+| Enemigos en pixel art (Cisterna Anegada) | El esbirro: frente, perfil, espalda, tajo, escudazo, golpe y dormido |
 |---|---|
 | ![](docs/capturas/pixel_cisterna.png) | ![](docs/capturas/esbirro_vistas.png) |
 
@@ -36,7 +36,7 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 
 - **Pisos 1 a 5**, cada uno más grande (25×25 → 45×45) y con enemigos de rango más fuerte. Rango 10 = más débil, 1 = más fuerte.
 - Cada piso es un **bioma** con su paleta, niebla y texturas: Catacumbas del Pozo, Cisterna Anegada, Salones de la Luna, Castillo Carmesí y El Abismo.
-- **Enemigos** en **pixel art** dentro del mundo 3D (estilo Dragon Quest HD-2D): monstruos caricaturescos de calavera enorme que miran a la cámara, con vistas de frente, perfil y espalda, iluminados por las antorchas y con la niebla del entorno. Las hojas actuales son **de prueba**, generadas por código, y se reemplazan por arte definitivo con el mismo formato: el **esbirro** ya está **dibujado en 2D** pieza por pieza (`tools/sprites/draw_esbirro.py`, a la espera del visto bueno para pasar el resto a ese estilo) y los demás siguen con el generador anterior (`tools/sprites/draw_monsters.py`); en Opciones → Enemigos se puede volver a los modelos 3D. Los esqueletos: el **esbirro** y el **ballestero** (básicos), el **guardián** (élite, con hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, color y tamaño piso a piso. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
+- **Enemigos** en **pixel art** dentro del mundo 3D (estilo Dragon Quest HD-2D): monstruos caricaturescos de calavera enorme que miran a la cámara, con vistas de frente, perfil y espalda, iluminados por las antorchas y con la niebla del entorno. Las hojas actuales son **de prueba**, generadas por código, y se reemplazan por arte definitivo con el mismo formato: el **esbirro** ya está en **pixel art grueso** (sprite chico de píxeles gordos, pocos colores y contorno negro, con luz pareja: contraste duro con el entorno 3D; `tools/sprites/draw_esbirro.py`, a la espera del visto bueno para pasar el resto a ese estilo) y los demás siguen con el generador anterior (`tools/sprites/draw_monsters.py`); en Opciones → Enemigos se puede volver a los modelos 3D. Los esqueletos: el **esbirro** y el **ballestero** (básicos), el **guardián** (élite, con hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, color y tamaño piso a piso. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
 - Los enemigos **deambulan y te persiguen**. Si chocas tú primero: **ataque sorpresa** (turno gratis y daño ×1,5). Si te alcanzan **por la espalda o un costado: emboscada** (pegan primero ×1,5).
 - Cada piso tiene un **jefe** que custodia la salida. Al vencerlo eliges: **bajar**, **retirarte con el botín** o quedarte.
 - **Almas**: a veces un enemigo suelta su alma (los jefes siempre). Se revela al pulsar Continuar; recogerla es opcional y eliges quién la lleva (1 activa + pasiva opcional + modificadores). **No salen de la cripta.**

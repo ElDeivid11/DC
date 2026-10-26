@@ -369,6 +369,7 @@ func build_lighting() -> void:
 		moon.light_color = moon_def.get("color", Color.WHITE)
 		moon.light_energy = float(moon_def.get("energia", 0.3))
 		moon.shadow_enabled = false
+		moon.add_to_group(EnemySprite.LIGHTS_GROUP)
 		world.add_child(moon)
 	var ambient := WorldEnvironment.new()
 	var env := Environment.new()

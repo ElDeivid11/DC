@@ -23,6 +23,11 @@ uniform float eye_energy = 1.4;
 uniform float flash = 0.0;
 // Luz propia mínima: que la silueta se lea aunque no la alumbre nada.
 uniform float self_light = 0.12;
+// Luz pareja (sprites de píxel gordo): todo el cuadro recibe la misma luz,
+// que calcula EnemySprite en el centro del sprite (ambiente + luces cerca),
+// en lineal. Así cada color queda plano, como en un sprite de 8/16 bits.
+uniform bool flat_light = false;
+uniform vec3 flat_color = vec3(1.0);
 
 varying float v_fog;
 
@@ -45,8 +50,15 @@ void fragment() {
 	vec3 albedo = mix(c.rgb * tint.rgb, vec3(1.0), flash);
 	// Igual que el material PSX sombreado: con niebla total el color es
 	// exactamente el de la niebla (el albedo se apaga y entra por emisión).
-	ALBEDO = albedo * (1.0 - v_fog);
-	EMISSION = (albedo * self_light + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
+	if (flat_light) {
+		// Sin albedo las luces de la escena no suman nada: todo entra por
+		// emisión con la luz que calculó EnemySprite.
+		ALBEDO = vec3(0.0);
+		EMISSION = (albedo * (flat_color + vec3(self_light)) + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
+	} else {
+		ALBEDO = albedo * (1.0 - v_fog);
+		EMISSION = (albedo * self_light + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
+	}
 	if (texture(glow, uv).r > 0.5) {
 		ALBEDO = vec3(0.0);
 		EMISSION = eye_color * eye_energy;
