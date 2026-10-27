@@ -1,0 +1,116 @@
+{
+	"afinidades": {
+		"hueso": {
+			"nombre": "Hueso",
+			"icono": "afin_hueso",
+			"rampa": "hueso",
+			"descripcion": "Armazón de los que no caen.",
+			"niveles": [
+				{"cantidad": 2, "nombre": "Armazón", "efectos": [{"type": "def_flat", "value": 2}]},
+				{"cantidad": 4, "nombre": "Negarse a caer", "efectos": [{"type": "last_stand", "value": 1}]}
+			]
+		},
+		"sangre": {
+			"nombre": "Sangre",
+			"icono": "afin_sangre",
+			"rampa": "sangre",
+			"descripcion": "Heridas que no cierran.",
+			"niveles": [
+				{"cantidad": 2, "nombre": "Filo dentado", "efectos": [{"type": "bleed_on_hit", "value": 1}]},
+				{"cantidad": 4, "nombre": "Festín rojo", "efectos": [{"type": "bleed_damage_bonus", "value": 1}, {"type": "bleed_lifesteal_pct", "value": 0.5}]}
+			]
+		},
+		"sombra": {
+			"nombre": "Sombra",
+			"icono": "afin_sombra",
+			"rampa": "amatista",
+			"descripcion": "Golpear donde no se ve.",
+			"niveles": [
+				{"cantidad": 2, "nombre": "Punto ciego", "efectos": [{"type": "crit_chance", "value": 0.1}]},
+				{"cantidad": 4, "nombre": "Asesino", "efectos": [{"type": "crit_damage_bonus", "value": 0.5}, {"type": "crit_marks", "value": 0.5}]}
+			]
+		},
+		"espiritu": {
+			"nombre": "Espíritu",
+			"icono": "afin_espiritu",
+			"rampa": "alma",
+			"descripcion": "Las almas responden más rápido.",
+			"niveles": [
+				{"cantidad": 2, "nombre": "Eco", "efectos": [{"type": "active_power_flat", "value": 2}]},
+				{"cantidad": 4, "nombre": "Coro", "efectos": [{"type": "cooldown_reduction", "value": 1}]}
+			]
+		},
+		"acero": {
+			"nombre": "Acero",
+			"icono": "afin_acero",
+			"rampa": "acero",
+			"descripcion": "El arma de siempre, mejor afilada.",
+			"niveles": [
+				{"cantidad": 2, "nombre": "Afilado", "efectos": [{"type": "damage_bonus_flat", "value": 1}]},
+				{"cantidad": 4, "nombre": "Maestro de armas", "efectos": [{"type": "damage_bonus_flat", "value": 1}, {"type": "defend_counter", "value": 1.0}]}
+			]
+		},
+		"fortuna": {
+			"nombre": "Fortuna",
+			"icono": "afin_fortuna",
+			"rampa": "moneda",
+			"descripcion": "Los muertos pagan bien.",
+			"niveles": [
+				{"cantidad": 2, "nombre": "Bolsillos llenos", "efectos": [{"type": "coin_bonus_pct", "value": 0.25}]},
+				{"cantidad": 3, "nombre": "Buena estrella", "efectos": [{"type": "soul_chance_pct", "value": 10}, {"type": "xp_bonus_pct", "value": 0.25}]}
+			]
+		}
+	},
+	"pactos": {
+		"lluvia_de_acero": {
+			"nombre": "Lluvia de acero",
+			"almas": ["arquero_doble", "jefe_osario"],
+			"efectos": [{"type": "extra_hits", "value": 1}]
+		},
+		"hemorragia": {
+			"nombre": "Hemorragia",
+			"almas": ["esbirro_tajo", "arquero_veneno"],
+			"efectos": [{"type": "bleed_apply_mult", "value": 1.0}]
+		},
+		"muralla_de_huesos": {
+			"nombre": "Muralla de huesos",
+			"almas": ["esbirro_terco", "guardian_muro"],
+			"efectos": [{"type": "start_shield", "value": 6}, {"type": "shield_mult", "value": 0.5}]
+		},
+		"cabeza_dura": {
+			"nombre": "Cabeza dura",
+			"almas": ["guardian_cabezazo", "esbirro_escudazo"],
+			"efectos": [{"type": "stun_extra_turn", "value": 1}]
+		},
+		"verdugo": {
+			"nombre": "Verdugo",
+			"almas": ["guardian_hacha", "arquero_flecha"],
+			"efectos": [{"type": "execute_threshold_bonus", "value": 0.15}, {"type": "crit_damage_bonus", "value": 0.5}]
+		},
+		"banquete_sepulcral": {
+			"nombre": "Banquete sepulcral",
+			"almas": ["jefe_novicio", "esbirro_tajo"],
+			"efectos": [{"type": "drain_bonus_pct", "value": 0.5}, {"type": "lifesteal_pct", "value": 0.1}]
+		},
+		"marea_roja": {
+			"nombre": "Marea roja",
+			"almas": ["jefe_ahogado", "arquero_veneno"],
+			"efectos": [{"type": "weaken_bleed", "value": 3}]
+		},
+		"punteria_codiciosa": {
+			"nombre": "Puntería codiciosa",
+			"almas": ["arquero_doble", "jefe_archi"],
+			"efectos": [{"type": "coin_on_crit", "value": 2}]
+		},
+		"ojos_del_mas_alla": {
+			"nombre": "Ojos del más allá",
+			"almas": ["arquero_fantasma", "jefe_novicio"],
+			"efectos": [{"type": "cooldown_reduction", "value": 1}]
+		},
+		"sentencia_final": {
+			"nombre": "Sentencia final",
+			"almas": ["jefe_archi", "guardian_hacha"],
+			"efectos": [{"type": "mark_bonus", "value": 0.5}]
+		}
+	}
+}

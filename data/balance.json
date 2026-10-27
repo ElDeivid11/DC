@@ -1,0 +1,147 @@
+{
+	"party": [
+		{"id": "bjorn", "name": "Bjorn", "base_hp": 34, "base_atk": 7,
+			"apariencia": {"cara": 1, "ojos": 1, "boca": 0, "marca": 0, "pelo": 1, "barba": 2, "tocado": 2, "ropa": 1,
+				"color_piel": 1, "color_pelo": 1, "color_ojos": 0, "color_ropa": 0, "color_capa": 6}}
+	],
+	"stats_for_rank": {
+		"hp_base": 5.25,
+		"hp_per_rank": 4.75,
+		"atk_base": -0.25,
+		"atk_per_rank": 1.9
+	},
+	"floors_per_run": 5,
+	"start_items": ["pocion_menor"],
+	"inventory_capacity": 8,
+	"soul_capacity": 3,
+	"leveling": {
+		"max_level": 10,
+		"xp_to_next": [24, 44, 76, 120, 176, 244, 324, 416, 520],
+		"xp_kill_base": 3,
+		"xp_per_rank": 1.0,
+		"xp_elite_mult": 1.5,
+		"xp_boss_mult": 4.0,
+		"points_per_level": 3,
+		"soul_slot_every": 2,
+		"heal_on_level_pct": 0.1
+	},
+	"stats": {
+		"vit_hp": 1.0,
+		"atq_atk": 0.25,
+		"def_reduction": 0.25,
+		"esp_ability": 0.5,
+		"agi_crit": 0.015,
+		"agi_flee": 0.015,
+		"sue_soul": 0.005,
+		"sue_coins": 0.02
+	},
+	"heal_between_floors_pct": 0.3,
+	"coins": {
+		"kill_base": 11,
+		"boss_per_floor": 25,
+		"first_kill_mult": 10,
+		"chest_per_floor": 6,
+		"elite_mult": 2,
+		"coin_keep_on_death": 0.5
+	},
+	"enemies": {
+		"elite_chance": 0.05,
+		"elite_stat_mult": 1.25,
+		"elite_scale": 1.15,
+		"elite_tint": [1.0, 0.9, 0.78],
+		"elite_eye": "#ffb040",
+		"albedo_boost": 1.35,
+		"sprite_albedo": 0.85,
+		"sprite_self_light": 0.12,
+		"sprite_flat_tint": 0.5,
+		"boss_stat_mult": 1.5,
+		"wake_radius": 2,
+		"aggro_radius": 5,
+		"wander_chance": 0.3
+	},
+	"soul_drop": {
+		"normal_base": 0.2,
+		"rank_factor_per_rank": 0.1,
+		"elite": 0.6,
+		"boss": 1.0,
+		"pity_per_kill": 0.05
+	},
+	"almas": {
+		"poder_por_rango": 0.35,
+		"recarga_minima": 2,
+		"opciones_jefe": 3
+	},
+	"combat": {
+		"damage_variance": 1,
+		"defend_block": 0.5,
+		"defend_block_max": 0.9,
+		"crit_mult": 2.0,
+		"surprise_damage_mult": 1.5,
+		"surprise_free_turn": true,
+		"ambush_enabled": true,
+		"ambush_damage_mult": 1.5,
+		"boss_ability_every": 3,
+		"boss_ability_mult": 1.6,
+		"stun_resist_actions": 2,
+		"boss_stun_max": 1,
+		"topes": {
+			"sangrado": 12,
+			"robo_de_vida": 0.4,
+			"robo_de_vida_sangrado": 0.5,
+			"critico_mult": 3.0,
+			"escudo_pct_hp": 1.0,
+			"marca": 1.0,
+			"debilita": 0.6,
+			"aturdir_turnos": 2
+		},
+		"enemy_turn_delay": 0.35,
+		"enemy_attack_windup": 0.3,
+		"flee_stun_turns": 2,
+		"fx": {"hit_stop_crit": 0.08, "hit_stop_kill": 0.14, "kill_pause": 0.8, "low_hp": 0.3}
+	},
+	"flee": {
+		"base": 0.5,
+		"per_rank": 0.1,
+		"min": 0.1,
+		"max": 0.9,
+		"allow_boss": false
+	},
+	"fog": {
+		"torch_near_bonus": 3.0,
+		"torch_far_bonus": 6.0
+	},
+	"render": {
+		"preset_default": "clasico",
+		"enemy_style_default": "sprite",
+		"presets": {
+			"clasico": {"lines": 240, "dither_bits": 5, "affine": 0.6, "precision_xy": 160},
+			"crujiente": {"lines": 180, "dither_bits": 5, "affine": 1.0, "precision_xy": 110},
+			"limpio": {"lines": 0, "dither_bits": 0, "affine": 0.0, "precision_xy": 0}
+		},
+		"fov": 64.0,
+		"combat_fov": 58.0,
+		"combat_fov_boss": 72.0,
+		"combat_boss_lift": 0.15,
+		"combat_boss_pitch": -1.0,
+		"player_light_color": "#ffc98a",
+		"player_light_energy": 1.5,
+		"player_light_range": 8.5,
+		"player_light_attenuation": 1.0,
+		"flicker_amount": 0.05,
+		"flicker_hz": 10.0,
+		"head_bob": 0.04,
+		"boss_room_height": 3.5,
+		"chest": {"sprite": "res://assets/sprites/props/cofre.json", "glow": "#ffd27a", "light_energy": 0.45, "light_range": 2.4},
+		"map": {"pitch": 24.0, "open_time": 0.32, "close_time": 0.2, "paper_shade": 0.25}
+	},
+	"boss_room": {
+		"brazier_inset": 0.42,
+		"brazier_energy": 2.0,
+		"brazier_range": 6.0,
+		"circle_size": 3.4,
+		"intro_step": 0.3,
+		"approach_step": 0.24,
+		"title_hold": 2.2,
+		"skip_speed": 4.0
+	}
+}

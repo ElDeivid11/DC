@@ -1,0 +1,3 @@
+# Intermedios del pipeline (build_skeletons.py / process_enemies.mjs)
+.work/
+.tmp/

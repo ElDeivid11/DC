@@ -1,0 +1,674 @@
+{
+	"size": 48,
+	"layers": [
+		"fondo_pelo",
+		"fondo_tocado",
+		"cuerpo",
+		"cuello",
+		"cabeza",
+		"cara",
+		"barba",
+		"pelo",
+		"tocado",
+		"frente"
+	],
+	"materials": [
+		"tinta",
+		"piel",
+		"pelo",
+		"ojos",
+		"blanco",
+		"ropa",
+		"capa",
+		"cuero",
+		"metal",
+		"oso",
+		"dientes",
+		"pintura"
+	],
+	"hides_hair": [
+		"capucha",
+		"oso",
+		"casco"
+	],
+	"categories": {
+		"cara": [
+			{
+				"id": "redonda",
+				"layers": {
+					"cabeza": {
+						"rect": [
+							0,
+							0,
+							32,
+							25
+						],
+						"at": [
+							8,
+							8
+						]
+					},
+					"cuello": {
+						"rect": [
+							33,
+							0,
+							12,
+							11
+						],
+						"at": [
+							18,
+							27
+						]
+					}
+				}
+			},
+			{
+				"id": "cuadrada",
+				"layers": {
+					"cabeza": {
+						"rect": [
+							46,
+							0,
+							32,
+							25
+						],
+						"at": [
+							8,
+							8
+						]
+					},
+					"cuello": {
+						"rect": [
+							79,
+							0,
+							12,
+							11
+						],
+						"at": [
+							18,
+							27
+						]
+					}
+				}
+			},
+			{
+				"id": "fina",
+				"layers": {
+					"cabeza": {
+						"rect": [
+							92,
+							0,
+							32,
+							26
+						],
+						"at": [
+							8,
+							7
+						]
+					},
+					"cuello": {
+						"rect": [
+							125,
+							0,
+							12,
+							11
+						],
+						"at": [
+							18,
+							27
+						]
+					}
+				}
+			}
+		],
+		"ojos": [
+			{
+				"id": "normales",
+				"layers": {
+					"cara": {
+						"rect": [
+							138,
+							0,
+							12,
+							4
+						],
+						"at": [
+							18,
+							18
+						]
+					}
+				}
+			},
+			{
+				"id": "entornados",
+				"layers": {
+					"cara": {
+						"rect": [
+							151,
+							0,
+							10,
+							4
+						],
+						"at": [
+							19,
+							18
+						]
+					}
+				}
+			},
+			{
+				"id": "grandes",
+				"layers": {
+					"cara": {
+						"rect": [
+							162,
+							0,
+							12,
+							4
+						],
+						"at": [
+							18,
+							18
+						]
+					}
+				}
+			}
+		],
+		"boca": [
+			{
+				"id": "neutral",
+				"layers": {
+					"cara": {
+						"rect": [
+							175,
+							0,
+							5,
+							3
+						],
+						"at": [
+							22,
+							24
+						]
+					}
+				}
+			},
+			{
+				"id": "sonrisa",
+				"layers": {
+					"cara": {
+						"rect": [
+							181,
+							0,
+							7,
+							4
+						],
+						"at": [
+							21,
+							24
+						]
+					}
+				}
+			},
+			{
+				"id": "mueca",
+				"layers": {
+					"cara": {
+						"rect": [
+							189,
+							0,
+							5,
+							4
+						],
+						"at": [
+							22,
+							24
+						]
+					}
+				}
+			}
+		],
+		"marca": [
+			{
+				"id": "ninguna",
+				"layers": {}
+			},
+			{
+				"id": "cicatriz",
+				"layers": {
+					"cara": {
+						"rect": [
+							195,
+							0,
+							3,
+							6
+						],
+						"at": [
+							28,
+							16
+						]
+					}
+				}
+			},
+			{
+				"id": "pintura",
+				"layers": {
+					"cara": {
+						"rect": [
+							199,
+							0,
+							17,
+							2
+						],
+						"at": [
+							16,
+							23
+						]
+					}
+				}
+			},
+			{
+				"id": "pecas",
+				"layers": {
+					"cara": {
+						"rect": [
+							217,
+							0,
+							16,
+							4
+						],
+						"at": [
+							16,
+							23
+						]
+					}
+				}
+			}
+		],
+		"barba": [
+			{
+				"id": "ninguna",
+				"layers": {}
+			},
+			{
+				"id": "corta",
+				"layers": {
+					"barba": {
+						"rect": [
+							0,
+							27,
+							24,
+							15
+						],
+						"at": [
+							12,
+							18
+						]
+					}
+				}
+			},
+			{
+				"id": "larga",
+				"layers": {
+					"barba": {
+						"rect": [
+							25,
+							27,
+							24,
+							22
+						],
+						"at": [
+							12,
+							18
+						]
+					}
+				}
+			},
+			{
+				"id": "bigote",
+				"layers": {
+					"barba": {
+						"rect": [
+							50,
+							27,
+							11,
+							5
+						],
+						"at": [
+							19,
+							23
+						]
+					}
+				}
+			},
+			{
+				"id": "candado",
+				"layers": {
+					"barba": {
+						"rect": [
+							62,
+							27,
+							11,
+							9
+						],
+						"at": [
+							19,
+							23
+						]
+					}
+				}
+			}
+		],
+		"pelo": [
+			{
+				"id": "calvo",
+				"layers": {}
+			},
+			{
+				"id": "corto",
+				"layers": {
+					"pelo": {
+						"rect": [
+							74,
+							27,
+							28,
+							14
+						],
+						"at": [
+							10,
+							6
+						]
+					}
+				}
+			},
+			{
+				"id": "flequillo",
+				"layers": {
+					"pelo": {
+						"rect": [
+							103,
+							27,
+							28,
+							14
+						],
+						"at": [
+							10,
+							6
+						]
+					}
+				}
+			},
+			{
+				"id": "largo",
+				"layers": {
+					"fondo_pelo": {
+						"rect": [
+							132,
+							27,
+							32,
+							26
+						],
+						"at": [
+							8,
+							13
+						]
+					},
+					"pelo": {
+						"rect": [
+							165,
+							27,
+							28,
+							17
+						],
+						"at": [
+							10,
+							6
+						]
+					}
+				}
+			},
+			{
+				"id": "coleta",
+				"layers": {
+					"fondo_pelo": {
+						"rect": [
+							194,
+							27,
+							9,
+							21
+						],
+						"at": [
+							32,
+							9
+						]
+					},
+					"pelo": {
+						"rect": [
+							204,
+							27,
+							28,
+							14
+						],
+						"at": [
+							10,
+							6
+						]
+					}
+				}
+			},
+			{
+				"id": "cresta",
+				"layers": {
+					"pelo": {
+						"rect": [
+							233,
+							27,
+							8,
+							15
+						],
+						"at": [
+							20,
+							1
+						]
+					}
+				}
+			},
+			{
+				"id": "trenzas",
+				"layers": {
+					"fondo_pelo": {
+						"rect": [
+							0,
+							54,
+							30,
+							22
+						],
+						"at": [
+							9,
+							21
+						]
+					},
+					"pelo": {
+						"rect": [
+							31,
+							54,
+							28,
+							17
+						],
+						"at": [
+							10,
+							6
+						]
+					}
+				}
+			}
+		],
+		"tocado": [
+			{
+				"id": "ninguno",
+				"layers": {}
+			},
+			{
+				"id": "capucha",
+				"layers": {
+					"fondo_tocado": {
+						"rect": [
+							60,
+							54,
+							32,
+							19
+						],
+						"at": [
+							8,
+							17
+						]
+					},
+					"tocado": {
+						"rect": [
+							93,
+							54,
+							32,
+							34
+						],
+						"at": [
+							8,
+							2
+						]
+					}
+				}
+			},
+			{
+				"id": "oso",
+				"layers": {
+					"fondo_tocado": {
+						"rect": [
+							126,
+							54,
+							32,
+							20
+						],
+						"at": [
+							8,
+							19
+						]
+					},
+					"tocado": {
+						"rect": [
+							159,
+							54,
+							32,
+							34
+						],
+						"at": [
+							8,
+							0
+						]
+					}
+				}
+			},
+			{
+				"id": "cinta",
+				"layers": {
+					"tocado": {
+						"rect": [
+							192,
+							54,
+							27,
+							8
+						],
+						"at": [
+							11,
+							12
+						]
+					}
+				}
+			},
+			{
+				"id": "casco",
+				"layers": {
+					"tocado": {
+						"rect": [
+							220,
+							54,
+							28,
+							22
+						],
+						"at": [
+							10,
+							4
+						]
+					}
+				}
+			}
+		],
+		"ropa": [
+			{
+				"id": "tunica",
+				"layers": {
+					"cuerpo": {
+						"rect": [
+							0,
+							89,
+							48,
+							16
+						],
+						"at": [
+							0,
+							32
+						]
+					}
+				}
+			},
+			{
+				"id": "cuero",
+				"layers": {
+					"cuerpo": {
+						"rect": [
+							49,
+							89,
+							48,
+							16
+						],
+						"at": [
+							0,
+							32
+						]
+					}
+				}
+			},
+			{
+				"id": "armadura",
+				"layers": {
+					"cuerpo": {
+						"rect": [
+							98,
+							89,
+							48,
+							16
+						],
+						"at": [
+							0,
+							32
+						]
+					}
+				}
+			},
+			{
+				"id": "harapos",
+				"layers": {
+					"cuerpo": {
+						"rect": [
+							147,
+							89,
+							48,
+							16
+						],
+						"at": [
+							0,
+							32
+						]
+					}
+				}
+			}
+		]
+	}
+}

@@ -1,0 +1,6 @@
+# Caché que Godot regenera solo
+.godot/
+*.tmp
+override.cfg
+node_modules/
+__pycache__/
