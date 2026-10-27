@@ -84,10 +84,15 @@ func test_recarga_de_activas() -> void:
 	check(not c.ability_ready(0), "recarga 2: el turno siguiente tampoco")
 	c.begin_hero_turn()
 	check(c.ability_ready(0), "dos turnos después, lista")
-	# Coro (Espíritu II) baja la recarga, nunca de 1.
-	var fast := _core([_soul("esbirro_tajo")])
+	# Coro (Espíritu II) y Ojos del más allá bajan la recarga, pero nunca por
+	# debajo de la mínima: una activa lista cada turno deja a Atacar sin uso.
+	var minimum := DataRegistry.bal_i("almas.recarga_minima", 2)
+	var fast := _core([_soul("esbirro_tajo"), _soul("guardian_muro")]) # recargas 2 y 4
 	fast.fx["cooldown_reduction"] = 5.0
-	eq(fast.recharge(0), 1, "mínimo cada turno")
+	eq(fast.recharge(0), mini(2, minimum), "la de recarga 2 no baja")
+	eq(fast.recharge(1), minimum, "la de recarga 4 baja hasta la mínima")
+	fast.fx["cooldown_reduction"] = 1.0
+	eq(fast.recharge(1), 3, "−1: de 4 a 3")
 
 func test_poder_de_activa() -> void:
 	var weak := _core([_soul("arquero_flecha", 9)])
@@ -111,12 +116,14 @@ func test_sangrado_y_aturdir() -> void:
 	var hero_hp := int(c.hero.hp)
 	c.enemy_act()
 	eq(int(c.hero.hp), hero_hp, "pierde el turno")
-	check(c.stun_immune, "después resiste")
+	check(c.stun_immune(), "después resiste")
 	c.cooldowns[1] = 0
 	c.ability(1)
 	eq(c.stun, 0, "no se puede encadenar")
-	c.enemy_act()
-	check(not c.stun_immune, "al atacar vuelve a poder aturdirse")
+	for k in DataRegistry.bal_i("combat.stun_resist_actions", 2):
+		check(c.stun_immune(), "resiste %d acciones suyas (va %d)" % [DataRegistry.bal_i("combat.stun_resist_actions", 2), k])
+		c.enemy_act()
+	check(not c.stun_immune(), "después de atacar esas veces vuelve a poder aturdirse")
 
 func test_escudo_y_negarse_a_caer() -> void:
 	var c := _core([_soul("guardian_muro")], 100, 10)
@@ -152,6 +159,40 @@ func test_marca_y_ejecutar() -> void:
 	c.ability(1)
 	check(e_before - int(c.enemy.hp) >= c.ability_hit(1) * 2 - 1, "Ejecutar duplica el daño")
 
+func test_topes_de_acumulacion() -> void:
+	# Ningún efecto apilable pasa su tope (balance.json → combat.topes), por
+	# más almas, pasivas y pactos que se junten.
+	var c := _core([_soul("esbirro_tajo"), _soul("arquero_veneno")], 999)
+	c.fx["bleed_apply_mult"] = 5.0
+	c.fx["bleed_on_hit"] = 9.0
+	for k in 6:
+		c.cooldowns[0] = 0
+		c.ability(0)
+		c.attack()
+	check(c.bleed <= int(CombatCore.cap("sangrado", 12)), "sangrado con tope (%d)" % c.bleed)
+	var steal := _core([], 999)
+	steal.fx["lifesteal_pct"] = 3.0
+	steal.hero["hp"] = 1
+	steal.attack()
+	check(int(steal.hero.hp) - 1 <= ceili(9 * CombatCore.cap("robo_de_vida", 0.4)) + 1, "robo de vida con tope")
+	var crit := _core([], 999)
+	crit.fx["crit_chance"] = 1.0
+	crit.fx["crit_damage_bonus"] = 9.0
+	crit.attack()
+	check(999 - int(crit.enemy.hp) <= ceili(7 * CombatCore.cap("critico_mult", 3.0)), "crítico con tope (%d)" % (999 - int(crit.enemy.hp)))
+	var sh := _core([_soul("guardian_muro"), _soul("esbirro_terco")], 999)
+	sh.fx["shield_mult"] = 9.0
+	sh.ability(0)
+	sh.ability(1)
+	check(sh.shield <= roundi(int(sh.hero.max_hp) * CombatCore.cap("escudo_pct_hp", 1.0)), "escudo con tope (%d)" % sh.shield)
+	var mk := _core([_soul("arquero_fantasma")], 999)
+	mk.fx["mark_bonus"] = 9.0
+	mk.ability(0)
+	check(mk.mark <= CombatCore.cap("marca", 1.0) + 0.001, "marca con tope")
+	var boss := _core([_soul("guardian_cabezazo")], 999, 5, RunRules.BOSS)
+	boss.fx["stun_extra_turn"] = 5.0
+	eq(boss.ability_stun(0), DataRegistry.bal_i("combat.boss_stun_max", 1), "a un jefe se lo aturde poco")
+
 func test_golpe_cargado_del_jefe() -> void:
 	var c := _core([], 999, 10, RunRules.BOSS)
 	var every := DataRegistry.bal_i("combat.boss_ability_every", 3)
@@ -179,6 +220,44 @@ func test_sorpresa_y_emboscada() -> void:
 	check(a.ambush_pending, "emboscada: el enemigo pega primero")
 	a.enemy_act()
 	check(30 - int(a.hero.hp) >= roundi(3 * DataRegistry.bal_f("combat.ambush_damage_mult", 1.5)), "y más fuerte")
+
+func test_eleccion_del_jefe() -> void:
+	GameState.new_run(21, false)
+	var rng := RandomNumberGenerator.new()
+	var last := String((DataRegistry.get_floor(DataRegistry.floor_count()).boss as Dictionary).soul_id)
+	for n in range(1, DataRegistry.floor_count() + 1):
+		var fl := DataRegistry.get_floor(n)
+		var boss: Dictionary = fl.boss
+		for k in 20:
+			rng.seed = n * 100 + k
+			var opts := GameState.boss_soul_options(boss, fl, rng)
+			eq(opts.size(), DataRegistry.bal_i("almas.opciones_jefe", 3), "piso %d: tres para elegir" % n)
+			eq(opts[0], String(boss.soul_id), "piso %d: la primera es la del jefe" % n)
+			var seen := {}
+			for sid in opts:
+				check(not seen.has(sid), "piso %d: sin repetir" % n)
+				seen[sid] = true
+				check(not DataRegistry.get_soul(sid).is_empty(), "%s existe" % sid)
+			if n < DataRegistry.floor_count():
+				check(not opts.has(last), "piso %d: el alma del último jefe no se ofrece antes" % n)
+			# Una de las especies del piso (no de jefe).
+			check(opts.any(func(s: String) -> bool: return String(DataRegistry.get_soul(s).species) != String(boss.species)), "piso %d: una de las especies del piso" % n)
+
+func test_racha_sin_alma() -> void:
+	GameState.new_run(22, false)
+	var base := GameState.soul_drop_chance(9, RunRules.NORMAL)
+	for k in 3:
+		GameState.register_soul_roll(RunRules.NORMAL, false)
+	eq(GameState.soul_dry_streak, 3, "tres kills sin alma")
+	near(GameState.soul_drop_chance(9, RunRules.NORMAL), base + 3 * DataRegistry.bal_f("soul_drop.pity_per_kill", 0.0), "cada una suma a la próxima")
+	GameState.register_soul_roll(RunRules.BOSS, true)
+	eq(GameState.soul_dry_streak, 3, "los jefes no cuentan")
+	GameState.register_soul_roll(RunRules.ELITE, true)
+	eq(GameState.soul_dry_streak, 0, "al soltar una, vuelve a cero")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	check(GameState.roll_soul("esqueleto_esbirro", 9, RunRules.NORMAL, rng, true) != "", "forzada, siempre suelta")
+	check((DataRegistry.get_species("esqueleto_esbirro").almas as Array).has(GameState.roll_soul("esqueleto_esbirro", 9, RunRules.NORMAL, rng, true)), "una de su especie")
 
 func test_efectos_fuera_del_combate() -> void:
 	GameState.new_run(11, false)

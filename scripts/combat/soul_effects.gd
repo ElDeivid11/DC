@@ -44,7 +44,8 @@ static func modifiers_text(mods: Dictionary) -> String:
 	for k: Variant in mods.keys():
 		var key := "stat." + String(k)
 		var label := DataRegistry.t(key) if DataRegistry.has_text(key) else String(k)
-		parts.append("%s +%s" % [label, str(mods[k])])
+		var v := float(mods[k])
+		parts.append("%s +%s" % [label, str(roundi(v)) if is_equal_approx(v, roundf(v)) else str(v)])
 	return " · ".join(parts)
 
 ## Qué hace una activa. Con un CombatCore y el índice del alma, con las

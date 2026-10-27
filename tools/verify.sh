@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verificación completa del proyecto (ver CLAUDE.md, sección "Verificación").
 #
-#   tools/verify.sh            → import + lint + arranque + tests + smoke test
+#   tools/verify.sh            → import + lint + arranque + tests + smoke test + balance
 #   GODOT=/ruta/a/godot tools/verify.sh
 #
 # Copia tools/strict_warnings.cfg como override.cfg mientras corre: así TODAS
@@ -43,6 +43,8 @@ step lint res://tools/lint.tscn
 step arranque --quit-after 120
 [ -f tests/TestRunner.tscn ] && step tests res://tests/TestRunner.tscn
 [ -f tests/SmokeTest.tscn ] && step smoke res://tests/SmokeTest.tscn
+# Balance: ningún build forzado roto y el promedio en su rango (balance_sim --check).
+step balance res://tools/balance_sim.tscn -- --check
 
 if [ "$failed" -ne 0 ]; then
 	echo "VERIFICACIÓN FALLIDA"

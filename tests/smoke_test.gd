@@ -274,10 +274,27 @@ func _check_boss_intro(run: RunController) -> void:
 	check(run.is_wall(door), "la puerta se cerró detrás del equipo")
 	await _wait_frames(30)
 	var combat := run.combat
+	var options: Array = combat.get("soul_options")
+	check(options.size() == DataRegistry.bal_i("almas.opciones_jefe", 3), "el jefe deja elegir entre %d almas" % options.size())
+	var souls_before := (GameState.hero().souls as Array).size()
 	combat.call("debug_win")
 	await _wait_frames(2)
-	combat.emit_signal("combat_ended", "victory", combat.call("_result"))
+	# Resumen → Continuar → elección: la primera «Elegir» se la lleva.
+	combat.call("_after_victory_summary")
 	await _wait_frames(2)
+	var pick: UIButton = null
+	for b: Node in combat.find_children("*", "UIButton", true, false):
+		if (b as UIButton).text == DataRegistry.t("combat.soul_pick"):
+			pick = b
+			break
+	check(pick != null, "la elección del jefe muestra «Elegir»")
+	if pick != null:
+		pick.emit_signal("pressed")
+	else:
+		combat.emit_signal("combat_ended", "victory", combat.call("_result"))
+	await _wait_frames(2)
+	var after := GameState.hero().souls as Array
+	check(after.size() == souls_before + 1 and options.any(func(o: Dictionary) -> bool: return String(o.id) == String((after.back() as Dictionary).id)), "se lleva el alma elegida")
 	check(not run.is_wall(door), "vencer al jefe abre la puerta")
 	check(run.exit_open, "vencer al jefe abre la salida")
 

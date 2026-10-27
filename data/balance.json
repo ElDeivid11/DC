@@ -63,10 +63,13 @@
 		"normal_base": 0.2,
 		"rank_factor_per_rank": 0.1,
 		"elite": 0.6,
-		"boss": 1.0
+		"boss": 1.0,
+		"pity_per_kill": 0.05
 	},
 	"almas": {
-		"poder_por_rango": 0.35
+		"poder_por_rango": 0.35,
+		"recarga_minima": 2,
+		"opciones_jefe": 3
 	},
 	"combat": {
 		"damage_variance": 1,
@@ -79,6 +82,18 @@
 		"ambush_damage_mult": 1.5,
 		"boss_ability_every": 3,
 		"boss_ability_mult": 1.6,
+		"stun_resist_actions": 2,
+		"boss_stun_max": 1,
+		"topes": {
+			"sangrado": 12,
+			"robo_de_vida": 0.4,
+			"robo_de_vida_sangrado": 0.5,
+			"critico_mult": 3.0,
+			"escudo_pct_hp": 1.0,
+			"marca": 1.0,
+			"debilita": 0.6,
+			"aturdir_turnos": 2
+		},
 		"enemy_turn_delay": 0.35,
 		"enemy_attack_windup": 0.3,
 		"flee_stun_turns": 2

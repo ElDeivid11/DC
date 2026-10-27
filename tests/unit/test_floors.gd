@@ -90,7 +90,7 @@ func test_sorteo_de_enemigos() -> void:
 	check(pool.has("esqueleto_esbirro") and pool.has("esqueleto_picaro"), "las básicas en el piso 1: %s" % [pool])
 	check(not pool.has("esqueleto_guardian"), "la élite no baja hasta rango 8")
 	check(not pool.has("nigromante"), "el jefe nunca sale como enemigo común")
-	check(not pool.has("goblin"), "las inactivas no salen")
+	check(not pool.has("rata_cripta"), "las inactivas no salen")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 11
 	var deep := FloorGenerator.species_pool(2, 5)

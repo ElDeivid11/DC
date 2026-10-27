@@ -52,7 +52,6 @@ var world: Node3D
 ## Bioma: DataRegistry.get_theme() (niebla, ambiente, texturas, antorchas).
 var theme: Dictionary
 var _mats: Dictionary = {}          # slot de TEXTURE_SLOTS -> PsxMaterial3D
-var _props_template: Node3D = null
 var _flame_mat: PsxMaterial3D = null
 
 ## Arrays de una superficie (un material) de un bloque de malla.
@@ -146,11 +145,9 @@ func _load_texture(slot: String) -> Texture2D:
 	var grey := 0.35 if slot != "ceiling" else 0.18
 	return checker_texture(Color(grey, grey, grey), Color(grey * 0.85, grey * 0.85, grey * 0.85), 2)
 
-## Libera la plantilla de props (nunca entra al árbol: nadie más la libera).
+## Suelta las escenas de props cargadas (al salir de la run o del Hub).
 func dispose() -> void:
-	if _props_template:
-		_props_template.free()
-		_props_template = null
+	_prop_scenes.clear()
 
 # --- Geometría ----------------------------------------------------------------------
 
@@ -422,24 +419,27 @@ func _get_flame_material(color: Color) -> PsxMaterial3D:
 		_flame_mat = make_glow_material(color.lightened(0.35))
 	return _flame_mat
 
-# --- Props (pack PSX de cajas/barriles) ------------------------------------------------
-# El .glb trae varios objetos juntos (Crate_1, Barrel_1, Chest_1...). Se
-# instancia UNA vez como plantilla fuera del árbol y se duplica solo el nodo
-# pedido.
+# --- Props (cajas y barriles de KayKit Dungeon Remastered, CC0) ------------------------
+# Un .glb por objeto en addons/kaykit_dungeon_remastered/Assets/gltf/; cada
+# escena se carga una vez y se instancia con el material PSX (niebla y
+# snapping como el resto). Misma escala que las antorchas de KayKit (su
+# grilla es de 4 m; la nuestra, de 2).
 
-func _get_props_template() -> Node3D:
-	if _props_template == null:
-		var packed: PackedScene = load("res://assets/psx_boxes_barrels/Crates_and_barrels_glb.glb")
-		_props_template = packed.instantiate()
-	return _props_template
+const PROPS_DIR := "res://addons/kaykit_dungeon_remastered/Assets/gltf/"
+const PROPS_SCALE := 0.5
+var _prop_scenes: Dictionary = {}
 
-func spawn_prop(node_name: String, pos: Vector3, rot_y_deg: float = 0.0) -> Node3D:
-	var source := _get_props_template().get_node_or_null(node_name)
-	if source == null:
-		push_warning("Prop '%s' no encontrado en el pack de cajas/barriles." % node_name)
+func spawn_prop(prop_id: String, pos: Vector3, rot_y_deg: float = 0.0) -> Node3D:
+	if not _prop_scenes.has(prop_id):
+		var path := PROPS_DIR + prop_id + ".gltf.glb"
+		_prop_scenes[prop_id] = load(path) if ResourceLoader.exists(path) else null
+	var packed: PackedScene = _prop_scenes[prop_id]
+	if packed == null:
+		push_warning("Prop '%s' no encontrado en %s." % [prop_id, PROPS_DIR])
 		return null
-	var inst: Node3D = source.duplicate()
-	_apply_psx_material_recursive(inst, Color.WHITE) # niebla y snapping como el resto
+	var inst: Node3D = packed.instantiate()
+	inst.scale = Vector3.ONE * PROPS_SCALE
+	_apply_psx_material_recursive(inst, Color.WHITE)
 	world.add_child(inst)
 	inst.position = pos
 	inst.rotation_degrees.y = rot_y_deg

@@ -42,12 +42,13 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 
 ![La presentación del jefe](docs/capturas/jefe_presentacion.gif)
 - **Un solo héroe**: la expedición es uno contra uno; el build sale de las almas que juntes.
-- **Almas** (la mecánica principal): a veces un enemigo suelta su alma (los jefes siempre). Cada especie tiene **varias almas distintas** (el esbirro tres, el arquero cuatro, el guardián tres; cada jefe la suya) y suelta una al azar. Se revela al pulsar Continuar, con lo que activaría en tu build; tomarla es opcional y, sin lugar, puedes cambiarla por una que lleves (cada opción dice qué ganas y qué pierdes). Se empieza con **3 espacios** y se gana **uno cada 2 niveles**. **No salen de la cripta.** Cada alma trae:
-  - una **activa con efecto y recarga**: golpe fuerte, varios golpes, sangrado, aturdir, drenar vida, escudo, marcar (el próximo golpe pega más), debilitar o ejecutar (doble daño si al enemigo le queda poca vida). Su poder sale de tu ataque + el rango del monstruo que la soltó + ESP;
+- **Almas** (la mecánica principal): a veces un enemigo suelta su alma. Cada especie tiene **varias almas distintas** (el esbirro tres, el arquero cuatro, el guardián tres) y suelta una al azar; cada enemigo vencido sin soltar alma hace más probable la siguiente (**protección contra la mala suerte**, se ve en Estado → Almas). **Los jefes dejan elegir 1 de 3**: su alma, otra de jefe al azar y una de las especies del piso, cada una con lo que activaría. Se revela al pulsar Continuar, con lo que activaría en tu build; tomarla es opcional y, sin lugar, puedes cambiarla por una que lleves (cada opción dice qué ganas y qué pierdes). Se empieza con **3 espacios** y se gana **uno cada 2 niveles**. **No salen de la cripta.** Cada alma trae:
+  - una **activa con efecto y recarga**: golpe fuerte, varios golpes, sangrado, aturdir, drenar vida, escudo, marcar (el próximo golpe pega más), debilitar o ejecutar (doble daño si al enemigo le queda poca vida). Su poder sale de tu ataque + el rango del monstruo que la soltó + ESP. Ninguna recarga baja de 2 turnos, y los efectos que se acumulan (sangrado, robo de vida, crítico, escudo, marca, debilitar, aturdir) tienen **tope** (`balance.json → combat.topes`); a un enemigo aturdido le cuesta dos acciones suyas volver a aturdirse, y a un jefe se lo aturde un turno como mucho;
   - una **pasiva** opcional y **modificadores** de estadísticas;
   - una o dos **afinidades**: Hueso, Sangre, Sombra, Espíritu, Acero y Fortuna. Juntar 2 y 4 almas de la misma afinidad (Fortuna: 2 y 3) activa sus **niveles** (p. ej. Sangre I: tus ataques sangran; Sombra II: críticos ×2,5 que marcan; Hueso II: una vez por combate sobrevives con 1 HP);
   - **pactos**: dos almas concretas juntas dan un efecto propio (Hemorragia, Lluvia de acero, Muralla de huesos, Verdugo…). Cada tarjeta dice con qué alma pacta.
   Todo está en **Estado → Almas** (tarjetas con las cifras reales y las sinergias activas o a medias) y en `data/souls.json` y `data/sinergias.json`.
+  ![Elegir el alma del jefe](docs/capturas/jefe_almas.png)
 - **Combate**: Atacar, **Habilidad** (las activas listas, con su daño y recarga), Defender, Objeto y Huir. El enemigo muestra sus estados bajo la barra (sangrado, aturdido, marca, debilitado) y el jefe **avisa** cuando prepara su golpe fuerte (cada 3 turnos): es el momento de Defender.
 - **Niveles** (solo durante la expedición): cada enemigo da EXP. Cada nivel da **3 puntos** para repartir en **Estado → Atributos** entre VIT, ATQ, DEF, ESP, AGI y SUE (hexágono con el reparto antes de confirmar), y **cada 2 niveles** un espacio de alma más. El HUD marca con ▲ si hay puntos sin repartir.
 - **Cofres** en **pixel art** como los enemigos, con una luz dorada propia y destellos que los hacen resaltar en el pasillo; al abrirlos se sacuden, se levanta la tapa y sale un golpe de luz (`tools/sprites/draw_cofre.py`).
@@ -101,7 +102,7 @@ Todos se cambian en `data/balance.json` (y en los otros JSON de `data/`) sin toc
 | Equipo | Un héroe, Bjorn: 34 HP, 7 ATK (`party`, con un solo personaje) |
 | "Impuesto" | No hay sumidero: al morir se conserva el 50% (`coins.coin_keep_on_death`) |
 | Bestiario | Persistente; bonus de primera kill = 10 × (11 − rango), una sola vez |
-| Almas | 3 espacios al empezar, +1 cada 2 niveles (y el Amuleto de hueso). Drop: normal 20% × factor de rango, élite 60%, jefe 100%. Poder extra por rango del alma: 0,35 × (11 − rango) (`almas.poder_por_rango`). Afinidades y pactos en `data/sinergias.json` |
+| Almas | 3 espacios al empezar, +1 cada 2 niveles (y el Amuleto de hueso). Drop: normal 20% × factor de rango, élite 60%, jefe 100% (elegir 1 de 3, `almas.opciones_jefe`); +5% por cada enemigo seguido sin alma (`soul_drop.pity_per_kill`). Poder extra por rango del alma: 0,35 × (11 − rango) (`almas.poder_por_rango`); recarga mínima 2 (`almas.recarga_minima`). Afinidades y pactos en `data/sinergias.json` |
 | Inventario | 8 objetos; se empieza con 1 Poción menor (`start_items`) |
 | Mejoras | Tope 5 niveles; coste = base × nivel. Fuerza +0,4 ATK y Vitalidad +1,6 HP por nivel, redondeado (ver *Balance*) |
 | Huir | 50% ± 10% por rango de diferencia con la media del piso; no contra jefes. Si fallas, pierdes el turno |
@@ -116,15 +117,22 @@ Todos se cambian en `data/balance.json` (y en los otros JSON de `data/`) sin toc
 
 ### Balance
 
-`tools/balance_sim.tscn` juega cientos de runs con las reglas reales del juego (el mismo `CombatCore` que el combate), con una política simple: curarse con pociones, defenderse cuando el jefe carga su golpe, usar la activa lista que más rinde (o atacar), tomar las almas y cambiarlas si mejora el conjunto (sinergias y poder), y repartir los puntos de nivel al momento (en ronda entre las 6 estadísticas, o solo VIT/ATQ). Con `-- --set=ruta=valor` se prueban valores sin tocar `balance.json`.
+`tools/balance_sim.tscn` juega cientos de runs con las reglas reales del juego (el mismo `CombatCore` que el combate y las mismas funciones de almas de `GameState`), con una política simple: curarse con pociones, defenderse cuando el jefe carga su golpe, usar la activa lista que más rinde (contando la marca puesta y si Ejecutar ya alcanza) o atacar, tomar las almas y cambiarlas si mejora el conjunto (sinergias y poder; del jefe, la que deja el mejor conjunto), y repartir los puntos de nivel al momento (en ronda entre las 6 estadísticas, o solo VIT/ATQ). Con `-- --set=ruta=valor` se prueban valores sin tocar `balance.json`.
 
-| Configuración | Piso medio | Victorias | Al final |
-|---|---|---|---|
-| Sin mejoras | 2,8–2,9 | 11–13% | nivel 3,5 · 2,9 almas · 2 niveles de afinidad · 1,2 pactos |
-| Todo al máximo (reparto parejo) | 4,4 | ~40% | nivel 5 · 4,5 almas · 3,9 niveles · 2,2 pactos |
-| Todo al máximo (solo VIT/ATQ) | 4,6 | ~50% | nivel 5,3 · 4,8 almas · 4,1 niveles · 2,3 pactos |
+| Configuración | Piso medio | Victorias | Al final | Turnos atacando |
+|---|---|---|---|---|
+| Sin mejoras | 2,8–3,0 | 3–8% | nivel 3,4 · 3,1 almas · 2,4 niveles de afinidad · 1,3 pactos | ~24% |
+| Todo al máximo | 4,2 | 28–30% | nivel 4,9 · 4,5 almas · 3,9 niveles · 2,3 pactos | ~14% |
+| Máximo + todo desbloqueado | 4,2–4,4 | 27–36% | nivel 5 · 4,6 almas · 4 niveles · 2,4 pactos | ~14% |
 
-Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 y con todo al máximo al 4–5 con riesgo real (las muertes se reparten entre los pisos 3, 4 y 5). Sin almas al principio, el jefe del piso 1 es el primer muro (bajó a rango 8 al pasar a un solo héroe).
+Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 y con todo al máximo al 4–5 con riesgo real (las muertes se reparten entre los pisos 3, 4 y 5).
+
+**Builds** (un promedio no detecta un build roto):
+- Después del resumen, para «sin mejoras» y «al máximo»: de las runs que llegan al piso 3, victorias y piso medio según los pactos y la afinidad dominante que llevaban al empezarlo, y cuánto se ofrece, se toma y se lleva cada alma.
+- `-- --builds`: **builds forzados** (el héroe empieza con esas almas y no cambia): sin almas, cada pacto solo y cada afinidad con las almas de su último nivel; `-- --build=a,b,c` prueba uno concreto.
+- `-- --check` (lo corre `tools/verify.sh`): falla si algún build forzado gana más del 60% sin mejoras, si el piso medio sin mejoras sale de 2,2–3,6 o si «atacar» baja del 15% de los turnos.
+
+Con esto salió (27-oct-2026) que Hueso ×4 (Escudazo + Cabezazo con Cabeza dura y escudos) ganaba el **95%** sin mejoras aturdiendo al enemigo casi todos los turnos: ahora el aturdido resiste dos acciones suyas y a un jefe se lo aturde un turno. Hoy el build forzado más fuerte es Sangre ×4 (piso 4,4 sin mejoras, 4–6% de victorias) y el más flojo, Fortuna ×3 (piso 2, una afinidad de economía).
 
 ## Herramientas
 
@@ -163,16 +171,14 @@ docs/       GUIA_CLAUDE_CODE.md, ESTADO_TECNICO_PROTOTIPO.md, capturas/
 - **Íconos**: game-icons.net — *Icons made by Lorc, Delapouite, Skoll y Sbed*, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Rasterizados a 16 px y recoloreados. Lista y licencia en `tools/ui/`. El crédito también está en Opciones → Créditos.
 - **Sonidos de la UI**: Kenney (kenney.nl), UI Audio, RPG Audio e Interface Sounds, CC0 (`assets/audio/ui/`).
 - **Enemigos**: esqueleto "Skeleton - Realistic" de Paul Kotelevets (Blender Human Base Meshes, CC0), animado con Universal Animation Library 1 y 2 de Quaternius (CC0); la túnica del nigromante sale de Modular Character Outfits - Fantasy de Quaternius (CC0). Las armas son de KayKit Character Pack: Skeletons, de Kay Lousberg (CC0). Licencias, repos y commits exactos en `assets/enemies/LICENSE_*.txt`; el armado, en `tools/assets/` (Blender por `bpy` + Node).
-- **Antorchas**: KayKit Dungeon Remastered, de Kay Lousberg (CC0, `addons/kaykit_dungeon_remastered/Assets/LICENSE.txt`).
+- **Antorchas, cajas y barriles**: KayKit Dungeon Remastered, de Kay Lousberg (CC0, `addons/kaykit_dungeon_remastered/Assets/LICENSE.txt`). El cofre es propio (pixel art por código, `tools/sprites/draw_cofre.py`).
 - **Retratos**: los de héroes son propios (pixel art por código, `tools/portraits/draw_hero_parts.py`); los de objetos, de KayKit Dungeon Remastered y Halloween Bits, más algunos hechos con primitivas; todo de Kay Lousberg, CC0 (`assets/portraits/LICENSE_KayKit_*.txt`). Detalle por retrato en `tools/portraits/README.md`.
 - **Texturas de los biomas**: WRAD Textures, de wriks (CC0, `assets/textures/LICENSE_WRAD.txt`), reducidas y recoloreadas con `tools/assets/make_textures.py`.
-- Pack PSX de cajas/barriles (Games by McSteeg): `assets/psx_boxes_barrels/Licence.txt`. Permite usarlo en juegos, **pero prohíbe redistribuirlo**: si el repo es público, conviene sacarlo del repo o pasar a props CC0 antes de publicar.
 - PSX Visuals y LevelBlock: ver sus carpetas en `addons/`.
-- **El pack de goblins no trae licencia**: esas especies quedaron inactivas (`"activo": false`) y no aparecen en el juego.
+- Sacados del repo (27-oct-2026) por licencia: el pack de goblins (sin licencia), Gothic Furniture (texturas de Textures.com, que limitan redistribuirlas) y el pack PSX de cajas y barriles de Games by McSteeg (permite usarlo en juegos pero prohíbe redistribuirlo). Las cajas y barriles se reemplazaron por los de KayKit (CC0). Siguen en el historial de git: si el repo se hace público, conviene limpiarlo también.
 
 ## Pendiente / diferido
 
 - Diferido a propósito, sin pedido no se implementa: razas, árbol de habilidades, crafting, eventos mensuales. (Niveles/EXP ya están, por expedición.)
 - `addons/dungeon_crawler_3d` quedó sin usar: el generador propio produce la grilla que ya consume el juego (ver `docs/ESTADO_TECNICO_PROTOTIPO.md`).
-- Gothic Furniture sigue sin integrar (los `.fbx` necesitan materiales asignados a mano).
 - Sonidos: hay blips generados por código; faltan sonidos reales.

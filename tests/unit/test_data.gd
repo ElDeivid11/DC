@@ -62,8 +62,8 @@ func test_especies_de_debil_a_fuerte() -> void:
 	var ids := DataRegistry.species_ids()
 	eq(ids[0], "esqueleto_esbirro", "la más débil primero")
 	eq(ids[ids.size() - 1], "nigromante", "la más fuerte al final")
-	check(not ids.has("goblin"), "las inactivas no aparecen")
-	check(DataRegistry.species_ids(true).has("goblin"), "...salvo que se pidan")
+	check(not ids.has("rata_cripta"), "las inactivas no aparecen")
+	check(DataRegistry.species_ids(true).has("rata_cripta"), "...salvo que se pidan")
 
 func test_textos() -> void:
 	var key := "no.existe" + ".nunca"

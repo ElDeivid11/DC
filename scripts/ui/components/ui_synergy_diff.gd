@@ -8,14 +8,20 @@ extends VBoxContainer
 ## Si no cambia nada y se pasa el alma nueva, cuenta cómo quedan sus
 ## afinidades («Acero 1/2 · Sangre 2/4»).
 
-func _init(diff: Dictionary, soul_id := "", souls: Array = []) -> void:
+var _width := 440
+## Breve: solo los nombres (sin los efectos), para columnas angostas.
+var _brief := false
+
+func _init(diff: Dictionary, soul_id := "", souls: Array = [], width := 440, brief := false) -> void:
+	_width = width
+	_brief = brief
 	add_theme_constant_override("separation", 2)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for g: Dictionary in diff.get("tiers", []):
 		_tier_line(String(g.id), int(g.tier), true)
 	for id: Variant in diff.get("pacts", []):
 		var p := DataRegistry.get_pact(String(id))
-		_line(UIIcon.make("pacto", "alma"), DataRegistry.t("synergy.pact_new", [p.nombre, SoulEffects.effects_text(p.efectos)]), UIStyle.SOUL_LIGHT)
+		_line(UIIcon.make("pacto", "alma"), DataRegistry.t("synergy.pact_new_brief", [p.nombre]) if _brief else DataRegistry.t("synergy.pact_new", [p.nombre, SoulEffects.effects_text(p.efectos)]), UIStyle.SOUL_LIGHT)
 	for g: Dictionary in diff.get("lost", []):
 		_tier_line(String(g.id), int(g.tier), false)
 	for id: Variant in diff.get("pacts_lost", []):
@@ -32,7 +38,8 @@ func _tier_line(af_id: String, tier: int, gained: bool) -> void:
 	var lv: Dictionary = levels[tier - 1]
 	var tier_name := "%s %s" % [af.nombre, UIFormat.roman(tier)]
 	if gained:
-		_line(UIIcon.make(String(af.icono), String(af.rampa)), DataRegistry.t("synergy.tier_new", [tier_name, lv.nombre, SoulEffects.effects_text(lv.efectos)]), UIStyle.ramp_color(String(af.rampa)))
+		var fx := "" if _brief else SoulEffects.effects_text(lv.efectos)
+		_line(UIIcon.make(String(af.icono), String(af.rampa)), DataRegistry.t("synergy.tier_new", [tier_name, lv.nombre, fx]).strip_edges(), UIStyle.ramp_color(String(af.rampa)))
 	else:
 		_line(UIIcon.make(String(af.icono), "apagado"), DataRegistry.t("synergy.tier_lost", [tier_name, lv.nombre]), UIStyle.DANGER)
 
@@ -60,6 +67,6 @@ func _line(icon: Control, text: String, color: Color) -> void:
 	l.add_theme_color_override("font_color", color)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	l.custom_minimum_size.x = 440
+	l.custom_minimum_size.x = _width
 	row.add_child(l)
 	add_child(row)

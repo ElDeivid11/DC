@@ -457,15 +457,21 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	var species := DataRegistry.get_species(String(e.species_id))
 
 	var soul: Dictionary = {}
-	# Sabiduría (mejora), SUE y Buena estrella suman puntos porcentuales. El
-	# jefe suelta la suya (floors.json); el resto, una de su especie al azar.
-	var chance := RunRules.soul_drop_chance(rank, kind, GameState.soul_chance_bonus())
-	if DebugTools.force_soul_drop or GameState.rng.randf() < chance:
-		var sid := String(e.get("soul_id", ""))
-		if sid == "":
-			sid = DataRegistry.roll_soul_id(String(e.species_id), GameState.rng)
+	var soul_options: Array = []
+	if kind == RunRules.BOSS:
+		# El jefe deja elegir entre varias almas (la suya, otra de jefe y una
+		# de las especies del piso).
+		var fl := DataRegistry.get_floor(GameState.floor_n)
+		var boss_def: Dictionary = fl.get("boss", {"species": e.species_id, "soul_id": e.get("soul_id", "")})
+		for sid in GameState.boss_soul_options(boss_def, fl, GameState.rng):
+			var from_name := String(DataRegistry.get_species(String(DataRegistry.get_soul(sid).get("species", ""))).get("display_name", e.display_name))
+			soul_options.append(DataRegistry.make_soul(sid, rank, String(e.display_name) if sid == String(e.get("soul_id", "")) else from_name))
+	else:
+		# Sabiduría, SUE, Buena estrella y la racha sin alma suman puntos.
+		var sid := GameState.roll_soul(String(e.species_id), rank, kind, GameState.rng, DebugTools.force_soul_drop)
 		if sid != "":
 			soul = DataRegistry.make_soul(sid, rank, String(e.display_name))
+	e["dropped_soul"] = not soul.is_empty() or not soul_options.is_empty()
 
 	# El bonus de monedas (almas + SUE) se fija al empezar: lo que muestra el
 	# resumen es lo que se cobra.
@@ -500,6 +506,7 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	var flee := RunRules.flee_chance(rank, GameState.floor_n) + RunRules.stat_flee(roundi(GameState.party_stat_average("agi")))
 	combat.set("flee_chance", clampf(flee, DataRegistry.bal_f("flee.min", 0.1), DataRegistry.bal_f("flee.max", 0.9)))
 	combat.set("soul_drop", soul)
+	combat.set("soul_options", soul_options)
 	combat.set("reward_preview", {"coins": coin_preview, "xp": xp, "first_kill": first_kill, "first_kill_bonus": RunRules.first_kill_bonus(int(species.get("rank", rank))), "species_name": String(species.get("display_name", e.display_name))})
 	combat.set("rng", GameState.rng)
 	combat.set("god_mode", DebugTools.god_mode)
@@ -573,6 +580,7 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 	match outcome:
 		"victory":
 			GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind), float(e.get("coin_bonus", -1.0)))
+			GameState.register_soul_roll(String(e.kind), bool(e.get("dropped_soul", false)))
 			_grant_xp(GameState.kill_xp(int(e.rank), String(e.kind)))
 			var pick: Dictionary = result.soul_pick
 			if not pick.is_empty():
@@ -1062,7 +1070,8 @@ func debug_kill_boss() -> void:
 			_on_combat_ended_debug(e)
 
 ## Capturas de pantalla / pruebas visuales: abre un menú o deja el combate en
-## un estado concreto. ("status" | "inventory" | "map" | "pause" | "victory" | "soul")
+## un estado concreto. ("status" | "inventory" | "map" | "pause" | "victory" | "soul" |
+## "boss_soul": la elección de almas del jefe)
 func debug_demo(what: String) -> void:
 	match what:
 		"status":
@@ -1076,6 +1085,11 @@ func debug_demo(what: String) -> void:
 			_open_menu(MapScreen.new(self), false)
 		"pause":
 			_open_menu(PauseMenu.new(self), true)
+		"boss_soul":
+			debug_fight_boss()
+			if combat:
+				combat.call("debug_win")
+				combat.call("_after_victory_summary")
 		"victory", "soul":
 			DebugTools.force_soul_drop = what == "soul"
 			debug_fight_nearest()

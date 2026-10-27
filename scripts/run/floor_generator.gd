@@ -16,7 +16,9 @@ extends RefCounted
 ## docs/ESTADO_TECNICO_PROTOTIPO.md.
 
 const DIRS: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
-const PROPS: Array[String] = ["Crate_1", "Barrel_1", "Crate_2", "Barrel_2_keg", "Crate_1_open", "Barrel_Stand", "Crate_Broken"]
+## Cajas y barriles de las esquinas de las salas (KayKit Dungeon Remastered, CC0;
+## ver FloorBuilder.spawn_prop).
+const PROPS: Array[String] = ["box_large", "barrel_large", "box_small_decorated", "barrel_small_stack", "crates_stacked", "barrel_large_decorated", "box_stacked", "barrel_small"]
 
 static func generate(floor_n: int, run_seed: int, item_pool: Array[String]) -> FloorData:
 	var def := DataRegistry.get_floor(floor_n)
@@ -87,9 +89,9 @@ static func test_room() -> FloorData:
 		fd.enemies.append(e)
 	fd.pillars = [Vector3(7 * 2.0 + 0.6, 0, 2 * 2.0 + 0.6), Vector3(7 * 2.0 + 0.6, 0, 6 * 2.0 + 0.6)]
 	fd.props = [
-		{"prop": "Crate_1", "pos": Vector3(3 * 2.0 + 0.5, 0, 2 * 2.0 + 0.5), "rot": 15.0},
-		{"prop": "Barrel_1", "pos": Vector3(7 * 2.0 + 0.5, 0, 4 * 2.0 - 0.5), "rot": -20.0},
-		{"prop": "Crate_2", "pos": Vector3(11 * 2.0 - 0.5, 0, 4 * 2.0 + 0.5), "rot": 40.0},
+		{"prop": "box_large", "pos": Vector3(3 * 2.0 + 0.5, 0, 2 * 2.0 + 0.5), "rot": 15.0},
+		{"prop": "barrel_large", "pos": Vector3(7 * 2.0 + 0.5, 0, 4 * 2.0 - 0.5), "rot": -20.0},
+		{"prop": "crates_stacked", "pos": Vector3(11 * 2.0 - 0.5, 0, 4 * 2.0 + 0.5), "rot": 40.0},
 	]
 	fd.torches = [
 		{"cell": Vector2i(4, 1), "dir": 0},

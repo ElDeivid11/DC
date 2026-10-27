@@ -10,7 +10,8 @@ extends PanelContainer
 ##   Pacto: Hemorragia, con Flecha Envenenada (Esqueleto arquero)
 ## Con un CombatCore armado con las almas del héroe (y el índice de esta) las
 ## cifras son las reales de ese héroe; sin él, en % del poder. Los pactos
-## completos se pintan de azul.
+## completos se pintan de azul. compact: sin la descripción de la pasiva y
+## con los pactos en una línea (el detalle, en el tooltip).
 
 var soul: Dictionary = {}
 var _box: VBoxContainer
@@ -64,8 +65,6 @@ func set_soul(p_soul: Dictionary, compact := false, core: CombatCore = null, ind
 	if mods != "":
 		_add_line(DataRegistry.t("soul.modifiers", [mods]), "GoodLabel")
 
-	if compact:
-		return
 	var have := {}
 	if core != null:
 		for s: Dictionary in core.hero.get("souls", []):
@@ -77,8 +76,13 @@ func set_soul(p_soul: Dictionary, compact := false, core: CombatCore = null, ind
 		var other := String(pair[1] if String(pair[0]) == sid else pair[0])
 		var o := DataRegistry.get_soul(other)
 		var o_species := String(DataRegistry.get_species(String(o.get("species", ""))).get("display_name", ""))
-		var l := _add_line(DataRegistry.t("soul.pact", [pact.nombre, (o.get("active", {}) as Dictionary).get("name", other), o_species, SoulEffects.effects_text(pact.efectos)]), "")
+		var full := DataRegistry.t("soul.pact", [pact.nombre, (o.get("active", {}) as Dictionary).get("name", other), o_species, SoulEffects.effects_text(pact.efectos)])
+		# Compacta: el pacto en una línea; el detalle, en el tooltip.
+		var l := _add_line(DataRegistry.t("soul.pact_short", [pact.nombre, (o.get("active", {}) as Dictionary).get("name", other)]) if compact else full, "DetailLabel" if compact else "")
 		l.add_theme_color_override("font_color", UIStyle.SOUL_LIGHT if have.has(other) and have.has(sid) else UIStyle.TEXT_DIM)
+		if compact:
+			l.mouse_filter = Control.MOUSE_FILTER_PASS
+			UITooltip.attach(l, full)
 
 ## Fila de afinidades: [ícono] Nombre por cada una, en su color.
 static func affinity_chips(ids: Array) -> HBoxContainer:

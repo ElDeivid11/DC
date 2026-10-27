@@ -32,6 +32,9 @@ var kills_total := 0
 var seen_species: Dictionary = {}
 var souls_taken: Array = []
 var souls_taken_by_species: Dictionary = {}
+## Protección contra la mala suerte: kills seguidas (sin jefes) que no
+## soltaron alma. Cada una suma soul_drop.pity_per_kill a la próxima.
+var soul_dry_streak := 0
 var items_used: Dictionary = {}
 var flee_count := 0
 var bosses_defeated: Array[int] = []
@@ -71,6 +74,7 @@ func new_run(p_seed: int, p_test_room := false) -> void:
 	seen_species = {}
 	souls_taken = []
 	souls_taken_by_species = {}
+	soul_dry_streak = 0
 	items_used = {}
 	flee_count = 0
 	bosses_defeated = []
@@ -275,9 +279,58 @@ func party_coin_bonus() -> float:
 	return party_passive_total("coin_bonus_pct") + RunRules.stat_coins(party_stat_total("sue"))
 
 ## Puntos porcentuales extra de que un enemigo suelte alma: Sabiduría (mejora),
-## SUE y Buena estrella (Fortuna).
+## SUE, Buena estrella (Fortuna) y la racha sin alma (protección contra la
+## mala suerte).
 func soul_chance_bonus() -> float:
-	return MetaState.upgrade_bonus("soul_chance_pct") + 100.0 * RunRules.stat_soul(party_stat_total("sue")) + party_passive_total("soul_chance_pct")
+	return MetaState.upgrade_bonus("soul_chance_pct") + 100.0 * RunRules.stat_soul(party_stat_total("sue")) + party_passive_total("soul_chance_pct") + pity_bonus()
+
+## Puntos que suma la racha de kills sin alma.
+func pity_bonus() -> float:
+	return 100.0 * soul_dry_streak * DataRegistry.bal_f("soul_drop.pity_per_kill", 0.0)
+
+## Probabilidad de que este enemigo suelte alma.
+func soul_drop_chance(rank: int, kind: String) -> float:
+	return RunRules.soul_drop_chance(rank, kind, soul_chance_bonus())
+
+## Sorteo del alma de un enemigo común (o élite): "" si no suelta. `force`
+## (debug) la hace caer siempre.
+func roll_soul(species_id: String, rank: int, kind: String, p_rng: RandomNumberGenerator, force := false) -> String:
+	if not force and p_rng.randf() >= soul_drop_chance(rank, kind):
+		return ""
+	return DataRegistry.roll_soul_id(species_id, p_rng)
+
+## Al ganar un combate contra un enemigo común: si no soltó alma la racha
+## sube (la próxima es más probable); si soltó, vuelve a cero. Los jefes no
+## cuentan (siempre sueltan).
+func register_soul_roll(kind: String, dropped: bool) -> void:
+	if kind == RunRules.BOSS:
+		return
+	soul_dry_streak = 0 if dropped else soul_dry_streak + 1
+
+## Almas para elegir al vencer a un jefe (almas.opciones_jefe, sin repetir):
+## la suya (floors.json), otra de jefe al azar (no la del último jefe: esa
+## es el trofeo final) y una de las especies del piso.
+func boss_soul_options(boss_def: Dictionary, floor_def: Dictionary, p_rng: RandomNumberGenerator) -> Array[String]:
+	var out: Array[String] = []
+	var own := String(boss_def.get("soul_id", ""))
+	if own != "":
+		out.append(own)
+	var count := DataRegistry.bal_i("almas.opciones_jefe", 3)
+	var last := String((DataRegistry.get_floor(DataRegistry.floor_count()).get("boss", {}) as Dictionary).get("soul_id", ""))
+	var others: Array[String] = []
+	for sid: Variant in DataRegistry.get_species(String(boss_def.get("species", ""))).get("almas", []):
+		if String(sid) != own and String(sid) != last:
+			others.append(String(sid))
+	if out.size() < count and not others.is_empty():
+		out.append(others[p_rng.randi_range(0, others.size() - 1)])
+	var pool := FloorGenerator.species_pool(int(floor_def.get("rank_min", 10)), int(floor_def.get("rank_max", 10)))
+	for attempt in 8:
+		if out.size() >= count or pool.is_empty():
+			break
+		var sid := DataRegistry.roll_soul_id(pool[p_rng.randi_range(0, pool.size() - 1)], p_rng)
+		if sid != "" and not out.has(sid):
+			out.append(sid)
+	return out
 
 ## EXP de una kill con el bonus de las almas (Buena estrella).
 func kill_xp(rank: int, kind: String) -> int:

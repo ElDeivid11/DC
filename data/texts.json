@@ -64,7 +64,7 @@
 	"effect.crit_damage_bonus": "(+%d%% de daño en los críticos)",
 	"effect.crit_marks": "(los críticos marcan: +%d%% al próximo golpe)",
 	"effect.active_power_flat": "(+%d de poder en las activas)",
-	"effect.cooldown_reduction": "(recarga de las activas −%d turno)",
+	"effect.cooldown_reduction": "(recarga de las activas −%d turno, sin bajar de la mínima)",
 	"effect.defend_counter": "(al Defender, contraatacas con el %d%% de tu ataque)",
 	"effect.extra_hits": "(+%d golpe en las activas de varios golpes)",
 	"effect.start_shield": "(empiezas cada combate con %d de escudo)",
@@ -393,7 +393,7 @@
 	"credits.fonts": "Fuentes: Jacquard 12 y 24, Jacquarda Bastarda 9, Jersey 15 y Micro 5 (The Soft Type Project Authors), Pixelify Sans (The Pixelify Sans Project Authors) y Noto Sans Symbols. SIL Open Font License 1.1.",
 	"credits.icons": "Íconos: game-icons.net. Icons made by Lorc, Delapouite, Skoll y Sbed, CC BY 3.0 (creativecommons.org/licenses/by/3.0). Rasterizados a 16 px y recoloreados.",
 	"credits.sounds": "Sonidos: Kenney (kenney.nl), CC0.",
-	"credits.models": "Modelos y texturas: esqueleto de Paul Kotelevets, animaciones y ropa de Quaternius, armas, antorchas y retratos de Kay Lousberg (KayKit), texturas WRAD de wriks, todo CC0. Cajas y barriles: PSX Dungeon Boxes and Barrels, de Games by McSteeg.",
+	"credits.models": "Modelos y texturas: esqueleto de Paul Kotelevets, animaciones y ropa de Quaternius, armas, antorchas, cajas, barriles y retratos de Kay Lousberg (KayKit), texturas WRAD de wriks, todo CC0.",
 	"controls.move_forward": "Avanzar",
 	"controls.move_back": "Retroceder",
 	"controls.turn_left": "Girar a la izquierda",
@@ -509,5 +509,14 @@
 	"debug.fight_nearest": "Pelear con el más cercano",
 	"debug.fight_boss": "Pelear con el jefe",
 	"upgrades.at_max": "Tope: %s",
-	"synergy.no_affinity": "Sin almas de %s: el primer nivel pide %d."
+	"synergy.no_affinity": "Sin almas de %s: el primer nivel pide %d.",
+	"combat.soul_hint_choice": "Sus almas se desprenden: elige una de %d…",
+	"combat.soul_choice_title": "Elige un alma",
+	"combat.soul_choice_text": "El jefe deja varias almas: llévate una (almas %d/%d).",
+	"combat.soul_choice_text_full": "Llévate una: no tienes lugar (%d/%d), así que reemplaza a otra.",
+	"combat.soul_pick": "Elegir",
+	"combat.soul_leave_all": "Dejarlas todas",
+	"status.soul_streak": "%d enemigos seguidos sin alma: el próximo tiene +%d%% de soltarla.",
+	"soul.pact_short": "Pacto %s, con %s",
+	"synergy.pact_new_brief": "Sella el pacto %s"
 }

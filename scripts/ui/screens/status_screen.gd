@@ -162,6 +162,9 @@ func _souls_page() -> Control:
 	var hn := UILabel.make(DataRegistry.t("status.souls_count", [souls.size(), GameState.member_soul_capacity(m) if not m.is_empty() else 0]), "HeadLabel")
 	hn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(hn)
+	# Protección contra la mala suerte: la racha sin alma sube la próxima.
+	if GameState.soul_dry_streak > 0:
+		col.add_child(UILabel.make(DataRegistry.t("status.soul_streak", [GameState.soul_dry_streak, roundi(GameState.pity_bonus())]), "DimLabel", true))
 	if souls.is_empty():
 		col.add_child(UILabel.make(DataRegistry.t("status.no_souls"), "DimLabel", true))
 	var core := GameState.preview_core()

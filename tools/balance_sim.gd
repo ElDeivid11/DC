@@ -4,9 +4,10 @@ extends Node
 ## Juega N runs "promedio" con las MISMAS reglas del juego (CombatCore,
 ## RunRules, balance.json, floors.json, almas y sinergias) y una política
 ## simple (curarse con pociones, defenderse del golpe cargado del jefe, usar
-## la activa que más rinde o atacar; tomar almas y cambiarlas si mejora el
-## conjunto), y reporta hasta qué piso se llega en tres configuraciones: sin
-## mejoras, mejoras al máximo, y mejoras al máximo + todo desbloqueado.
+## la activa que más rinde —contando la marca puesta y si Ejecutar ya
+## alcanza— o atacar; tomar almas y cambiarlas si mejora el conjunto), y
+## reporta hasta qué piso se llega en tres configuraciones: sin mejoras,
+## mejoras al máximo, y mejoras al máximo + todo desbloqueado.
 ##
 ## Objetivo (guía §9): sin mejoras → piso 2–3; todo al máximo → piso 4–5
 ## con riesgo real. Si el piso 1 queda trivial con todo maxeado, bajar el
@@ -15,7 +16,22 @@ extends Node
 ## Niveles: cada kill da EXP (RunRules.kill_xp) y los puntos se reparten al
 ## momento con una de dos políticas: "parejo" (las 6 estadísticas en ronda)
 ## o "VIT/ATQ" (solo vida y ataque, la más agresiva). Cada configuración se
-## reporta con las dos, más el nivel medio al terminar.
+## reporta con las dos.
+##
+## BUILDS (un promedio no detecta un build roto):
+##  - Después del resumen, para "sin mejoras" y "al máximo" (parejo): de las
+##    runs que llegan al piso 3, victorias y piso medio según los pactos y la
+##    afinidad dominante que llevaban AL EMPEZAR el piso 3 (así se comparan
+##    runs que llegaron igual de lejos), y cuánto se lleva cada alma.
+##  - --builds: builds FORZADOS (el héroe empieza con esas almas y no cambia):
+##    sin almas, cada pacto solo y cada afinidad al máximo, sin mejoras y al
+##    máximo. Mide los builds concretos sin depender del azar del drop.
+##  - --build=a,b,c: solo ese build forzado.
+##  - --check: los builds forzados y el promedio sin mejoras contra los
+##    umbrales de abajo; si algo se pasa imprime «TEST FAIL» y sale con 1 (lo
+##    corre tools/verify.sh).
+## En todos los casos se cuenta qué hace el héroe en sus turnos (atacar,
+## activas, defender, curarse): si «atacar» desaparece, algo está roto.
 ##
 ## Para probar valores sin tocar balance.json (se pueden correr varias a la vez):
 ##   godot --headless --path . res://tools/balance_sim.tscn -- \
@@ -23,6 +39,19 @@ extends Node
 ## (el valor se lee como JSON; xp_to_next necesita max_level − 1 valores).
 
 const RUNS := 300
+## Runs por build forzado (--builds) y en --check.
+const BUILD_RUNS := 150
+const CHECK_RUNS := 100
+## Umbrales de --check (sin mejoras, reparto parejo): ningún build forzado
+## gana más que esto; en las runs normales «atacar» sigue siendo una parte de
+## los turnos (por build no se exige: con dos activas o más, los combates
+## cortos de los primeros pisos se resuelven sin atacar) y el piso medio
+## queda en este rango.
+const CHECK_MAX_BUILD_WIN := 0.6
+const CHECK_MIN_ATTACK_SHARE := 0.15
+const CHECK_FLOOR_RANGE := Vector2(2.2, 3.6)
+## Rango con el que se fijan las almas de un build forzado.
+const FORCED_RANK := 6
 ## Fracción de enemigos normales del piso que el jugador termina peleando.
 const ENCOUNTER_RATE := 0.75
 ## Cómo empiezan los combates (chocar primero / normal / emboscada). Los
@@ -37,66 +66,201 @@ const POLICIES := {
 }
 
 var rng := RandomNumberGenerator.new()
-## % de HP del equipo al terminar el piso 1 (para ver si queda trivial).
-var _floor1_hp: Array[float] = []
 var _policy: Array = []
-var _levels: Array[float] = []
-## Al terminar cada run: almas puestas, niveles de afinidad y pactos activos.
-var _souls: Array[float] = []
-## Muertes contra el jefe del piso (del total de muertes).
+## Almas fijas del build forzado (con _forced_mode no hay drops: el build no cambia).
+var _forced: Array[String] = []
+var _forced_mode := false
+## Una entrada por run: {floor, won, level, souls, tiers, pacts, at3: {pacts, dominant} | {}}.
+var _log: Array = []
+## Muertes contra el jefe del piso / total.
 var _boss_deaths := 0
 var _deaths := 0
-var _tiers: Array[float] = []
-var _pacts: Array[float] = []
+## % de HP al terminar el piso 1 (para ver si queda trivial).
+var _floor1_hp: Array[float] = []
+## Acciones del héroe: attack | ability | defend | heal → cantidad.
+var _actions := {}
+## Almas ofrecidas / tomadas (por id de plantilla).
+var _offered := {}
+var _taken := {}
+var _failures: Array[String] = []
 
 func _ready() -> void:
 	rng.seed = 12345
 	DebugTools.set("_log_file", null) # sin log de eventos: miles de runs
+	var mode := "summary"
+	var one_build: Array[String] = []
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--set="):
 			_override(arg.substr(6))
+		elif arg == "--builds":
+			mode = "builds"
+		elif arg == "--check":
+			mode = "check"
+		elif arg.begins_with("--build="):
+			mode = "build"
+			for sid in arg.substr(8).split(","):
+				one_build.append(sid.strip_edges())
 	var t0 := Time.get_ticks_msec()
+	match mode:
+		"summary":
+			_summary()
+		"builds":
+			_forced_table(_archetypes(), BUILD_RUNS, [0, 5])
+		"build":
+			_forced_table([{"name": ", ".join(one_build), "souls": one_build}], BUILD_RUNS, [0, 5])
+		"check":
+			_check()
+	print("(%.1f s)" % ((Time.get_ticks_msec() - t0) / 1000.0))
+	for f in _failures:
+		print("TEST FAIL: balance_sim: " + f)
+	get_tree().quit(1 if not _failures.is_empty() else 0)
+
+# --- Modos --------------------------------------------------------------------------------
+
+func _summary() -> void:
 	var configs: Array = [
 		["Sin mejoras", 0, false],
 		["Mejoras al máximo", 5, false],
 		["Máximo + todo desbloqueado", 5, true],
 	]
+	var detail: Array = []
 	for cfg: Array in configs:
 		for policy: String in POLICIES.keys():
 			_policy = POLICIES[policy]
-			_report("%s (%s)" % [cfg[0], policy], int(cfg[1]), bool(cfg[2]))
-	print("(%d runs por configuración, %.1f s)" % [RUNS, (Time.get_ticks_msec() - t0) / 1000.0])
-	get_tree().quit()
+			var label := "%s (%s)" % [cfg[0], policy]
+			_run_batch(RUNS, int(cfg[1]), bool(cfg[2]))
+			print(_summary_line(label))
+			if policy == "parejo" and not bool(cfg[2]):
+				detail.append([label, _log.duplicate(), _offered.duplicate(), _taken.duplicate()])
+	print("(%d runs por configuración)" % RUNS)
+	for d: Array in detail:
+		_print_builds(String(d[0]), d[1], d[2], d[3])
 
-func _report(label: String, upgrade_level: int, unlock_all: bool) -> void:
+## Builds forzados: uno por fila, en cada nivel de mejoras pedido.
+func _forced_table(builds: Array, runs: int, upgrade_levels: Array) -> void:
+	_policy = POLICIES["parejo"]
+	for lvl: Variant in upgrade_levels:
+		print("\n== Builds forzados, %s (%d runs c/u, almas de rango %d, sin drops) ==" % ["sin mejoras" if int(lvl) == 0 else "mejoras al máximo", runs, FORCED_RANK])
+		print("%-44s %8s %9s %8s  %s" % ["build", "piso", "victoria", "atacar", "afinidades · pactos"])
+		for b: Dictionary in builds:
+			var r := _forced_run(b, runs, int(lvl))
+			print("%-44s %8.2f %8d%% %7d%%  %s" % [String(b.name).left(44), r.floor, roundi(100.0 * float(r.win)), roundi(100.0 * float(r.attack)), r.info])
+
+func _forced_run(b: Dictionary, runs: int, upgrade_level: int) -> Dictionary:
+	_forced.clear()
+	for sid: Variant in b.souls:
+		_forced.append(String(sid))
+	_forced_mode = true
+	_run_batch(runs, upgrade_level, false)
+	_forced_mode = false
+	_forced.clear()
+	var souls: Array = []
+	for sid: Variant in b.souls:
+		souls.append(DataRegistry.make_soul(String(sid), FORCED_RANK, "sim"))
+	var tiers: Array[String] = []
+	for row: Dictionary in SoulBuild.affinity_rows(souls):
+		if int(row.tier) > 0:
+			tiers.append("%s %s" % [DataRegistry.get_affinity(String(row.id)).nombre, UIFormat.roman(int(row.tier))])
+	var pacts: Array[String] = []
+	for pid in SoulBuild.active_pacts(souls):
+		pacts.append(String(DataRegistry.get_pact(pid).nombre))
+	return {"floor": _avg_of("floor"), "win": _share_of("won"), "attack": _action_share("attack"),
+		"info": "%s · %s" % [", ".join(tiers) if not tiers.is_empty() else "—", ", ".join(pacts) if not pacts.is_empty() else "—"]}
+
+## Umbrales: builds forzados sin mejoras + el promedio normal sin mejoras.
+func _check() -> void:
+	_policy = POLICIES["parejo"]
+	_run_batch(CHECK_RUNS * 2, 0, false)
+	var floor_avg := _avg_of("floor")
+	print(_summary_line("Sin mejoras (parejo)"))
+	if floor_avg < CHECK_FLOOR_RANGE.x or floor_avg > CHECK_FLOOR_RANGE.y:
+		_failures.append("piso medio sin mejoras %.2f fuera de [%.1f, %.1f]" % [floor_avg, CHECK_FLOOR_RANGE.x, CHECK_FLOOR_RANGE.y])
+	if _action_share("attack") < CHECK_MIN_ATTACK_SHARE:
+		_failures.append("«atacar» es solo el %d%% de los turnos (mínimo %d%%)" % [roundi(100.0 * _action_share("attack")), roundi(100.0 * CHECK_MIN_ATTACK_SHARE)])
+	for b: Dictionary in _archetypes():
+		var r := _forced_run(b, CHECK_RUNS, 0)
+		print("  %-44s piso %.2f · victoria %d%% · atacar %d%%" % [String(b.name).left(44), r.floor, roundi(100.0 * float(r.win)), roundi(100.0 * float(r.attack))])
+		if float(r.win) > CHECK_MAX_BUILD_WIN:
+			_failures.append("el build «%s» gana el %d%% sin mejoras (máximo %d%%)" % [b.name, roundi(100.0 * float(r.win)), roundi(100.0 * CHECK_MAX_BUILD_WIN)])
+
+## Builds de referencia: sin almas, cada pacto solo (sus dos almas) y cada
+## afinidad con las almas justas para su último nivel.
+func _archetypes() -> Array:
+	var out: Array = [{"name": "sin almas", "souls": []}]
+	for pid: String in DataRegistry.pacts.keys():
+		var p := DataRegistry.get_pact(pid)
+		out.append({"name": "pacto %s" % p.nombre, "souls": (p.almas as Array).duplicate()})
+	for af in DataRegistry.affinity_ids():
+		var levels: Array = DataRegistry.get_affinity(af).niveles
+		var need := int((levels[levels.size() - 1] as Dictionary).cantidad)
+		var souls: Array = []
+		for sid: String in DataRegistry.souls.keys():
+			if souls.size() < need and (DataRegistry.get_soul(sid).afinidades as Array).has(af) and _obtainable(sid):
+				souls.append(sid)
+		out.append({"name": "%s ×%d" % [DataRegistry.get_affinity(af).nombre, souls.size()], "souls": souls})
+	return out
+
+## Almas que se pueden conseguir en una run (alguna especie activa las suelta
+## o algún jefe de los pisos, menos el último: la run termina ahí).
+static func _obtainable(soul_id: String) -> bool:
+	for sp_id in DataRegistry.species_ids():
+		if String(DataRegistry.get_species(sp_id).get("tier", "")) != "jefe" and (DataRegistry.get_species(sp_id).almas as Array).has(soul_id):
+			return true
+	for n in range(1, DataRegistry.floor_count()):
+		if String((DataRegistry.get_floor(n).boss as Dictionary).get("soul_id", "")) == soul_id:
+			return true
+	return false
+
+# --- Runs -----------------------------------------------------------------------------------
+
+func _run_batch(runs: int, upgrade_level: int, unlock_all: bool) -> void:
 	MetaState.reset()
 	for id: String in DataRegistry.upgrades.keys():
 		MetaState.upgrades[id] = mini(upgrade_level, MetaState.upgrade_max(id))
 	MetaState.debug_set_all_unlocked(unlock_all)
-	var floors := DataRegistry.bal_i("floors_per_run", 5)
-	var reached: Array[int] = []
-	reached.resize(floors + 2)
-	reached.fill(0)
-	var total_floor := 0
+	_log.clear()
 	_floor1_hp.clear()
-	_levels.clear()
-	_souls.clear()
 	_boss_deaths = 0
 	_deaths = 0
-	_tiers.clear()
-	_pacts.clear()
-	for i in RUNS:
-		var f := _simulate_run()
-		reached[f] += 1
-		total_floor += mini(f, floors)
-	var line := "%-40s piso medio %.2f |" % [label, float(total_floor) / RUNS]
+	_actions.clear()
+	_offered.clear()
+	_taken.clear()
+	for i in runs:
+		_log.append(_simulate_run())
+
+func _summary_line(label: String) -> String:
+	var floors := DataRegistry.bal_i("floors_per_run", 5)
+	var line := "%-40s piso medio %.2f |" % [label, _avg_of("floor")]
 	for f in range(1, floors + 1):
-		line += " muere en %d: %3d%%" % [f, roundi(100.0 * reached[f] / RUNS)]
-	line += " | victoria: %d%%" % roundi(100.0 * reached[floors + 1] / RUNS)
+		var died := _log.filter(func(r: Dictionary) -> bool: return not bool(r.won) and int(r.floor) == f).size()
+		line += " muere en %d: %3d%%" % [f, roundi(100.0 * died / maxf(_log.size(), 1))]
+	line += " | victoria: %d%%" % roundi(100.0 * _share_of("won"))
 	line += " | HP al salir del piso 1: %d%%" % roundi(100.0 * _avg(_floor1_hp))
 	line += " | muertes contra jefes: %d%%" % roundi(100.0 * _boss_deaths / maxf(_deaths, 1))
-	line += " | al final: nivel %.1f, almas %.1f, niveles de afinidad %.1f, pactos %.1f" % [_avg(_levels), _avg(_souls), _avg(_tiers), _avg(_pacts)]
-	print(line)
+	line += " | al final: nivel %.1f, almas %.1f, niveles de afinidad %.1f, pactos %.1f" % [_avg_of("level"), _avg_of("souls"), _avg_of("tiers"), _avg_of("pacts")]
+	line += " | turnos: " + _actions_text()
+	return line
+
+func _actions_text() -> String:
+	var parts: Array[String] = []
+	for pair: Array in [["attack", "atacar"], ["ability", "activas"], ["defend", "defender"], ["heal", "curarse"]]:
+		parts.append("%s %d%%" % [pair[1], roundi(100.0 * _action_share(String(pair[0])))])
+	return ", ".join(parts)
+
+func _action_share(kind: String) -> float:
+	var total := 0
+	for k: Variant in _actions.keys():
+		total += int(_actions[k])
+	return float(int(_actions.get(kind, 0))) / maxf(total, 1)
+
+func _avg_of(key: String) -> float:
+	var t := 0.0
+	for r: Dictionary in _log:
+		t += float(r[key])
+	return t / maxf(_log.size(), 1)
+
+func _share_of(key: String) -> float:
+	return float(_log.filter(func(r: Dictionary) -> bool: return bool(r[key])).size()) / maxf(_log.size(), 1)
 
 static func _avg(values: Array[float]) -> float:
 	var t := 0.0
@@ -104,15 +268,24 @@ static func _avg(values: Array[float]) -> float:
 		t += v
 	return t / maxf(values.size(), 1)
 
-## Devuelve el piso donde murió (1..5) o floors+1 si ganó.
-func _simulate_run() -> int:
-	var f := _play_run()
+## Una run: {floor (donde murió, o el último si ganó), won, level, souls,
+## tiers, pacts, at3 (build al empezar el piso 3, si llegó)}.
+func _simulate_run() -> Dictionary:
+	var rec := {"at3": {}}
+	var f := _play_run(rec)
 	var m := GameState.hero()
-	_levels.append(float(int(m.level)))
-	_souls.append(float((m.souls as Array).size()))
-	_tiers.append(float(_tier_count(m.souls)))
-	_pacts.append(float(SoulBuild.active_pacts(m.souls).size()))
-	return f
+	var floors := DataRegistry.bal_i("floors_per_run", 5)
+	rec["won"] = f > floors
+	rec["floor"] = mini(f, floors)
+	rec["level"] = int(m.level)
+	rec["souls"] = (m.souls as Array).size()
+	rec["tiers"] = _tier_count(m.souls)
+	rec["pacts"] = SoulBuild.active_pacts(m.souls).size()
+	var ids: Array[String] = []
+	for s: Dictionary in m.souls:
+		ids.append(String(s.get("id", "")))
+	rec["ids"] = ids
+	return rec
 
 func _tier_count(souls: Array) -> int:
 	var n := 0
@@ -120,11 +293,29 @@ func _tier_count(souls: Array) -> int:
 		n += int(row.tier)
 	return n
 
-func _play_run() -> int:
+## La afinidad con más niveles alcanzados (con empate, más almas); "" si
+## ninguna llega al primero.
+static func _dominant(souls: Array) -> String:
+	var rows := SoulBuild.affinity_rows(souls)
+	var best := ""
+	var best_key := Vector2i(0, 0)
+	for row: Dictionary in rows:
+		var key := Vector2i(int(row.tier), int(row.count))
+		if int(row.tier) > 0 and (key.x > best_key.x or (key.x == best_key.x and key.y > best_key.y)):
+			best_key = key
+			best = String(row.id)
+	return best
+
+func _play_run(rec: Dictionary) -> int:
 	GameState.new_run(rng.randi(), false)
+	var m := GameState.hero()
+	for sid in _forced:
+		GameState.add_soul(String(m.id), DataRegistry.make_soul(sid, FORCED_RANK, "sim"))
 	var pool := MetaState.available_items()
 	var floors := DataRegistry.bal_i("floors_per_run", 5)
 	for n in range(1, floors + 1):
+		if n == 3:
+			rec["at3"] = {"pacts": SoulBuild.active_pacts(m.souls), "dominant": _dominant(m.souls)}
 		var def := DataRegistry.get_floor(n)
 		var species_pool := FloorGenerator.species_pool(int(def.rank_min), int(def.rank_max))
 		# Botín del piso: cofres y objetos sueltos.
@@ -136,17 +327,16 @@ func _play_run() -> int:
 		for k in fights:
 			# Mismo sorteo que el generador de pisos (especie, rango y tipo).
 			var roll := FloorGenerator.roll_enemy(rng, species_pool, int(def.rank_min), int(def.rank_max))
-			if not _fight(String(roll.species_id), int(roll.rank), String(roll.kind), ""):
+			if not _fight(String(roll.species_id), int(roll.rank), String(roll.kind), def):
 				_deaths += 1
 				return n
 			_heal_between_fights()
 		var b: Dictionary = def.boss
-		if not _fight(String(b.species), int(b.rank), RunRules.BOSS, String(b.soul_id)):
+		if not _fight(String(b.species), int(b.rank), RunRules.BOSS, def):
 			_deaths += 1
 			_boss_deaths += 1
 			return n
 		if n == 1:
-			var m := GameState.hero()
 			_floor1_hp.append(float(int(m.hp)) / GameState.member_max_hp(m))
 		if n < floors:
 			GameState.advance_floor()
@@ -179,7 +369,7 @@ func _best_heal_item(in_combat: bool) -> int:
 ## Un combate con CombatCore (las reglas del juego) y una política simple:
 ## curarse con poción bajo el 30%; defenderse si el jefe carga su golpe y
 ## queda poca vida; si no, la activa lista que más rinde (o atacar). true = ganó.
-func _fight(species_id: String, rank: int, kind: String, boss_soul: String) -> bool:
+func _fight(species_id: String, rank: int, kind: String, floor_def: Dictionary) -> bool:
 	var stats := RunRules.enemy_stats(rank, kind)
 	var r := rng.randf()
 	var mode := "surprise" if r < START_SURPRISE else ("ambush" if r < START_SURPRISE + START_AMBUSH else "normal")
@@ -219,12 +409,57 @@ func _fight(species_id: String, rank: int, kind: String, boss_soul: String) -> b
 	GameState.add_xp(GameState.kill_xp(rank, kind))
 	_spend_points()
 	GameState.heal_after_victory()
-	var chance := RunRules.soul_drop_chance(rank, kind, GameState.soul_chance_bonus())
-	if rng.randf() < chance:
-		var sid := boss_soul if boss_soul != "" else DataRegistry.roll_soul_id(species_id, rng)
+	if _forced_mode:
+		return true
+	# Las mismas funciones que el juego: el jefe deja elegir entre varias; el
+	# resto suelta (o no) con la racha sin alma.
+	if kind == RunRules.BOSS:
+		var options: Array = []
+		for sid in GameState.boss_soul_options(floor_def.get("boss", {}), floor_def, rng):
+			options.append(DataRegistry.make_soul(sid, rank, "sim"))
+		_offer_choice(options)
+	else:
+		var sid := GameState.roll_soul(species_id, rank, kind, rng)
+		GameState.register_soul_roll(kind, sid != "")
 		if sid != "":
 			_offer_soul(DataRegistry.make_soul(sid, rank, "sim"))
 	return true
+
+## Elegir una de varias almas: la que deja el mejor conjunto (tomándola si
+## hay lugar o cambiando la que menos aporta).
+func _offer_choice(options: Array) -> void:
+	if options.is_empty():
+		return
+	var m := GameState.hero()
+	var best: Dictionary = options[0]
+	var best_sc := -1e9
+	for opt: Dictionary in options:
+		var sid := String(opt.get("id", ""))
+		_offered[sid] = int(_offered.get(sid, 0)) + 1
+		var sc := _best_with(m.souls, opt, GameState.member_soul_capacity(m))
+		if sc > best_sc:
+			best_sc = sc
+			best = opt
+	# _offer_soul vuelve a contarla como ofrecida: se descuenta.
+	var bid := String(best.get("id", ""))
+	_offered[bid] = int(_offered[bid]) - 1
+	_offer_soul(best)
+
+## Puntaje del mejor conjunto posible con `soul` (sumarla, cambiarla o no).
+func _best_with(souls: Array, soul: Dictionary, capacity: int) -> float:
+	if souls.size() < capacity:
+		var plus := souls.duplicate()
+		plus.append(soul)
+		return _build_score(plus)
+	var best := _build_score(souls)
+	for i in souls.size():
+		var trial := souls.duplicate()
+		trial[i] = soul
+		best = maxf(best, _build_score(trial))
+	return best
+
+func _count_action(kind: String) -> void:
+	_actions[kind] = int(_actions.get(kind, 0)) + 1
 
 func _policy_act(core: CombatCore) -> void:
 	var hp_pct := float(int(core.hero.hp)) / maxi(int(core.hero.max_hp), 1)
@@ -233,9 +468,11 @@ func _policy_act(core: CombatCore) -> void:
 		var it := DataRegistry.get_item(GameState.inventory[heal_idx])
 		GameState.consume_item_at(heal_idx)
 		core.heal_hero(int(it.efecto.valor), "")
+		_count_action("heal")
 		return
 	if core.enemy_special_next() and hp_pct < 0.6 and core.shield <= 0:
 		core.defend()
+		_count_action("defend")
 		return
 	var best := -1
 	var best_v := _attack_value(core)
@@ -248,32 +485,41 @@ func _policy_act(core: CombatCore) -> void:
 			best = i
 	if best >= 0:
 		core.ability(best)
+		_count_action("ability")
 	else:
 		core.attack()
+		_count_action("attack")
+
+## Un golpe sobre un enemigo marcado pega × (1 + marca): la política lo
+## cuenta, así después de marcar elige el golpe más fuerte.
+func _mark_mult(core: CombatCore) -> float:
+	return 1.0 + core.mark
 
 func _attack_value(core: CombatCore) -> float:
-	return float(int(core.hero.atk)) + core._fx("damage_bonus_flat") + core._fx("bleed_on_hit") * 1.5
+	return (float(int(core.hero.atk)) + core._fx("damage_bonus_flat")) * _mark_mult(core) + core._fx("bleed_on_hit") * 1.5
 
 ## Cuánto rinde usar ahora la activa i (daño esperado + lo que vale su efecto).
 func _ability_value(core: CombatCore, i: int, hp_pct: float) -> float:
 	var a := core.active_of(i)
-	var hit := float(core.ability_hit(i))
+	var hit := float(core.ability_hit(i)) * _mark_mult(core)
 	var eatk := float(int(core.enemy.atk))
 	var ehp := float(int(core.enemy.hp))
 	match String(a.tipo):
 		"multigolpe":
-			return hit * core.ability_hits(i)
+			# La marca solo vale para el primer golpe.
+			return hit + float(core.ability_hit(i)) * (core.ability_hits(i) - 1)
 		"sangrado":
 			var st := float(core.ability_bleed(i))
 			return hit + minf(st * (st + 1.0) / 2.0, ehp) * 0.8
 		"aturdir":
-			return hit + (0.0 if core.stun_immune else eatk * core.ability_stun(i))
+			return hit + (0.0 if core.stun_immune() else eatk * core.ability_stun(i))
 		"drenar":
 			return hit * (1.0 + (float(a.cura) if hp_pct < 0.9 else 0.0))
 		"escudo":
 			return float(core.ability_shield(i)) * (1.0 if hp_pct < 0.8 else 0.4)
 		"marca":
-			return hit + float(a.marca) * float(int(core.hero.atk))
+			# Gastar una marca para poner otra no rinde.
+			return float(core.ability_hit(i)) + (float(a.marca) * float(int(core.hero.atk)) if core.mark <= 0.0 else 0.0)
 		"debilitar":
 			return hit + eatk * float(a.debilita) * int(a.turnos)
 		"ejecutar":
@@ -283,10 +529,13 @@ func _ability_value(core: CombatCore, i: int, hp_pct: float) -> float:
 ## Alma nueva: si hay lugar se toma; si no, se cambia por la que menos aporta
 ## si el cambio mejora el «puntaje» del conjunto (sinergias + poder).
 func _offer_soul(soul: Dictionary) -> void:
+	var sid := String(soul.get("id", ""))
+	_offered[sid] = int(_offered.get(sid, 0)) + 1
 	var m := GameState.hero()
 	var souls: Array = m.souls
 	if souls.size() < GameState.member_soul_capacity(m):
 		GameState.add_soul(String(m.id), soul)
+		_taken[sid] = int(_taken.get(sid, 0)) + 1
 		return
 	var base := _build_score(souls)
 	var best_i := -1
@@ -300,6 +549,7 @@ func _offer_soul(soul: Dictionary) -> void:
 			best_i = i
 	if best_i >= 0:
 		GameState.add_soul(String(m.id), soul, best_i)
+		_taken[sid] = int(_taken.get(sid, 0)) + 1
 
 func _build_score(souls: Array) -> float:
 	var sc := 0.0
@@ -318,6 +568,46 @@ func _spend_points() -> void:
 				spent += int(m.stats[id])
 			var stat := String(_policy[spent % _policy.size()])
 			GameState.apply_points(m, {stat: 1})
+
+# --- Builds de runs normales ------------------------------------------------------------
+
+## De las runs que llegan al piso 3: victorias y piso medio según los pactos y
+## la afinidad dominante que llevaban al empezarlo; y qué almas se llevan.
+func _print_builds(label: String, log_: Array, offered: Dictionary, taken: Dictionary) -> void:
+	var reached := log_.filter(func(r: Dictionary) -> bool: return not (r.at3 as Dictionary).is_empty())
+	print("\n== Builds en «%s»: %d de %d runs llegan al piso 3 (victoria %d%%, piso medio %.2f) ==" % [label, reached.size(), log_.size(), roundi(100.0 * _win_of(reached)), _floor_of(reached)])
+	print("%-34s %6s %9s %8s" % ["al empezar el piso 3, con…", "runs", "victoria", "piso"])
+	var none := reached.filter(func(r: Dictionary) -> bool: return (r.at3.pacts as Array).is_empty())
+	print("%-34s %6d %8d%% %8.2f" % ["ningún pacto", none.size(), roundi(100.0 * _win_of(none)), _floor_of(none)])
+	for pid: String in DataRegistry.pacts.keys():
+		var has_pact := reached.filter(func(r: Dictionary) -> bool: return (r.at3.pacts as Array).has(pid))
+		if has_pact.is_empty():
+			continue
+		print("%-34s %6d %8d%% %8.2f" % ["pacto " + String(DataRegistry.get_pact(pid).nombre), has_pact.size(), roundi(100.0 * _win_of(has_pact)), _floor_of(has_pact)])
+	var groups: Array[String] = DataRegistry.affinity_ids()
+	groups.append("")
+	for af in groups:
+		var dom := reached.filter(func(r: Dictionary) -> bool: return String(r.at3.dominant) == af)
+		if dom.is_empty():
+			continue
+		var row_name := "sin afinidad dominante" if af == "" else "dominante " + String(DataRegistry.get_affinity(af).nombre)
+		print("%-34s %6d %8d%% %8.2f" % [row_name, dom.size(), roundi(100.0 * _win_of(dom)), _floor_of(dom)])
+	var line := "almas (ofrecida → tomada · llevada al final):"
+	for sid: String in DataRegistry.souls.keys():
+		if not offered.has(sid):
+			continue
+		var carried := log_.filter(func(r: Dictionary) -> bool: return (r.ids as Array).has(sid)).size()
+		line += "\n  %-22s %4d → %3d%% · %3d%% de las runs" % [String((DataRegistry.get_soul(sid).active as Dictionary).name), int(offered[sid]), roundi(100.0 * int(taken.get(sid, 0)) / maxf(int(offered[sid]), 1)), roundi(100.0 * carried / maxf(log_.size(), 1))]
+	print(line)
+
+static func _win_of(runs: Array) -> float:
+	return float(runs.filter(func(r: Dictionary) -> bool: return bool(r.won)).size()) / maxf(runs.size(), 1)
+
+static func _floor_of(runs: Array) -> float:
+	var t := 0.0
+	for r: Dictionary in runs:
+		t += float(r.floor)
+	return t / maxf(runs.size(), 1)
 
 ## "--set=a.b.c=valor": pisa balance.json en memoria (valor en JSON).
 func _override(spec: String) -> void:

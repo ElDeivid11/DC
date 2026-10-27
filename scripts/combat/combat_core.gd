@@ -32,11 +32,13 @@ var shield := 0
 var defending := false
 var last_stand_used := false
 ## Estados del enemigo: sangrado (daño al empezar su turno, baja 1),
-## aturdido (pierde turnos; después resiste hasta volver a actuar), marca
+## aturdido (pierde turnos; después resiste sus próximas acciones), marca
 ## (el próximo golpe hace +x), debilitado (pega un x% menos unos turnos).
+## Todos con tope (balance.json → combat.topes).
 var bleed := 0
 var stun := 0
-var stun_immune := false
+## Acciones del enemigo que faltan para que se lo pueda volver a aturdir.
+var stun_resist := 0
 var mark := 0.0
 var weak_turns := 0
 var weak_pct := 0.0
@@ -59,6 +61,19 @@ static func _bal(path: String, default: float) -> float:
 
 func _fx(type: String) -> float:
 	return float(fx.get(type, 0.0))
+
+## Tope de un efecto que se acumula (balance.json → combat.topes.<nombre>).
+static func cap(name: String, default: float) -> float:
+	return DataRegistry.bal_f("combat.topes." + name, default)
+
+func stun_immune() -> bool:
+	return stun_resist > 0
+
+func _add_bleed(n: int) -> void:
+	bleed = mini(bleed + n, int(cap("sangrado", 12)))
+
+func _add_shield(n: int) -> void:
+	shield = mini(shield + n, maxi(roundi(int(hero.max_hp) * cap("escudo_pct_hp", 1.0)), 1))
 
 ## mode: "surprise" | "boss" (el equipo golpea primero ×1,5 y el enemigo
 ## pierde su primer turno) | "ambush" (el enemigo pega primero ×1,5) | "normal".
@@ -85,7 +100,7 @@ func setup(p_hero: Dictionary, p_enemy: Dictionary, mode := "normal") -> Array:
 	var ev: Array = []
 	var start := int(_fx("start_shield"))
 	if start > 0:
-		shield += start
+		_add_shield(start)
 		ev.append({"shield": start, "log": DataRegistry.t("combat.log_start_shield", [start]), "tone": "soul"})
 	return ev
 
@@ -118,7 +133,7 @@ func attack() -> Array:
 	# Afinidad Sangre: los ataques normales abren heridas.
 	var b := int(_fx("bleed_on_hit"))
 	if b > 0 and not enemy_dead():
-		bleed += b
+		_add_bleed(b)
 	return ev
 
 func defend() -> Array:
@@ -161,9 +176,13 @@ func ability_power(i: int) -> int:
 	var soul: Dictionary = hero.souls[i]
 	return int(hero.atk) + int(soul.get("bonus_poder", 0)) + int(hero.ability_bonus) + int(_fx("active_power_flat"))
 
-## Cada cuántos turnos se puede usar (la recarga menos Coro y pactos; mínimo 1).
+## Cada cuántos turnos se puede usar: la recarga menos Coro y pactos, pero
+## nunca por debajo de almas.recarga_minima (o de la propia, si ya era menor):
+## una activa lista todos los turnos deja a «Atacar» sin uso.
 func recharge(i: int) -> int:
-	return maxi(1, int(active_of(i).get("recarga", 1)) - int(_fx("cooldown_reduction")))
+	var base := maxi(1, int(active_of(i).get("recarga", 1)))
+	var floor_ := mini(base, maxi(1, DataRegistry.bal_i("almas.recarga_minima", 2)))
+	return maxi(floor_, base - int(_fx("cooldown_reduction")))
 
 ## Daño de un golpe de la activa sin crítico ni marca (para el menú).
 func ability_hit(i: int) -> int:
@@ -182,9 +201,12 @@ func ability_shield(i: int) -> int:
 func ability_bleed(i: int) -> int:
 	return roundi(int(active_of(i).get("sangrado", 0)) * (1.0 + _fx("bleed_apply_mult")))
 
-## Turnos de aturdimiento (con Cabeza dura).
+## Turnos de aturdimiento (con Cabeza dura), con tope; a un jefe, menos.
 func ability_stun(i: int) -> int:
-	return int(active_of(i).get("turnos", 0)) + int(_fx("stun_extra_turn"))
+	var turns := mini(int(active_of(i).get("turnos", 0)) + int(_fx("stun_extra_turn")), int(cap("aturdir_turnos", 2)))
+	if String(enemy.get("kind", "")) == RunRules.BOSS:
+		turns = mini(turns, DataRegistry.bal_i("combat.boss_stun_max", 1))
+	return turns
 
 ## Umbral de Ejecutar (con Verdugo).
 func execute_threshold(i: int) -> float:
@@ -227,37 +249,38 @@ func ability(i: int) -> Array:
 			var h := _strike(p, 0.0, ev)
 			var st := ability_bleed(i)
 			if not enemy_dead():
-				bleed += st
+				_add_bleed(st)
 			_log_hit(h, "combat.log_bleed_apply", [who, aname, h.enemy_dmg, st])
 		"aturdir":
 			var h := _strike(p, 0.0, ev)
 			if enemy_dead():
 				_log_hit(h, "combat.log_ability", [who, aname, h.enemy_dmg])
-			elif stun_immune:
+			elif stun_immune():
 				_log_hit(h, "combat.log_stun_resist", [who, aname, h.enemy_dmg, enemy.name])
 			else:
-				stun += ability_stun(i)
+				stun = maxi(stun, ability_stun(i))
 				_log_hit(h, "combat.log_stun", [who, aname, h.enemy_dmg, enemy.name])
 		"drenar":
 			var h := _strike(p, 0.0, ev)
 			var healed := _heal(roundi(int(h.enemy_dmg) * (float(a.cura) + _fx("drain_bonus_pct"))), ev)
 			_log_hit(h, "combat.log_drain", [who, aname, h.enemy_dmg, healed])
 		"escudo":
-			var s := ability_shield(i)
-			shield += s
+			var before := shield
+			_add_shield(ability_shield(i))
+			var s := shield - before
 			ev.append({"shield": s, "log": DataRegistry.t("combat.log_shield", [who, aname, s]), "tone": "soul"})
 		"marca":
 			var h := _strike(p, 0.0, ev)
 			var m := float(a.marca) + _fx("mark_bonus")
 			if not enemy_dead():
-				mark = maxf(mark, m)
+				mark = minf(maxf(mark, m), cap("marca", 1.0))
 			_log_hit(h, "combat.log_mark", [who, aname, h.enemy_dmg, roundi(m * 100.0)])
 		"debilitar":
 			var h := _strike(p, 0.0, ev)
 			if not enemy_dead():
 				weak_turns = maxi(weak_turns, int(a.turnos))
-				weak_pct = maxf(weak_pct, float(a.debilita))
-				bleed += int(_fx("weaken_bleed"))
+				weak_pct = minf(maxf(weak_pct, float(a.debilita)), cap("debilita", 0.6))
+				_add_bleed(int(_fx("weaken_bleed")))
 			_log_hit(h, "combat.log_weaken", [who, aname, h.enemy_dmg, enemy.name])
 		"ejecutar":
 			var low := execute_ready(i)
@@ -282,19 +305,19 @@ func _strike(base: float, extra_crit: float, ev: Array) -> Dictionary:
 		mark = 0.0
 	var crit := rng.randf() < _fx("crit_chance") + float(hero.crit_bonus) + extra_crit
 	if crit:
-		dmg *= _bal("crit_mult", 2.0) + _fx("crit_damage_bonus")
+		dmg *= minf(_bal("crit_mult", 2.0) + _fx("crit_damage_bonus"), cap("critico_mult", 3.0))
 	var n := maxi(roundi(dmg), 1)
 	if one_hit:
 		n = maxi(n, int(enemy.hp))
 	enemy["hp"] = int(enemy.hp) - n
 	var h := {"enemy_dmg": n, "crit": crit}
 	ev.append(h)
-	var steal := _fx("lifesteal_pct")
+	var steal := minf(_fx("lifesteal_pct"), cap("robo_de_vida", 0.4))
 	if steal > 0.0:
 		_heal(roundi(n * steal), ev)
 	if crit:
 		if _fx("crit_marks") > 0.0 and not enemy_dead():
-			mark = maxf(mark, _fx("crit_marks"))
+			mark = minf(maxf(mark, _fx("crit_marks")), cap("marca", 1.0))
 		var c := int(_fx("coin_on_crit"))
 		if c > 0:
 			bonus_coins += c
@@ -335,7 +358,7 @@ func enemy_turn_start() -> Array:
 	bleed -= 1
 	enemy["hp"] = int(enemy.hp) - dmg
 	ev.append({"enemy_dmg": dmg, "bleed": true, "log": DataRegistry.t("combat.log_bleed_tick", [enemy.name, dmg]), "tone": "hit"})
-	var steal := _fx("bleed_lifesteal_pct")
+	var steal := minf(_fx("bleed_lifesteal_pct"), cap("robo_de_vida_sangrado", 0.5))
 	if steal > 0.0:
 		_heal(roundi(dmg * steal), ev)
 	return ev
@@ -348,11 +371,11 @@ func enemy_act() -> Array:
 	if intent == "stunned":
 		stun -= 1
 		if stun == 0:
-			stun_immune = true
+			stun_resist = maxi(1, DataRegistry.bal_i("combat.stun_resist_actions", 2))
 		ev.append({"log": DataRegistry.t("combat.log_enemy_dazed", [enemy.name]), "tone": "info"})
 	else:
 		enemy_turns += 1
-		stun_immune = false
+		stun_resist = maxi(stun_resist - 1, 0)
 		var raw: float
 		if intent == "special":
 			raw = int(enemy.atk) * _bal("boss_ability_mult", 1.6)

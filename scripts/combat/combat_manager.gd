@@ -47,6 +47,8 @@ const LOG_LINES := 3
 ## Registro: letras por segundo al escribirse la última línea.
 const TYPE_CPS := 60.0
 const ENEMY_BAR_W := 600
+## Ancho de cada columna en la elección de almas del jefe.
+const CHOICE_W := 368
 ## Un cuadro de las animaciones por pasos (≈ 15 fps).
 const STEP := 0.066
 ## Estados del enemigo: ícono del kit y rampa.
@@ -71,6 +73,9 @@ var start_mode := "normal"
 var flee_chance := 0.5
 ## Alma ya sorteada al empezar ({} = no suelta nada). Se revela al ganar.
 var soul_drop: Dictionary = {}
+## Jefe: almas para elegir una (GameState.boss_soul_options). Con más de una,
+## al ganar se elige antes de la revelación; la elegida pasa a soul_drop.
+var soul_options: Array = []
 ## Para el resumen post-combate: {coins, xp, first_kill, first_kill_bonus, species_name}
 var reward_preview := {"coins": 0, "first_kill": false, "first_kill_bonus": 0}
 var god_mode := false
@@ -111,6 +116,8 @@ var dialog: CombatDialog
 var _menu_level := ""
 var _log_tween: Tween
 var _status_key := ""
+## Adónde vuelve «Volver» desde el reemplazo: la revelación o la elección del jefe.
+var _soul_back := Callable()
 
 func _ready() -> void:
 	layer = 10
@@ -840,7 +847,9 @@ func _show_victory() -> void:
 				rows.add_child(_note_row(UIIcon.make("almas", "alma"), DataRegistry.t("combat.slot_up_line", [int(hero_data.soul_capacity_win)]), UIStyle.SOUL))
 	if reward_preview.get("first_kill", false):
 		rows.add_child(_note_row(UISprite.new("seal_mini"), DataRegistry.t("combat.first_kill", [String(reward_preview.get("species_name", enemy_data.name)), UIFormat.coins(int(reward_preview.first_kill_bonus))]), UIStyle.ACCENT))
-	if not soul_drop.is_empty():
+	if soul_options.size() > 1:
+		rows.add_child(_note_row(UIIcon.make("almas", "alma"), DataRegistry.t("combat.soul_hint_choice", [soul_options.size()]), UIStyle.SOUL))
+	elif not soul_drop.is_empty() or not soul_options.is_empty():
 		rows.add_child(_note_row(UIIcon.make("almas", "alma"), DataRegistry.t("combat.soul_hint"), UIStyle.SOUL))
 	d.add_button(DataRegistry.t("ui.continue"), _after_victory_summary).call_deferred("grab_focus")
 
@@ -876,10 +885,64 @@ func _dismiss_dialog() -> void:
 	dialog = null
 
 func _after_victory_summary() -> void:
+	if soul_options.size() > 1:
+		_soul_back = _choose_soul
+		_choose_soul()
+		return
+	if soul_drop.is_empty() and soul_options.size() == 1:
+		soul_drop = soul_options[0]
 	if soul_drop.is_empty():
 		combat_ended.emit("victory", _result())
 		return
+	_soul_back = _reveal_soul
 	_reveal_soul()
+
+## Jefe: elegir una de sus almas. Una columna por alma: su tarjeta (con las
+## cifras que tendría en este héroe), lo que activaría y «Elegir»; o
+## dejarlas todas. Sin lugar, la elegida pasa a «Reemplazar una…».
+func _choose_soul() -> void:
+	var souls := _hero_souls()
+	var full := souls.size() >= _capacity_after_win()
+	var text := DataRegistry.t("combat.soul_choice_text_full" if full else "combat.soul_choice_text", [souls.size(), _capacity_after_win()])
+	var d := _open_dialog(DataRegistry.t("combat.soul_choice_title"), text, "soul", "soul", CHOICE_W * soul_options.size() + GAP * (soul_options.size() - 1) + 64)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", GAP)
+	row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var picks: Array[UIButton] = []
+	for opt: Dictionary in soul_options:
+		var col := VBoxContainer.new()
+		col.custom_minimum_size.x = CHOICE_W
+		col.add_theme_constant_override("separation", 4)
+		row.add_child(col)
+		var after := souls.duplicate()
+		after.append(opt)
+		var card := UISoulCard.new(opt, true, _preview_core(after), after.size() - 1)
+		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		card.add_child(UISoulMotes.new())
+		col.add_child(card)
+		_pop_in(card)
+		col.add_child(UISynergyDiff.new(SoulBuild.diff_if_added(souls, opt) if not full else {}, String(opt.get("id", "")), souls, CHOICE_W - 40, true))
+		var chosen := opt
+		var b := UIButton.make(DataRegistry.t("combat.soul_pick"), func() -> void:
+			soul_drop = chosen
+			if full:
+				_choose_replacement()
+			else:
+				SceneRouter.play_ui("soul")
+				combat_ended.emit("victory", _result({"member_id": String(hero_data.id), "soul": soul_drop, "replace_index": -1})))
+		b.icon = UIIcon.kit_texture("soul_empty" if full else "soul_full")
+		col.add_child(b)
+		picks.append(b)
+	d.add_content(row)
+	var leave := d.add_button(DataRegistry.t("combat.soul_leave_all"), func() -> void: combat_ended.emit("victory", _result()))
+	for k in picks.size():
+		if k > 0:
+			picks[k].focus_neighbor_left = picks[k].get_path_to(picks[k - 1])
+		if k < picks.size() - 1:
+			picks[k].focus_neighbor_right = picks[k].get_path_to(picks[k + 1])
+		picks[k].focus_neighbor_bottom = picks[k].get_path_to(leave)
+	leave.focus_neighbor_top = leave.get_path_to(picks[0])
+	picks[0].call_deferred("grab_focus")
 
 func _hero_souls() -> Array:
 	return hero_data.get("souls", [])
@@ -948,7 +1011,7 @@ func _pop_in(c: Control) -> void:
 ## fila dice qué se gana y qué se pierde con ese cambio. Esc vuelve.
 func _choose_replacement() -> void:
 	var d := _open_dialog(DataRegistry.t("combat.replace_title", [hero_data.get("name", "")]), DataRegistry.t("combat.replace_text"), "danger", "", 820)
-	d.on_cancel = _reveal_soul
+	d.on_cancel = _soul_back
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 8)
 	var replace_buttons: Array = []
@@ -983,7 +1046,7 @@ func _choose_replacement() -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
 	d.add_content(scroll)
-	var back := d.add_button(DataRegistry.t("ui.back"), _reveal_soul)
+	var back := d.add_button(DataRegistry.t("ui.back"), _soul_back)
 	var discard := d.add_button(DataRegistry.t("combat.discard_new"), func() -> void: combat_ended.emit("victory", _result()))
 	var chain: Array = replace_buttons.duplicate()
 	chain.append(discard)
