@@ -13,7 +13,7 @@ func test_cada_opcion_arma_un_retrato() -> void:
 			check(not img.is_invisible(), "%s=%d: el retrato no sale vacío" % [key, i])
 
 func test_cambiar_una_parte_cambia_el_retrato() -> void:
-	var base := DataRegistry.default_look("elena")
+	var base := DataRegistry.default_look("bjorn")
 	# Sin tocado (bajo la capucha el pelo no se ve).
 	base["tocado"] = 0
 	var a := HeroPortrait.image(base).get_data()
@@ -29,7 +29,7 @@ func test_cambiar_una_parte_cambia_el_retrato() -> void:
 	check(HeroPortrait.image(hooded).get_data() != h, "cambiar color_capa cambia la capucha")
 
 func test_bajo_la_capucha_no_se_ve_el_pelo() -> void:
-	var look := DataRegistry.default_look("elena")
+	var look := DataRegistry.default_look("bjorn")
 	look["tocado"] = 1
 	var a := HeroPortrait.image(look).get_data()
 	look["pelo"] = (int(look.pelo) + 1) % DataRegistry.look_options("pelo")

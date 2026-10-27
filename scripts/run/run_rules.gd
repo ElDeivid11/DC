@@ -25,7 +25,6 @@ static func enemy_stats(rank: int, kind: String) -> Dictionary:
 	return {
 		"hp": roundi(float(s.hp) * mult),
 		"atk": roundi(float(s.atk) * mult),
-		"ability_damage": int(s.ability_damage),
 	}
 
 ## Monedas por matar: (kill_base − rango); élite ×elite_mult; jefe = 25 × piso.
@@ -107,10 +106,11 @@ static func level_after_xp(level: int, xp: int, gained: int) -> int:
 		lvl += 1
 	return lvl
 
-## Almas extra por nivel: +1 cada `soul_slot_every` niveles (nivel 2, 4, 6…).
+## Almas extra por nivel: +1 cada `soul_slot_every` niveles a partir del 1
+## (con 2: niveles 3, 5, 7, 9).
 static func level_soul_slots(level: int) -> int:
 	var every := DataRegistry.bal_i("leveling.soul_slot_every", 2)
-	return floori(level / float(every)) if every > 0 else 0
+	return floori(maxi(level - 1, 0) / float(every)) if every > 0 else 0
 
 ## Efecto de los puntos de una estadística. Los valores por punto pueden ser
 ## fraccionarios: ATQ, DEF y ESP van por escalones (hacia abajo: con 0.25, +1

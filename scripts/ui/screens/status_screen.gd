@@ -140,36 +140,41 @@ func _fill_party(row: HBoxContainer) -> void:
 			pts.add_child(pl)
 			box.add_child(pts)
 
+## Almas del héroe: sus tarjetas (con las cifras reales) a la izquierda y
+## las sinergias (afinidades y pactos) a la derecha.
 func _souls_page() -> Control:
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var m := GameState.hero()
 	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", UIStyle.SPACE * 4)
-	scroll.add_child(row)
-	for m: Dictionary in GameState.party:
-		var col := VBoxContainer.new()
-		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		col.add_theme_constant_override("separation", UIStyle.SPACE * 2)
-		row.add_child(col)
-		var head := HBoxContainer.new()
-		head.add_theme_constant_override("separation", UIStyle.SPACE * 2)
-		col.add_child(head)
-		var pic := UIPortrait.for_hero(String(m.id), 48)
-		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		head.add_child(pic)
-		var hn := UILabel.make(String(m.name), "HeadLabel")
-		hn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		head.add_child(hn)
-		var souls: Array = m.souls
-		var slots := UISoulSlots.new(souls.size(), GameState.member_soul_capacity(m))
-		head.add_child(slots)
-		col.add_child(UIDivider.new(240))
-		if souls.is_empty():
-			col.add_child(UILabel.make(DataRegistry.t("status.no_souls"), "DimLabel", true))
-		for soul: Dictionary in souls:
-			col.add_child(UISoulCard.new(soul))
-	return scroll
+	var left_scroll := ScrollContainer.new()
+	left_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	left_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(left_scroll)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	left_scroll.add_child(col)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+	col.add_child(head)
+	var souls: Array = m.get("souls", [])
+	head.add_child(UISoulSlots.new(souls.size(), GameState.member_soul_capacity(m) if not m.is_empty() else 0))
+	var hn := UILabel.make(DataRegistry.t("status.souls_count", [souls.size(), GameState.member_soul_capacity(m) if not m.is_empty() else 0]), "HeadLabel")
+	hn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(hn)
+	if souls.is_empty():
+		col.add_child(UILabel.make(DataRegistry.t("status.no_souls"), "DimLabel", true))
+	var core := GameState.preview_core()
+	for i in souls.size():
+		col.add_child(UISoulCard.new(souls[i], false, core, i))
+	var right_scroll := ScrollContainer.new()
+	right_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right_scroll.custom_minimum_size.x = 440
+	row.add_child(right_scroll)
+	var synergies := UISynergyPanel.new(souls)
+	synergies.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_scroll.add_child(synergies)
+	return row
 
 ## Morral de solo lectura (para usar algo, el Inventario).
 func _items_page() -> Control:

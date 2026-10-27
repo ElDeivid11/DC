@@ -219,7 +219,7 @@ func _lights_here() -> Array:
 	var found: Array = []
 	for node: Node in get_tree().get_nodes_in_group(LIGHTS_GROUP):
 		var l := node as Light3D
-		if l == null or not l.is_visible_in_tree():
+		if l == null or not l.is_visible_in_tree() or (l == light and not own_light_on_self):
 			continue
 		var att := 1.0
 		var dir := Vector3.ZERO

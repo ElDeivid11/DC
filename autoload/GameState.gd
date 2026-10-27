@@ -6,7 +6,8 @@ extends Node
 ## Lee MetaState (mejoras compradas, objetos disponibles) pero NUNCA lo
 ## escribe.
 ##
-## Personaje (party[i]):
+## Héroe (party[0]: el equipo es de UN personaje; se deja la lista para no
+## atar el resto del código a eso):
 ##   {id, name, base_hp, base_atk, hp, souls: [], soul_capacity,
 ##    level, xp, points, stats: {vit, atq, def, esp, agi, sue}}
 ##   base_hp/base_atk ya incluyen las mejoras de meta (se aplican al empezar).
@@ -163,6 +164,13 @@ func snapshot() -> Dictionary:
 
 # --- Equipo ---------------------------------------------------------------------------
 
+## El héroe de la run ({} si no hay run).
+func hero() -> Dictionary:
+	if party.is_empty():
+		return {}
+	var m: Dictionary = party[0]
+	return m
+
 func get_member(member_id: String) -> Dictionary:
 	for m: Dictionary in party:
 		if m.id == member_id:
@@ -262,9 +270,45 @@ func apply_points(m: Dictionary, alloc: Dictionary) -> bool:
 		m["hp"] = mini(int(m.hp) + maxi(member_max_hp(m) - old_max, 0), member_max_hp(m))
 	return true
 
-## Bonus de monedas por kill del grupo: pasivas de codicia + SUE.
+## Bonus de monedas por kill: almas (Diezmo, Fortuna) + SUE.
 func party_coin_bonus() -> float:
 	return party_passive_total("coin_bonus_pct") + RunRules.stat_coins(party_stat_total("sue"))
+
+## Puntos porcentuales extra de que un enemigo suelte alma: Sabiduría (mejora),
+## SUE y Buena estrella (Fortuna).
+func soul_chance_bonus() -> float:
+	return MetaState.upgrade_bonus("soul_chance_pct") + 100.0 * RunRules.stat_soul(party_stat_total("sue")) + party_passive_total("soul_chance_pct")
+
+## EXP de una kill con el bonus de las almas (Buena estrella).
+func kill_xp(rank: int, kind: String) -> int:
+	return roundi(RunRules.kill_xp(rank, kind) * (1.0 + party_passive_total("xp_bonus_pct")))
+
+## Al ganar un combate: lo que curan las almas (Musgo de cripta). Devuelve
+## cuánto curó.
+func heal_after_victory() -> int:
+	var healed := 0
+	for m: Dictionary in alive_members():
+		healed += heal_member(m, roundi(SoulEffects.total(m, "heal_after_combat")))
+	return healed
+
+## Lo que el combate necesita del héroe (CombatCore / CombatManager). Con
+## `souls` se arma con otra lista de almas (p. ej. para mostrar cómo quedaría
+## con una nueva).
+func combat_hero(m: Dictionary, souls: Variant = null) -> Dictionary:
+	return {
+		"id": String(m.id), "name": String(m.name), "hp": int(m.hp), "max_hp": member_max_hp(m),
+		"atk": member_atk(m), "def": member_def(m), "ability_bonus": member_ability_bonus(m),
+		"crit_bonus": member_crit_bonus(m), "souls": souls if souls is Array else m.souls,
+	}
+
+## Un CombatCore con el héroe (sin enemigo): para describir sus activas con
+## las cifras reales fuera del combate (Estado, revelación de almas).
+func preview_core(souls: Variant = null) -> CombatCore:
+	var core := CombatCore.new()
+	var m := hero()
+	if not m.is_empty():
+		core.setup(combat_hero(m, souls), {"name": "", "hp": 1, "atk": 0})
+	return core
 
 func points_pending() -> bool:
 	return party.any(func(m: Dictionary) -> bool: return int(m.get("points", 0)) > 0)
@@ -298,22 +342,16 @@ func add_soul(member_id: String, soul: Dictionary, replace_index := -1) -> void:
 	var gained := member_max_hp(m) - old_max
 	m["hp"] = clampi(int(m.hp) + maxi(gained, 0), 0, member_max_hp(m))
 	var sid := String(soul.get("species", ""))
-	souls_taken.append({"member": m.name, "name": soul.active.name, "species": soul.get("source_species", ""), "rank": soul.get("source_rank", 0)})
+	souls_taken.append({"member": m.name, "name": soul.active.name, "id": soul.get("id", ""), "species": soul.get("source_species", ""), "rank": soul.get("source_rank", 0)})
 	souls_taken_by_species[sid] = int(souls_taken_by_species.get(sid, 0)) + 1
 	EventBus.soul_acquired.emit(member_id, soul)
 
-## Suma de una pasiva de alma de un tipo entre TODO el equipo vivo (p. ej.
-## coin_bonus_pct, que no es de un golpe puntual sino del grupo).
+## Suma de un efecto de almas (pasivas, afinidades y pactos) entre el equipo
+## vivo (p. ej. coin_bonus_pct, que no es de un golpe sino de la run).
 func party_passive_total(effect_type: String) -> float:
 	var total := 0.0
 	for m: Dictionary in alive_members():
-		for soul: Dictionary in m.souls:
-			var passive: Variant = soul.get("passive")
-			if passive == null:
-				continue
-			var effect: Dictionary = (passive as Dictionary).get("effect", {})
-			if effect.get("type", "") == effect_type:
-				total += float(effect.get("value", 0))
+		total += SoulEffects.total(m, effect_type)
 	return total
 
 # --- Monedas, kills y especies ----------------------------------------------------------

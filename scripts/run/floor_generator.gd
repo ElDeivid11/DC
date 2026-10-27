@@ -112,7 +112,8 @@ static func make_enemy(cell: Vector2i, species_id: String, kind: String, rank :=
 		"rank": int(sp.rank) if rank < 0 else rank,
 		"kind": kind,
 		"display_name": String(sp.display_name),
-		"soul_id": String(sp.soul_id),
+		# Alma fija (jefes, de floors.json); "" = una de su especie al azar.
+		"soul_id": "",
 		"scale_mult": 1.0,
 		"tint": Color.WHITE,
 		"eye_color": visual.get("eye_color", Color.WHITE),
@@ -172,7 +173,7 @@ static func roll_enemy(rng: RandomNumberGenerator, pool: Array[String], rank_min
 static func _apply_boss_def(boss: Dictionary, b: Dictionary) -> void:
 	boss["rank"] = int(b.get("rank", boss.rank))
 	boss["display_name"] = String(b.get("display_name", boss.display_name))
-	boss["soul_id"] = String(b.get("soul_id", boss.soul_id))
+	boss["soul_id"] = String(b.get("soul_id", ""))
 	boss["scale_mult"] = float(b.get("scale_mult", 1.0))
 	boss["tint"] = b.get("tint", Color.WHITE)
 	boss["epithet"] = String(b.get("epiteto", ""))

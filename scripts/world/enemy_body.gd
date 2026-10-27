@@ -15,6 +15,9 @@ const LOOPING: Array[String] = ["idle", "combat", "walk", "dormant"]
 var current_role := ""
 ## Luz propia (solo si visual.light existe; p. ej. el aura del nigromante).
 var light: FlickerLight = null
+## Si la luz propia también lo ilumina a él (visual.light.on_self, sí por
+## defecto). El cofre la apaga: pegada al sprite lo quemaba.
+var own_light_on_self := true
 
 ## def = species.visual (ya validado por DataRegistry); tint = color
 ## multiplicador; eye = color de los ojos (y de la luz propia, si tiene).
@@ -42,6 +45,7 @@ func _add_own_light(def: Dictionary, eye: Color) -> void:
 	if not def.has("light"):
 		return
 	var l: Dictionary = def.light
+	own_light_on_self = bool(l.get("on_self", true))
 	light = FlickerLight.make(eye.lerp(l.get("color", eye), 0.5), float(l.get("energy", 1.0)), float(l.get("range", 3.0)), 1.0, 0.1, 8.0)
 	# visual.light.pos (opcional): dónde va la luz, en metros del modelo.
 	light.position = _vec3(l.pos) if l.has("pos") else Vector3(0, 1.4, 0.4)

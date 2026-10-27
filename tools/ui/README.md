@@ -24,7 +24,7 @@ Y commitear `ui/kit/` y `ui/theme_main.tres`. Si se cambió un color de `data/ui
 
 ## Íconos
 
-Los 30 íconos son de [game-icons.net](https://game-icons.net) (repo `github.com/game-icons/icons`), **CC BY 3.0**: hay que dar crédito (ya va en Opciones → Créditos y en el README). Licencia original: `src/LICENSE_game-icons.txt`.
+Los 41 íconos (30 de menús y 11 de almas: afinidades, pacto, estados y escudo) son de [game-icons.net](https://game-icons.net) (repo `github.com/game-icons/icons`), **CC BY 3.0**: hay que dar crédito (ya va en Opciones → Créditos y en el README). Licencia original: `src/LICENSE_game-icons.txt`.
 
 - `src/icons.json`: id del juego → `autor/nombre` del SVG.
 - `src/icons_svg/<autor>/*.svg`: los SVG originales.

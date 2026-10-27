@@ -1,11 +1,12 @@
 extends Node
 ## Simulador de balance (herramienta de desarrollo, no es parte del juego):
 ##   godot --headless --path . res://tools/balance_sim.tscn
-## Juega N runs "promedio" con las MISMAS fórmulas del juego (RunRules,
-## balance.json, floors.json, almas y pasivas) y una política simple
-## (atacar, usar la mejor activa, curarse con pociones), y reporta hasta qué
-## piso se llega en tres configuraciones: sin mejoras, mejoras al máximo, y
-## mejoras al máximo + todo desbloqueado.
+## Juega N runs "promedio" con las MISMAS reglas del juego (CombatCore,
+## RunRules, balance.json, floors.json, almas y sinergias) y una política
+## simple (curarse con pociones, defenderse del golpe cargado del jefe, usar
+## la activa que más rinde o atacar; tomar almas y cambiarlas si mejora el
+## conjunto), y reporta hasta qué piso se llega en tres configuraciones: sin
+## mejoras, mejoras al máximo, y mejoras al máximo + todo desbloqueado.
 ##
 ## Objetivo (guía §9): sin mejoras → piso 2–3; todo al máximo → piso 4–5
 ## con riesgo real. Si el piso 1 queda trivial con todo maxeado, bajar el
@@ -40,6 +41,13 @@ var rng := RandomNumberGenerator.new()
 var _floor1_hp: Array[float] = []
 var _policy: Array = []
 var _levels: Array[float] = []
+## Al terminar cada run: almas puestas, niveles de afinidad y pactos activos.
+var _souls: Array[float] = []
+## Muertes contra el jefe del piso (del total de muertes).
+var _boss_deaths := 0
+var _deaths := 0
+var _tiers: Array[float] = []
+var _pacts: Array[float] = []
 
 func _ready() -> void:
 	rng.seed = 12345
@@ -72,6 +80,11 @@ func _report(label: String, upgrade_level: int, unlock_all: bool) -> void:
 	var total_floor := 0
 	_floor1_hp.clear()
 	_levels.clear()
+	_souls.clear()
+	_boss_deaths = 0
+	_deaths = 0
+	_tiers.clear()
+	_pacts.clear()
 	for i in RUNS:
 		var f := _simulate_run()
 		reached[f] += 1
@@ -80,24 +93,32 @@ func _report(label: String, upgrade_level: int, unlock_all: bool) -> void:
 	for f in range(1, floors + 1):
 		line += " muere en %d: %3d%%" % [f, roundi(100.0 * reached[f] / RUNS)]
 	line += " | victoria: %d%%" % roundi(100.0 * reached[floors + 1] / RUNS)
-	var avg := 0.0
-	for v in _floor1_hp:
-		avg += v
-	line += " | HP al salir del piso 1: %d%%" % roundi(100.0 * avg / maxf(_floor1_hp.size(), 1))
-	var lv := 0.0
-	for v in _levels:
-		lv += v
-	line += " | nivel medio al final: %.1f" % (lv / maxf(_levels.size(), 1))
+	line += " | HP al salir del piso 1: %d%%" % roundi(100.0 * _avg(_floor1_hp))
+	line += " | muertes contra jefes: %d%%" % roundi(100.0 * _boss_deaths / maxf(_deaths, 1))
+	line += " | al final: nivel %.1f, almas %.1f, niveles de afinidad %.1f, pactos %.1f" % [_avg(_levels), _avg(_souls), _avg(_tiers), _avg(_pacts)]
 	print(line)
+
+static func _avg(values: Array[float]) -> float:
+	var t := 0.0
+	for v in values:
+		t += v
+	return t / maxf(values.size(), 1)
 
 ## Devuelve el piso donde murió (1..5) o floors+1 si ganó.
 func _simulate_run() -> int:
 	var f := _play_run()
-	var lv := 0.0
-	for m: Dictionary in GameState.party:
-		lv += int(m.level)
-	_levels.append(lv / GameState.party.size())
+	var m := GameState.hero()
+	_levels.append(float(int(m.level)))
+	_souls.append(float((m.souls as Array).size()))
+	_tiers.append(float(_tier_count(m.souls)))
+	_pacts.append(float(SoulBuild.active_pacts(m.souls).size()))
 	return f
+
+func _tier_count(souls: Array) -> int:
+	var n := 0
+	for row: Dictionary in SoulBuild.affinity_rows(souls):
+		n += int(row.tier)
+	return n
 
 func _play_run() -> int:
 	GameState.new_run(rng.randi(), false)
@@ -115,20 +136,18 @@ func _play_run() -> int:
 		for k in fights:
 			# Mismo sorteo que el generador de pisos (especie, rango y tipo).
 			var roll := FloorGenerator.roll_enemy(rng, species_pool, int(def.rank_min), int(def.rank_max))
-			var sp := DataRegistry.get_species(String(roll.species_id))
-			if not _fight(int(roll.rank), String(roll.kind), String(sp.soul_id), n):
+			if not _fight(String(roll.species_id), int(roll.rank), String(roll.kind), ""):
+				_deaths += 1
 				return n
 			_heal_between_fights()
 		var b: Dictionary = def.boss
-		if not _fight(int(b.rank), RunRules.BOSS, String(b.soul_id), n):
+		if not _fight(String(b.species), int(b.rank), RunRules.BOSS, String(b.soul_id)):
+			_deaths += 1
+			_boss_deaths += 1
 			return n
 		if n == 1:
-			var hp := 0
-			var max_hp := 0
-			for m: Dictionary in GameState.party:
-				hp += int(m.hp)
-				max_hp += GameState.member_max_hp(m)
-			_floor1_hp.append(float(hp) / max_hp)
+			var m := GameState.hero()
+			_floor1_hp.append(float(int(m.hp)) / GameState.member_max_hp(m))
 		if n < floors:
 			GameState.advance_floor()
 	return floors + 1
@@ -157,90 +176,137 @@ func _best_heal_item(in_combat: bool) -> int:
 			best = i
 	return best
 
-## Combate con las fórmulas del CombatManager. true = ganó.
-func _fight(rank: int, kind: String, soul_id: String, _floor_n: int) -> bool:
+## Un combate con CombatCore (las reglas del juego) y una política simple:
+## curarse con poción bajo el 30%; defenderse si el jefe carga su golpe y
+## queda poca vida; si no, la activa lista que más rinde (o atacar). true = ganó.
+func _fight(species_id: String, rank: int, kind: String, boss_soul: String) -> bool:
 	var stats := RunRules.enemy_stats(rank, kind)
-	var ehp := int(stats.hp)
-	var eatk := int(stats.atk)
 	var r := rng.randf()
 	var mode := "surprise" if r < START_SURPRISE else ("ambush" if r < START_SURPRISE + START_AMBUSH else "normal")
 	if kind == RunRules.BOSS:
 		# En el juego el jefe no deambula (RunController._enemies_act lo salta):
-		# se lo pelea después de su presentación, con el turno gratis del equipo
+		# se lo pelea después de su presentación, con el turno gratis del héroe
 		# (modo "boss" del CombatManager, igual que un ataque sorpresa).
-		mode = "surprise"
-	var surprise := mode == "surprise"
-	var enemy_turns := 0
-	if mode == "ambush":
-		_enemy_attack(eatk, DataRegistry.bal_f("combat.ambush_damage_mult", 1.5), kind, enemy_turns)
-	for round_i in 60:
-		for m: Dictionary in GameState.alive_members():
-			if ehp <= 0:
-				break
-			var max_hp := GameState.member_max_hp(m)
-			var heal_idx := _best_heal_item(true)
-			if float(m.hp) / max_hp < 0.3 and heal_idx >= 0:
-				var it := DataRegistry.get_item(GameState.inventory[heal_idx])
-				GameState.heal_member(m, int(it.efecto.valor))
-				GameState.consume_item_at(heal_idx)
-				continue
-			var base := maxi(GameState.member_atk(m) + rng.randi_range(-1, 1), 1)
-			for soul: Dictionary in m.souls:
-				base = maxi(base, int(soul.active.damage) + GameState.member_ability_bonus(m))
-			var dmg := base + int(SoulEffects.total(m, "damage_bonus_flat"))
-			if surprise:
-				dmg = roundi(dmg * DataRegistry.bal_f("combat.surprise_damage_mult", 1.5))
-			if rng.randf() < SoulEffects.total(m, "crit_chance") + GameState.member_crit_bonus(m):
-				dmg = roundi(dmg * DataRegistry.bal_f("combat.crit_mult", 2.0))
-			ehp -= dmg
-			var steal := SoulEffects.total(m, "lifesteal_pct")
-			if steal > 0.0:
-				GameState.heal_member(m, roundi(dmg * steal))
-		if ehp <= 0:
+		mode = "boss"
+	var m := GameState.hero()
+	var core := CombatCore.new(rng)
+	core.setup(GameState.combat_hero(m), {"name": "", "hp": stats.hp, "atk": stats.atk, "kind": kind}, mode)
+	if core.ambush_pending:
+		core.enemy_act()
+	for turn in 80:
+		if core.hero_dead():
 			break
-		if surprise:
-			surprise = false
+		core.begin_hero_turn()
+		_policy_act(core)
+		var next := core.after_hero_action()
+		if next == "victory":
+			break
+		if next == "free_turn":
 			continue
-		enemy_turns += 1
-		ehp -= _enemy_attack(eatk, 1.0, kind, enemy_turns)
-		if GameState.is_party_dead():
-			return false
-	if ehp > 0:
+		core.enemy_turn_start()
+		if core.enemy_dead():
+			break
+		core.enemy_act()
+		if core.enemy_dead():
+			break
+	m["hp"] = maxi(int(core.hero.hp), 0)
+	if core.bonus_coins > 0:
+		GameState.add_coins(core.bonus_coins, "kills")
+	if not core.enemy_dead():
 		return false
-	# Victoria: monedas, alma (curva real) y asignación al que tenga lugar.
-	GameState.register_kill(DataRegistry.get_soul(soul_id).get("species", ""), rank, kind)
-	GameState.add_xp(RunRules.kill_xp(rank, kind))
+	# Victoria: monedas, EXP, curas de almas y el alma (curva real).
+	GameState.register_kill(species_id, rank, kind)
+	GameState.add_xp(GameState.kill_xp(rank, kind))
 	_spend_points()
-	var chance := RunRules.soul_drop_chance(rank, kind, MetaState.upgrade_bonus("soul_chance_pct") + 100.0 * RunRules.stat_soul(GameState.party_stat_total("sue")))
+	GameState.heal_after_victory()
+	var chance := RunRules.soul_drop_chance(rank, kind, GameState.soul_chance_bonus())
 	if rng.randf() < chance:
-		for m: Dictionary in GameState.party:
-			if int(m.hp) > 0 and (m.souls as Array).size() < GameState.member_soul_capacity(m):
-				GameState.add_soul(String(m.id), DataRegistry.make_soul(soul_id, rank, "sim"))
-				break
+		var sid := boss_soul if boss_soul != "" else DataRegistry.roll_soul_id(species_id, rng)
+		if sid != "":
+			_offer_soul(DataRegistry.make_soul(sid, rank, "sim"))
 	return true
 
-## Devuelve el daño de espinas que recibe el enemigo.
-func _enemy_attack(eatk: int, mult: float, kind: String, enemy_turns: int) -> int:
-	var alive := GameState.alive_members()
-	if alive.is_empty():
-		return 0
-	var every := DataRegistry.bal_i("combat.boss_ability_every", 3)
-	var targets: Array = alive
-	var raw := roundi((eatk + rng.randi_range(-1, 1)) * mult)
-	if kind == RunRules.BOSS and every > 0 and enemy_turns > 0 and enemy_turns % every == 0:
-		raw = maxi(roundi(eatk * DataRegistry.bal_f("combat.boss_ability_mult", 0.7) * mult), 1)
+func _policy_act(core: CombatCore) -> void:
+	var hp_pct := float(int(core.hero.hp)) / maxi(int(core.hero.max_hp), 1)
+	var heal_idx := _best_heal_item(true)
+	if hp_pct < 0.3 and heal_idx >= 0:
+		var it := DataRegistry.get_item(GameState.inventory[heal_idx])
+		GameState.consume_item_at(heal_idx)
+		core.heal_hero(int(it.efecto.valor), "")
+		return
+	if core.enemy_special_next() and hp_pct < 0.6 and core.shield <= 0:
+		core.defend()
+		return
+	var best := -1
+	var best_v := _attack_value(core)
+	for i in core.soul_count():
+		if not core.ability_ready(i):
+			continue
+		var v := _ability_value(core, i, hp_pct)
+		if v > best_v:
+			best_v = v
+			best = i
+	if best >= 0:
+		core.ability(best)
 	else:
-		targets = [alive[rng.randi_range(0, alive.size() - 1)]]
-	var thorns := 0
-	for t: Dictionary in targets:
-		var dmg := maxi(raw - int(SoulEffects.total(t, "damage_reduction_flat")), 0)
-		var def := GameState.member_def(t)
-		if def > 0 and dmg > 1:
-			dmg = maxi(dmg - def, 1)
-		t["hp"] = maxi(int(t.hp) - dmg, 0)
-		if dmg > 0:
-			thorns += int(SoulEffects.total(t, "thorns_flat"))
-	return thorns
+		core.attack()
+
+func _attack_value(core: CombatCore) -> float:
+	return float(int(core.hero.atk)) + core._fx("damage_bonus_flat") + core._fx("bleed_on_hit") * 1.5
+
+## Cuánto rinde usar ahora la activa i (daño esperado + lo que vale su efecto).
+func _ability_value(core: CombatCore, i: int, hp_pct: float) -> float:
+	var a := core.active_of(i)
+	var hit := float(core.ability_hit(i))
+	var eatk := float(int(core.enemy.atk))
+	var ehp := float(int(core.enemy.hp))
+	match String(a.tipo):
+		"multigolpe":
+			return hit * core.ability_hits(i)
+		"sangrado":
+			var st := float(core.ability_bleed(i))
+			return hit + minf(st * (st + 1.0) / 2.0, ehp) * 0.8
+		"aturdir":
+			return hit + (0.0 if core.stun_immune else eatk * core.ability_stun(i))
+		"drenar":
+			return hit * (1.0 + (float(a.cura) if hp_pct < 0.9 else 0.0))
+		"escudo":
+			return float(core.ability_shield(i)) * (1.0 if hp_pct < 0.8 else 0.4)
+		"marca":
+			return hit + float(a.marca) * float(int(core.hero.atk))
+		"debilitar":
+			return hit + eatk * float(a.debilita) * int(a.turnos)
+		"ejecutar":
+			return hit * (float(a.mult) if core.execute_ready(i) else 1.0)
+	return hit
+
+## Alma nueva: si hay lugar se toma; si no, se cambia por la que menos aporta
+## si el cambio mejora el «puntaje» del conjunto (sinergias + poder).
+func _offer_soul(soul: Dictionary) -> void:
+	var m := GameState.hero()
+	var souls: Array = m.souls
+	if souls.size() < GameState.member_soul_capacity(m):
+		GameState.add_soul(String(m.id), soul)
+		return
+	var base := _build_score(souls)
+	var best_i := -1
+	var best := base
+	for i in souls.size():
+		var trial := souls.duplicate()
+		trial[i] = soul
+		var sc := _build_score(trial)
+		if sc > best:
+			best = sc
+			best_i = i
+	if best_i >= 0:
+		GameState.add_soul(String(m.id), soul, best_i)
+
+func _build_score(souls: Array) -> float:
+	var sc := 0.0
+	for soul: Dictionary in souls:
+		sc += float(soul.get("bonus_poder", 0)) * 0.5 + 1.0
+	sc += _tier_count(souls) * 2.0 + SoulBuild.active_pacts(souls).size() * 2.5
+	return sc
 
 ## Reparte todos los puntos libres según la política (en ronda, continuando
 ## desde lo que ya tiene cada personaje).

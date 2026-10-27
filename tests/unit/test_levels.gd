@@ -38,12 +38,15 @@ func test_caidos_no_reciben_exp() -> void:
 func test_alma_extra_cada_dos_niveles() -> void:
 	var m := _member()
 	var base := GameState.member_soul_capacity(m)
+	eq(base, DataRegistry.bal_i("soul_capacity", 0), "nivel 1: las del principio")
 	GameState.add_xp(RunRules.xp_to_next(1))
-	eq(GameState.member_soul_capacity(m), base + 1, "nivel 2: +1 alma")
+	eq(GameState.member_soul_capacity(m), base, "nivel 2: igual")
 	GameState.add_xp(RunRules.xp_to_next(2))
-	eq(GameState.member_soul_capacity(m), base + 1, "nivel 3: igual")
+	eq(GameState.member_soul_capacity(m), base + 1, "nivel 3: +1 alma")
 	GameState.add_xp(RunRules.xp_to_next(3))
-	eq(GameState.member_soul_capacity(m), base + 2, "nivel 4: +2 almas")
+	eq(GameState.member_soul_capacity(m), base + 1, "nivel 4: igual")
+	GameState.add_xp(RunRules.xp_to_next(4))
+	eq(GameState.member_soul_capacity(m), base + 2, "nivel 5: +2 almas")
 
 func test_repartir_puntos() -> void:
 	var m := _member()

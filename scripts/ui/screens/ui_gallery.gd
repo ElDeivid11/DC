@@ -61,7 +61,7 @@ func _ready() -> void:
 	var hp_full := UIStatBar.new("Bjorn")
 	hp_full.set_values(18, 18)
 	bars.body.add_child(hp_full)
-	var hp_mid := UIStatBar.new("Elena")
+	var hp_mid := UIStatBar.new("Bjorn")
 	hp_mid.set_values(7, 16)
 	bars.body.add_child(hp_mid)
 	var hp_low := UIStatBar.new("Goblin")
@@ -90,8 +90,8 @@ func _ready() -> void:
 	# Almas
 	var souls := UIPanel.new(DataRegistry.t("gallery.souls"), "PanelAlt")
 	mid.add_child(souls)
-	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto arquero")))
-	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("esqueleto_guardian", 4, "Esqueleto guardián"), true))
+	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("arquero_flecha", 8, "Esqueleto arquero")))
+	souls.body.add_child(UISoulCard.new(DataRegistry.make_soul("guardian_hacha", 4, "Esqueleto guardián"), true))
 	# Retratos y hexágono de estadísticas (contorno verde = reparto pendiente).
 	var hero_row := HBoxContainer.new()
 	hero_row.add_theme_constant_override("separation", UIStyle.SPACE * 2)
@@ -99,7 +99,7 @@ func _ready() -> void:
 	var pics := VBoxContainer.new()
 	hero_row.add_child(pics)
 	pics.add_child(UIPortrait.for_hero("bjorn", 56))
-	var fallen := UIPortrait.for_hero("elena", 56)
+	var fallen := UIPortrait.for_hero("bjorn", 56)
 	fallen.set_dimmed(true)
 	pics.add_child(fallen)
 	var radar := UIStatRadar.new(170)

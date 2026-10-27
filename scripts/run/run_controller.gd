@@ -255,10 +255,13 @@ func _open_chest(cell: Vector2i) -> void:
 			# Inventario lleno: el objeto queda en el piso, al lado del cofre abierto.
 			item_nodes[cell] = {"node": builder.spawn_item(cell), "item_id": id}
 			EventBus.hud_message.emit(DataRegistry.t("run.chest_item_left", [it.nombre]))
-	node.queue_free()
-	var open := builder.spawn_prop("Crate_1_open", FloorBuilder.cell_to_world(cell), node.rotation_degrees.y)
-	if open:
-		open.scale = Vector3.ONE * 1.2
+	# Se abre (sacudón, tapa, golpe de luz) y queda abierto con la luz baja.
+	var chest := node as EnemyBody
+	if chest != null and chest.play_role("open", "opened") > 0.0:
+		if chest.light:
+			chest.light.create_tween().tween_property(chest.light, "base_energy", chest.light.base_energy * 0.35, 0.8)
+	else:
+		node.queue_free()
 	SceneRouter.play_ui("coin")
 	_after_move()
 
@@ -454,43 +457,46 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 	var species := DataRegistry.get_species(String(e.species_id))
 
 	var soul: Dictionary = {}
-	# Sabiduría (mejora) y SUE del equipo suman puntos porcentuales.
-	var chance := RunRules.soul_drop_chance(rank, kind, MetaState.upgrade_bonus("soul_chance_pct") + 100.0 * RunRules.stat_soul(GameState.party_stat_total("sue")))
+	# Sabiduría (mejora), SUE y Buena estrella suman puntos porcentuales. El
+	# jefe suelta la suya (floors.json); el resto, una de su especie al azar.
+	var chance := RunRules.soul_drop_chance(rank, kind, GameState.soul_chance_bonus())
 	if DebugTools.force_soul_drop or GameState.rng.randf() < chance:
-		soul = DataRegistry.make_soul(String(e.soul_id), rank, String(e.display_name))
+		var sid := String(e.get("soul_id", ""))
+		if sid == "":
+			sid = DataRegistry.roll_soul_id(String(e.species_id), GameState.rng)
+		if sid != "":
+			soul = DataRegistry.make_soul(sid, rank, String(e.display_name))
 
-	# El bonus de monedas (pasivas + SUE) se fija al empezar: si alguien con SUE
-	# cae en el combate, el resumen y lo que se cobra siguen siendo lo mismo.
+	# El bonus de monedas (almas + SUE) se fija al empezar: lo que muestra el
+	# resumen es lo que se cobra.
 	var coin_bonus := GameState.party_coin_bonus()
 	e["coin_bonus"] = coin_bonus
 	var coin_preview := roundi(RunRules.kill_coins(rank, kind, GameState.floor_n) * (1.0 + coin_bonus))
-	var xp := RunRules.kill_xp(rank, kind)
+	var xp := GameState.kill_xp(rank, kind)
 	var first_kill := not MetaState.has_killed(String(e.species_id)) and not GameState.kills_by_species.has(e.species_id)
 
-	var roster: Array = []
-	for m: Dictionary in GameState.party:
-		roster.append({
-			"id": m.id, "name": m.name, "hp": int(m.hp), "max_hp": GameState.member_max_hp(m),
-			"atk": GameState.member_atk(m), "souls": (m.souls as Array).duplicate(true),
-			"soul_capacity": GameState.member_soul_capacity(m),
-			# Si gana y sigue en pie, recibe la EXP de esta kill: nivel y almas con
-			# los que queda (para no marcarlo "lleno" si la victoria le abre lugar).
-			"level": int(m.level), "xp": int(m.xp), "level_win": RunRules.level_after_xp(int(m.level), int(m.xp), xp),
-			"soul_capacity_win": int(m.soul_capacity) + RunRules.level_soul_slots(RunRules.level_after_xp(int(m.level), int(m.xp), xp)),
-			"def": GameState.member_def(m), "ability_bonus": GameState.member_ability_bonus(m),
-			"crit_bonus": GameState.member_crit_bonus(m),
-		})
+	var m := GameState.hero()
+	var hero := GameState.combat_hero(m)
+	hero["souls"] = (m.souls as Array).duplicate(true)
+	hero["soul_capacity"] = GameState.member_soul_capacity(m)
+	# Si gana, recibe la EXP de esta kill: nivel y almas con los que queda
+	# (para no marcarlo "lleno" si la victoria le abre lugar).
+	var level_win := RunRules.level_after_xp(int(m.level), int(m.xp), xp)
+	hero["level"] = int(m.level)
+	hero["xp"] = int(m.xp)
+	hero["level_win"] = level_win
+	hero["soul_capacity_win"] = int(m.soul_capacity) + RunRules.level_soul_slots(level_win)
 
 	combat = COMBAT_SCRIPT.new()
 	combat.set("enemy_data", {
 		"name": e.display_name, "rank": rank, "hp": stats.hp, "atk": stats.atk,
-		"ability_damage": stats.ability_damage, "kind": kind, "species_id": e.species_id,
-		"ability_name": String(DataRegistry.get_soul(String(e.soul_id)).get("active", {}).get("name", "")),
+		"kind": kind, "species_id": e.species_id,
+		"ability_name": String(DataRegistry.get_soul(String(e.get("soul_id", ""))).get("active", {}).get("name", "")),
 	})
-	combat.set("party_roster", roster)
+	combat.set("hero_data", hero)
 	combat.set("inventory", GameState.inventory.duplicate())
 	combat.set("start_mode", mode)
-	# AGI promedio del equipo vivo facilita huir (dentro de los topes de balance).
+	# AGI facilita huir (dentro de los topes de balance).
 	var flee := RunRules.flee_chance(rank, GameState.floor_n) + RunRules.stat_flee(roundi(GameState.party_stat_average("agi")))
 	combat.set("flee_chance", clampf(flee, DataRegistry.bal_f("flee.min", 0.1), DataRegistry.bal_f("flee.max", 0.9)))
 	combat.set("soul_drop", soul)
@@ -557,6 +563,9 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 			m["hp"] = int(result.hp[mid])
 	for id: Variant in result.items_used:
 		GameState.consume_item_at(GameState.inventory.find(String(id)))
+	# Monedas de los críticos (Puntería codiciosa): se cobran pase lo que pase.
+	if int(result.get("coins", 0)) > 0:
+		GameState.add_coins(int(result.coins), "kills")
 	combat.queue_free()
 	combat = null
 	hud.visible = true
@@ -564,7 +573,7 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 	match outcome:
 		"victory":
 			GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind), float(e.get("coin_bonus", -1.0)))
-			_grant_xp(RunRules.kill_xp(int(e.rank), String(e.kind)))
+			_grant_xp(GameState.kill_xp(int(e.rank), String(e.kind)))
 			var pick: Dictionary = result.soul_pick
 			if not pick.is_empty():
 				# Si después de la EXP le quedó lugar, el alma se suma en vez de
@@ -575,6 +584,10 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 					ri = -1
 				GameState.add_soul(String(pick.member_id), pick.soul, ri)
 				EventBus.hud_message.emit(DataRegistry.t("run.soul_taken", [GameState.get_member(String(pick.member_id)).name, pick.soul.active.name]))
+			# Musgo de cripta: cura al ganar.
+			var healed := GameState.heal_after_victory()
+			if healed > 0:
+				UIToast.show(get_tree(), DataRegistry.t("run.healed_after", [healed]), "good")
 			_dispose_corpse(e)
 			fd.enemies.erase(e)
 			if e.kind == RunRules.BOSS:
@@ -826,13 +839,10 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 	var it := DataRegistry.get_item(id)
 	match String(it.efecto.tipo):
 		"curar":
-			# Solo se ofrece a los vivos heridos: así no se gasta una poción en nada.
-			var hurt := GameState.alive_members().filter(func(pm: Dictionary) -> bool: return int(pm.hp) < GameState.member_max_hp(pm))
-			if hurt.is_empty():
-				UIToast.show(get_tree(), DataRegistry.t("run.nobody_hurt"))
-				return false
-			var m := await _ask_member(ui_parent, String(it.nombre), true, true)
+			# Con el HP completo no se gasta la poción.
+			var m := _ask_member(ui_parent, String(it.nombre), true, true)
 			if m.is_empty():
+				UIToast.show(get_tree(), DataRegistry.t("run.nobody_hurt"))
 				return false
 			var healed := GameState.heal_member(m, int(it.efecto.valor))
 			GameState.consume_item_at(index)
@@ -845,7 +855,7 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 			_light_torch()
 			UIToast.show(get_tree(), DataRegistry.t("run.torch"), "good")
 		"capacidad_alma":
-			var m := await _ask_member(ui_parent, String(it.nombre), false)
+			var m := _ask_member(ui_parent, String(it.nombre), false)
 			if m.is_empty():
 				return false
 			m["soul_capacity"] = int(m.soul_capacity) + int(it.efecto.valor)
@@ -864,23 +874,13 @@ func use_item_field(index: int, ui_parent: Node) -> bool:
 	_after_move()
 	return true
 
-## Pregunta a qué personaje usarle un objeto. hurt_only: solo los que no
-## tienen el HP completo (curas).
-func _ask_member(ui_parent: Node, title: String, alive_only: bool, hurt_only := false) -> Dictionary:
-	var options: Array = []
-	var members: Array = []
-	for m: Dictionary in GameState.party:
-		if alive_only and int(m.hp) <= 0:
-			continue
-		if hurt_only and int(m.hp) >= GameState.member_max_hp(m):
-			continue
-		members.append(m)
-		options.append(DataRegistry.t("run.member_option", [m.name, m.hp, GameState.member_max_hp(m), (m.souls as Array).size(), GameState.member_soul_capacity(m)]))
-	var d := UIChoiceDialog.ask(ui_parent, title, DataRegistry.t("run.who"), options, DataRegistry.t("ui.cancel"))
-	var i: int = await d.chosen
-	if i < 0:
+## A quién usarle un objeto: el héroe (equipo de uno). {} si no aplica
+## (caído, o con el HP completo si hurt_only).
+func _ask_member(_ui_parent: Node, _title: String, alive_only: bool, hurt_only := false) -> Dictionary:
+	var m := GameState.hero()
+	if m.is_empty() or (alive_only and int(m.hp) <= 0) or (hurt_only and int(m.hp) >= GameState.member_max_hp(m)):
 		return {}
-	return members[i]
+	return m
 
 func _light_torch() -> void:
 	var th := DataRegistry.get_theme(GameState.floor_n)
@@ -969,7 +969,7 @@ func _grant_xp(xp: int) -> void:
 
 func _on_combat_ended_debug(e: Dictionary) -> void:
 	GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind))
-	_grant_xp(RunRules.kill_xp(int(e.rank), String(e.kind)))
+	_grant_xp(GameState.kill_xp(int(e.rank), String(e.kind)))
 	_dispose_corpse(e)
 	fd.enemies.erase(e)
 	if e.kind == RunRules.BOSS:
@@ -1038,6 +1038,12 @@ func debug_boss_entrance(intro := false) -> void:
 	_after_move()
 	if intro:
 		_boss_intro()
+
+## Abre el cofre de enfrente (capturas de la animación de apertura).
+func debug_open_front() -> void:
+	var cell: Vector2i = player.call("facing_cell")
+	if chest_nodes.has(cell):
+		_open_chest(cell)
 
 func debug_heal_party() -> void:
 	for m: Dictionary in GameState.party:

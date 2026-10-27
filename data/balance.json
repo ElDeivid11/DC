@@ -1,23 +1,19 @@
 {
 	"party": [
-		{"id": "bjorn", "name": "Bjorn", "base_hp": 20, "base_atk": 5,
+		{"id": "bjorn", "name": "Bjorn", "base_hp": 34, "base_atk": 7,
 			"apariencia": {"cara": 1, "ojos": 1, "boca": 0, "marca": 0, "pelo": 1, "barba": 2, "tocado": 2, "ropa": 1,
-				"color_piel": 1, "color_pelo": 1, "color_ojos": 0, "color_ropa": 0, "color_capa": 6}},
-		{"id": "elena", "name": "Elena", "base_hp": 16, "base_atk": 4,
-			"apariencia": {"cara": 2, "ojos": 0, "boca": 1, "marca": 0, "pelo": 3, "barba": 0, "tocado": 1, "ropa": 0,
-				"color_piel": 0, "color_pelo": 0, "color_ojos": 1, "color_ropa": 1, "color_capa": 0}}
+				"color_piel": 1, "color_pelo": 1, "color_ojos": 0, "color_ropa": 0, "color_capa": 6}}
 	],
 	"stats_for_rank": {
-		"hp_base": 7,
-		"hp_per_rank": 3.3,
-		"atk_base": 0.4,
-		"atk_per_rank": 1.35,
-		"ability_per_rank": 1.5
+		"hp_base": 5.25,
+		"hp_per_rank": 4.75,
+		"atk_base": -0.25,
+		"atk_per_rank": 1.9
 	},
 	"floors_per_run": 5,
 	"start_items": ["pocion_menor"],
 	"inventory_capacity": 8,
-	"soul_capacity": 1,
+	"soul_capacity": 3,
 	"leveling": {
 		"max_level": 10,
 		"xp_to_next": [24, 44, 76, 120, 176, 244, 324, 416, 520],
@@ -64,10 +60,13 @@
 		"wander_chance": 0.3
 	},
 	"soul_drop": {
-		"normal_base": 0.08,
+		"normal_base": 0.2,
 		"rank_factor_per_rank": 0.1,
-		"elite": 0.25,
+		"elite": 0.6,
 		"boss": 1.0
+	},
+	"almas": {
+		"poder_por_rango": 0.35
 	},
 	"combat": {
 		"damage_variance": 1,
@@ -79,7 +78,7 @@
 		"ambush_enabled": true,
 		"ambush_damage_mult": 1.5,
 		"boss_ability_every": 3,
-		"boss_ability_mult": 0.7,
+		"boss_ability_mult": 1.6,
 		"enemy_turn_delay": 0.35,
 		"enemy_attack_windup": 0.3,
 		"flee_stun_turns": 2
@@ -115,7 +114,8 @@
 		"flicker_amount": 0.05,
 		"flicker_hz": 10.0,
 		"head_bob": 0.04,
-		"boss_room_height": 3.5
+		"boss_room_height": 3.5,
+		"chest": {"sprite": "res://assets/sprites/props/cofre.json", "glow": "#ffd27a", "light_energy": 0.45, "light_range": 2.4}
 	},
 	"boss_room": {
 		"brazier_inset": 0.42,

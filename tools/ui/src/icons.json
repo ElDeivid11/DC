@@ -28,5 +28,16 @@
  "piso": "delapouite/stairs",
  "tiempo": "lorc/hourglass",
  "muerte": "sbed/death-skull",
- "victoria": "lorc/trophy"
+ "victoria": "lorc/trophy",
+ "afin_hueso": "lorc/crossed-bones",
+ "afin_sangre": "lorc/drop",
+ "afin_sombra": "lorc/domino-mask",
+ "afin_espiritu": "lorc/spectre",
+ "afin_acero": "lorc/mailed-fist",
+ "afin_fortuna": "delapouite/rolling-dices",
+ "pacto": "lorc/linked-rings",
+ "estado_aturdido": "lorc/star-swirl",
+ "estado_marca": "lorc/archery-target",
+ "estado_debil": "lorc/sword-break",
+ "escudo": "lorc/bell-shield"
 }

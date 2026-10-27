@@ -61,3 +61,21 @@ func test_papeles_en_el_sprite() -> void:
 		s.play_role("death", "")
 		check(s.is_dead(), "%s: después de death queda muerto" % id)
 		s.free()
+
+## El cofre (tools/sprites/draw_cofre.py) es un EnemySprite con tres papeles:
+## reposo con destellos, abrirse (una vez) y abierto.
+func test_hoja_del_cofre() -> void:
+	var path := String(DataRegistry.bal("render.chest.sprite", FloorBuilder.CHEST_SPRITE))
+	var data := EnemySprite.load_sheet(path)
+	check(not data.is_empty() and data.sheet != null, "la hoja del cofre carga")
+	if data.is_empty():
+		return
+	var anims: Dictionary = (data.meta as Dictionary).anims
+	for role: String in ["idle", "open", "opened"]:
+		check(anims.has(role), "el cofre tiene '%s'" % role)
+	check(bool((anims.idle as Dictionary).loop) and not bool((anims.open as Dictionary).loop), "reposo se repite; abrirse, una vez")
+	check(data.glow != null, "los destellos brillan (máscara de brillo)")
+	var chest := EnemySprite.new()
+	chest.setup({"sprite": path}, Color.WHITE, Color.GOLD, 1)
+	check(chest.play_role("open", "opened") > 0.0, "abrirse dura algo")
+	chest.free()

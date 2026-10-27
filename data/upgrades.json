@@ -1,7 +1,7 @@
 {
 	"vitalidad": {
 		"nombre": "Vitalidad",
-		"descripcion": "Más HP máximos para todo el equipo.",
+		"descripcion": "Más HP máximos para el héroe.",
 		"efecto": {
 			"tipo": "max_hp_flat",
 			"valor": 1.6
@@ -11,10 +11,10 @@
 	},
 	"fuerza": {
 		"nombre": "Fuerza",
-		"descripcion": "Más ataque para todo el equipo.",
+		"descripcion": "Más ataque para el héroe.",
 		"efecto": {
 			"tipo": "atk_flat",
-			"valor": 0.6
+			"valor": 0.4
 		},
 		"coste_base": 30,
 		"max_nivel": 5

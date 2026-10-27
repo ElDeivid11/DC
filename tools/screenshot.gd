@@ -17,11 +17,11 @@ extends Node
 ##   --floor=N            la run arranca en el piso N (semilla fija: revisar biomas)
 ##   --combat=metodo[:a,b][;otro]  casi al final, llama eso sobre el combate abierto
 ##                        (p. ej. _show_abilities, _show_items, debug_lose,
-##                        _damage_member:1,99, _choose_replacement:bjorn)
-##   --face-chest         pone al jugador frente a un cofre (placa de interacción)
+##                        _choose_replacement)
+##   --face-chest[=N]     pone al jugador frente a un cofre, a N celdas (1 = al
+##                        lado, con la placa de interacción)
 ##   --message=texto      casi al final, muestra ese mensaje en el HUD
-##   --party3             suma un tercer héroe (copia de Elena) a la run de
-##                        ejemplo: para revisar el combate con tres tarjetas
+##   --souls=a,b,c        con --run: el héroe lleva esas almas (ids de souls.json)
 
 var _scene_path := "res://scenes/ui/UIGallery.tscn"
 var _out := "user://screenshot.png"
@@ -32,6 +32,8 @@ var _tab := -1
 var _combat_call := ""
 var _message := ""
 var _face_chest := false
+var _chest_dist := 1
+var _souls: PackedStringArray = PackedStringArray()
 var _scene: Node
 
 func _ready() -> void:
@@ -52,13 +54,12 @@ func _ready() -> void:
 			_combat_call = arg.substr(9)
 		elif arg.begins_with("--message="):
 			_message = arg.substr(10)
-		elif arg == "--face-chest":
+		elif arg.begins_with("--face-chest"):
 			_face_chest = true
-		elif arg == "--party3" and GameState.party.size() >= 2:
-			var third: Dictionary = (GameState.party[1] as Dictionary).duplicate(true)
-			third["id"] = "tercero"
-			third["name"] = "Ilsa"
-			GameState.party.append(third)
+			if arg.contains("="):
+				_chest_dist = maxi(1, int(arg.get_slice("=", 1)))
+		elif arg.begins_with("--souls="):
+			_souls = arg.substr(8).split(",")
 		elif arg == "--demo":
 			_demo_meta()
 		elif arg == "--run":
@@ -75,6 +76,8 @@ func _ready() -> void:
 			GameSettings.apply(MetaState.settings, get_tree())
 		elif arg.begins_with("--enemies="):
 			MetaState.settings["enemy_style"] = arg.substr(10)
+	for sid in _souls:
+		GameState.add_soul("bjorn", DataRegistry.make_soul(sid, 6, "Demo"))
 	var packed: PackedScene = load(_scene_path)
 	_scene = packed.instantiate()
 	get_tree().root.add_child.call_deferred(_scene)
@@ -147,8 +150,13 @@ func _put_in_front_of_chest() -> void:
 	for c: Variant in (chests as Dictionary).keys():
 		var cell: Vector2i = c
 		for i in dirs.size():
-			var stand := cell - dirs[i]
-			if not bool(_scene.call("is_wall", stand)) and not bool(_scene.call("get_enemy_at", stand)):
+			var free := true
+			for k in range(1, _chest_dist + 1):
+				var c2 := cell - dirs[i] * k
+				if bool(_scene.call("is_wall", c2)) or bool(_scene.call("get_enemy_at", c2)):
+					free = false
+			if free:
+				var stand := cell - dirs[i] * _chest_dist
 				_scene.call("debug_teleport", "%d,%d,%d" % [stand.x, stand.y, i])
 				return
 
@@ -171,10 +179,11 @@ func _demo_meta() -> void:
 func _demo_run() -> void:
 	GameState.new_run(777, false)
 	GameState.inventory.append_array(["venda", "antorcha_vieja", "talisman_hueso"])
-	GameState.add_soul("bjorn", DataRegistry.make_soul("esqueleto_picaro", 8, "Esqueleto arquero"))
-	GameState.party[1]["hp"] = 9
+	GameState.add_soul("bjorn", DataRegistry.make_soul("arquero_flecha", 8, "Esqueleto arquero"))
+	GameState.add_soul("bjorn", DataRegistry.make_soul("esbirro_tajo", 9, "Esqueleto esbirro"))
+	GameState.party[0]["hp"] = 22
 	GameState.add_coins(37, "kills")
-	# Nivel 3 para los dos (y algo de EXP); Bjorn ya repartió algunos puntos.
+	# Nivel 3 (y algo de EXP); ya repartió algunos puntos.
 	GameState.add_xp(RunRules.xp_to_next(1) + RunRules.xp_to_next(2) + 10)
 	GameState.apply_points(GameState.party[0], {"vit": 2, "atq": 2, "def": 1})
 

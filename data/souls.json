@@ -1,39 +1,77 @@
 {
-	"goblin": {
-		"species": "goblin",
-		"active": {"name": "Golpe Bárbaro"},
-		"passive": {
-			"name": "Piel Curtida",
-			"description": "Reduce el daño recibido en combate",
-			"effect": {"type": "damage_reduction_flat", "value": 1}
-		},
-		"stat_modifiers": {}
-	},
-	"goblin_archer": {
-		"species": "goblin_archer",
-		"active": {"name": "Disparo Certero"},
-		"passive": {
-			"name": "Puntería Letal",
-			"description": "Suma daño plano extra a cada golpe (ataque normal o activa)",
-			"effect": {"type": "damage_bonus_flat", "value": 1}
-		},
-		"stat_modifiers": {}
-	},
-	"goblin_warrior": {
-		"species": "goblin_warrior",
-		"active": {"name": "Estocada Brutal"},
-		"passive": null,
-		"stat_modifiers": {"atk": 2, "max_hp": 2}
-	},
-	"rata_cripta": {
-		"species": "rata_cripta",
-		"active": {"name": "Mordisco Rabioso"},
+	"esbirro_tajo": {
+		"species": "esqueleto_esbirro",
+		"afinidades": ["acero", "sangre"],
+		"active": {"name": "Tajo Oxidado", "tipo": "sangrado", "poder": 0.8, "sangrado": 3, "recarga": 2},
 		"passive": null,
 		"stat_modifiers": {"atk": 1}
 	},
-	"esqueleto_guardian": {
+	"esbirro_escudazo": {
+		"species": "esqueleto_esbirro",
+		"afinidades": ["hueso", "acero"],
+		"active": {"name": "Escudazo", "tipo": "aturdir", "poder": 0.6, "turnos": 1, "recarga": 4},
+		"passive": {
+			"name": "Tablas de Pino",
+			"description": "El escudo de tablas sigue aguantando: bloqueas más al Defender",
+			"effect": {"type": "defend_bonus_multiplier", "value": 0.2}
+		},
+		"stat_modifiers": {"max_hp": 2}
+	},
+	"esbirro_terco": {
+		"species": "esqueleto_esbirro",
+		"afinidades": ["hueso", "fortuna"],
+		"active": {"name": "Hueso Terco", "tipo": "escudo", "poder": 1.0, "recarga": 3},
+		"passive": {
+			"name": "Terquedad",
+			"description": "No sabe cuándo rendirse: cada golpe te hace un poco menos",
+			"effect": {"type": "damage_reduction_flat", "value": 1}
+		},
+		"stat_modifiers": {"max_hp": 3}
+	},
+	"arquero_flecha": {
+		"species": "esqueleto_picaro",
+		"afinidades": ["sombra", "acero"],
+		"active": {"name": "Flecha Certera", "tipo": "golpe", "poder": 1.4, "critico": 0.25, "recarga": 2},
+		"passive": {
+			"name": "Ojo de Tirador",
+			"description": "Todavía apunta con un ojo cerrado",
+			"effect": {"type": "crit_chance", "value": 0.08}
+		},
+		"stat_modifiers": {}
+	},
+	"arquero_doble": {
+		"species": "esqueleto_picaro",
+		"afinidades": ["sombra", "fortuna"],
+		"active": {"name": "Doble Disparo", "tipo": "multigolpe", "poder": 0.6, "golpes": 2, "recarga": 2},
+		"passive": null,
+		"stat_modifiers": {"atk": 1}
+	},
+	"arquero_veneno": {
+		"species": "esqueleto_picaro",
+		"afinidades": ["sangre", "sombra"],
+		"active": {"name": "Flecha Envenenada", "tipo": "sangrado", "poder": 0.5, "sangrado": 4, "recarga": 3},
+		"passive": {
+			"name": "Musgo de Cripta",
+			"description": "Lleva en el carcaj un musgo que cierra heridas",
+			"effect": {"type": "heal_after_combat", "value": 3}
+		},
+		"stat_modifiers": {}
+	},
+	"arquero_fantasma": {
+		"species": "esqueleto_picaro",
+		"afinidades": ["sombra", "espiritu"],
+		"active": {"name": "Flecha Fantasma", "tipo": "marca", "poder": 0.8, "marca": 0.5, "recarga": 2},
+		"passive": {
+			"name": "Puntería Espectral",
+			"description": "La flecha sabe adónde ir",
+			"effect": {"type": "crit_chance", "value": 0.05}
+		},
+		"stat_modifiers": {}
+	},
+	"guardian_hacha": {
 		"species": "esqueleto_guardian",
-		"active": {"name": "Corte Óseo"},
+		"afinidades": ["acero", "sangre"],
+		"active": {"name": "Corte Óseo", "tipo": "ejecutar", "poder": 1.2, "umbral": 0.35, "mult": 2.0, "recarga": 3},
 		"passive": {
 			"name": "Guardia Inquebrantable",
 			"description": "Bloquea más daño de lo normal al Defender",
@@ -41,39 +79,65 @@
 		},
 		"stat_modifiers": {"max_hp": 3}
 	},
+	"guardian_muro": {
+		"species": "esqueleto_guardian",
+		"afinidades": ["hueso", "espiritu"],
+		"active": {"name": "Muro de Bronce", "tipo": "escudo", "poder": 1.6, "recarga": 4},
+		"passive": {
+			"name": "Escudo con Púas",
+			"description": "Quien te golpea se lleva un recuerdo",
+			"effect": {"type": "thorns_flat", "value": 2}
+		},
+		"stat_modifiers": {"max_hp": 4}
+	},
+	"guardian_cabezazo": {
+		"species": "esqueleto_guardian",
+		"afinidades": ["hueso", "sangre"],
+		"active": {"name": "Cabezazo", "tipo": "aturdir", "poder": 0.9, "turnos": 1, "recarga": 3},
+		"passive": {
+			"name": "Casco con Cuernos",
+			"description": "Los golpes resbalan por el casco",
+			"effect": {"type": "damage_reduction_flat", "value": 1}
+		},
+		"stat_modifiers": {}
+	},
 	"jefe_novicio": {
 		"species": "nigromante",
-		"active": {"name": "Chispa Sepulcral"},
+		"afinidades": ["espiritu", "sombra"],
+		"active": {"name": "Chispa Sepulcral", "tipo": "drenar", "poder": 1.2, "cura": 0.5, "recarga": 2},
 		"passive": {
 			"name": "Ojo del Vidente",
-			"description": "Probabilidad de golpe crítico (daño doble)",
-			"effect": {"type": "crit_chance", "value": 0.15}
+			"description": "Ve el punto débil antes de que exista",
+			"effect": {"type": "crit_chance", "value": 0.12}
 		},
 		"stat_modifiers": {}
 	},
 	"jefe_osario": {
 		"species": "nigromante",
-		"active": {"name": "Lluvia de Huesos"},
+		"afinidades": ["hueso", "acero"],
+		"active": {"name": "Lluvia de Huesos", "tipo": "multigolpe", "poder": 0.5, "golpes": 3, "recarga": 3},
 		"passive": {
 			"name": "Sed de Médula",
 			"description": "Recupera parte del daño que inflige",
-			"effect": {"type": "lifesteal_pct", "value": 0.3}
+			"effect": {"type": "lifesteal_pct", "value": 0.2}
 		},
 		"stat_modifiers": {}
 	},
 	"jefe_ahogado": {
 		"species": "nigromante",
-		"active": {"name": "Marea Negra"},
+		"afinidades": ["espiritu", "sangre"],
+		"active": {"name": "Marea Negra", "tipo": "debilitar", "poder": 0.6, "debilita": 0.35, "turnos": 3, "recarga": 4},
 		"passive": {
 			"name": "Espinas de Hueso",
-			"description": "Devuelve daño plano a quien te golpea",
+			"description": "Devuelve daño a quien te golpea",
 			"effect": {"type": "thorns_flat", "value": 2}
 		},
 		"stat_modifiers": {"max_hp": 2}
 	},
 	"jefe_archi": {
 		"species": "nigromante",
-		"active": {"name": "Sentencia Ósea"},
+		"afinidades": ["fortuna", "espiritu"],
+		"active": {"name": "Sentencia Ósea", "tipo": "marca", "poder": 1.0, "marca": 0.6, "recarga": 3},
 		"passive": {
 			"name": "Diezmo de los Muertos",
 			"description": "Más monedas por cada enemigo derrotado",
@@ -83,28 +147,13 @@
 	},
 	"jefe_senor": {
 		"species": "nigromante",
-		"active": {"name": "Lamento de la Cripta"},
+		"afinidades": ["sombra", "sangre"],
+		"active": {"name": "Lamento de la Cripta", "tipo": "golpe", "poder": 2.2, "recarga": 4},
 		"passive": {
 			"name": "Hambre de Almas",
 			"description": "Recupera parte del daño que inflige",
-			"effect": {"type": "lifesteal_pct", "value": 0.5}
+			"effect": {"type": "lifesteal_pct", "value": 0.3}
 		},
 		"stat_modifiers": {"atk": 2, "max_hp": 4}
-	},
-	"esqueleto_esbirro": {
-		"species": "esqueleto_esbirro",
-		"active": {"name": "Tajo Oxidado"},
-		"passive": null,
-		"stat_modifiers": {"atk": 1}
-	},
-	"esqueleto_picaro": {
-		"species": "esqueleto_picaro",
-		"active": {"name": "Flecha Certera"},
-		"passive": {
-			"name": "Ojo de Tirador",
-			"description": "Probabilidad de golpe crítico (daño doble)",
-			"effect": {"type": "crit_chance", "value": 0.1}
-		},
-		"stat_modifiers": {}
 	}
 }

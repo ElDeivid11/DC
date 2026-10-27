@@ -7,7 +7,7 @@
 		"peso": 5,
 		"family": "esqueleto",
 		"description": "Huesos viejos que alguien obligó a seguir trabajando. Pega con lo que encontró en el camino.",
-		"soul_id": "esqueleto_esbirro",
+		"almas": ["esbirro_tajo", "esbirro_escudazo", "esbirro_terco"],
 		"dormant_chance": 0.5,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_esbirro.glb",
@@ -38,7 +38,7 @@
 		"peso": 4,
 		"family": "esqueleto",
 		"description": "Todavía apunta con un ojo cerrado, aunque ya no tenga párpados.",
-		"soul_id": "esqueleto_picaro",
+		"almas": ["arquero_flecha", "arquero_doble", "arquero_veneno", "arquero_fantasma"],
 		"dormant_chance": 0.3,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_picaro.glb",
@@ -66,7 +66,7 @@
 		"rank": 4,
 		"family": "esqueleto",
 		"description": "Sigue cumpliendo una guardia que nadie recuerda haberle dado. El escudo no es de adorno.",
-		"soul_id": "esqueleto_guardian",
+		"almas": ["guardian_hacha", "guardian_muro", "guardian_cabezazo"],
 		"rank_range": [2, 6],
 		"tier": "elite",
 		"peso": 1.5,
@@ -102,7 +102,7 @@
 		"peso": 0,
 		"family": "esqueleto",
 		"description": "Custodia cada escalera hacia abajo. Habla con los muertos y los muertos le contestan.",
-		"soul_id": "jefe_novicio",
+		"almas": ["jefe_novicio", "jefe_osario", "jefe_ahogado", "jefe_archi", "jefe_senor"],
 		"dormant_chance": 0.0,
 		"visual": {
 			"model_path": "res://assets/enemies/nigromante.glb",
@@ -135,7 +135,7 @@
 		"description": "Explorador flaco y nervioso. Golpea primero y pregunta nunca.",
 		"model_path": "res://assets/goblin_pack/Basic_Goblin.glb",
 		"model_scale": 1.3,
-		"soul_id": "goblin",
+		"almas": [],
 		"activo": false,
 		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	},
@@ -146,7 +146,7 @@
 		"description": "Prefiere la distancia, pero en los pasillos estrechos no le queda otra.",
 		"model_path": "res://assets/goblin_pack/Goblin_Archer.glb",
 		"model_scale": 1.5,
-		"soul_id": "goblin_archer",
+		"almas": [],
 		"activo": false,
 		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	},
@@ -157,7 +157,7 @@
 		"description": "El más fuerte de la familia goblin. Lleva la armadura de sus víctimas.",
 		"model_path": "res://assets/goblin_pack/Goblin_Warrior.glb",
 		"model_scale": 1.7,
-		"soul_id": "goblin_warrior",
+		"almas": [],
 		"activo": false,
 		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	},
@@ -168,7 +168,7 @@
 		"description": "Engordada con lo que se deja en las criptas. Su mordida infecta.",
 		"color_a": [0.35, 0.32, 0.15],
 		"color_b": [0.18, 0.16, 0.07],
-		"soul_id": "rata_cripta",
+		"almas": [],
 		"activo": false,
 		"nota": "Prototipo: sin licencia confirmada (goblins) o placeholder de caja. No aparece en pisos ni bestiario."
 	}

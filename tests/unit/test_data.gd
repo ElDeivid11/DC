@@ -13,7 +13,6 @@ func test_stats_for_rank_formula() -> void:
 		var s := DataRegistry.stats_for_rank(rank)
 		eq(int(s.hp), roundi(DataRegistry.bal_f("stats_for_rank.hp_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.hp_per_rank", 0.0)), "hp rango %d" % rank)
 		eq(int(s.atk), roundi(DataRegistry.bal_f("stats_for_rank.atk_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.atk_per_rank", 0.0)), "atk rango %d" % rank)
-		eq(int(s.ability_damage), int(steps * DataRegistry.bal_f("stats_for_rank.ability_per_rank", 0.0)), "habilidad rango %d" % rank)
 		if rank < 10:
 			var weaker := DataRegistry.stats_for_rank(rank + 1)
 			check(int(s.hp) > int(weaker.hp) and int(s.atk) >= int(weaker.atk), "rango %d más fuerte que %d" % [rank, rank + 1])
@@ -38,12 +37,26 @@ func test_campo_faltante_se_reporta() -> void:
 	reg.free()
 
 func test_make_soul_usa_el_rango_del_monstruo() -> void:
-	var soul := DataRegistry.make_soul("esqueleto_picaro", 9, "Esqueleto arquero")
-	eq(int(soul.active.damage), 3, "daño de la activa en rango 9")
+	var soul := DataRegistry.make_soul("arquero_flecha", 9, "Esqueleto arquero")
+	eq(String(soul.id), "arquero_flecha", "id de la plantilla")
+	eq(int(soul.bonus_poder), floori(2 * DataRegistry.bal_f("almas.poder_por_rango", 0.0)), "poder extra del rango 9")
 	eq(int(soul.source_rank), 9, "rango de origen")
 	eq(String(soul.passive.effect.type), "crit_chance", "pasiva")
-	var strong := DataRegistry.make_soul("esqueleto_picaro", 2, "Jefe")
-	check(int(strong.active.damage) > int(soul.active.damage), "un alma de rango más fuerte pega más")
+	eq(String(soul.active.tipo), "golpe", "tipo de activa")
+	var strong := DataRegistry.make_soul("arquero_flecha", 2, "Jefe")
+	check(int(strong.bonus_poder) > int(soul.bonus_poder), "un alma de rango más fuerte tiene más poder")
+	check(DataRegistry.get_soul("arquero_flecha").get("bonus_poder") == null, "la plantilla no se toca")
+
+func test_cada_especie_activa_suelta_varias_almas() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	for id in DataRegistry.species_ids():
+		var souls: Array = DataRegistry.get_species(id).almas
+		check(souls.size() >= 3, "%s suelta al menos tres almas distintas" % id)
+		var seen := {}
+		for i in 200:
+			seen[DataRegistry.roll_soul_id(id, rng)] = true
+		eq(seen.size(), souls.size(), "%s: el sorteo llega a todas" % id)
 
 func test_especies_de_debil_a_fuerte() -> void:
 	var ids := DataRegistry.species_ids()

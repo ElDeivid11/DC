@@ -28,10 +28,12 @@ func test_provisiones_suma_pociones() -> void:
 
 func test_curva_de_almas() -> void:
 	near(RunRules.soul_drop_chance(3, RunRules.BOSS, 0.0), 1.0, "jefe siempre")
-	near(RunRules.soul_drop_chance(9, RunRules.ELITE, 0.0), 0.25, "élite")
-	near(RunRules.soul_drop_chance(10, RunRules.NORMAL, 0.0), 0.08, "normal rango 10")
-	near(RunRules.soul_drop_chance(9, RunRules.NORMAL, 0.0), 0.088, "normal rango 9 (factor 1.1)")
-	near(RunRules.soul_drop_chance(10, RunRules.NORMAL, 10.0), 0.18, "Sabiduría +10 puntos")
+	var base := DataRegistry.bal_f("soul_drop.normal_base", 0.0)
+	var factor := DataRegistry.bal_f("soul_drop.rank_factor_per_rank", 0.0)
+	near(RunRules.soul_drop_chance(9, RunRules.ELITE, 0.0), DataRegistry.bal_f("soul_drop.elite", 0.0), "élite")
+	near(RunRules.soul_drop_chance(10, RunRules.NORMAL, 0.0), base, "normal rango 10")
+	near(RunRules.soul_drop_chance(9, RunRules.NORMAL, 0.0), base * (1.0 + factor), "normal rango 9 (un paso de factor)")
+	near(RunRules.soul_drop_chance(10, RunRules.NORMAL, 10.0), base + 0.1, "Sabiduría +10 puntos")
 
 func test_huida_segun_rango() -> void:
 	# Piso 1: rangos 8–9 → rango medio 8.5.

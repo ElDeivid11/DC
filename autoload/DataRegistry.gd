@@ -12,10 +12,25 @@ const DATA_DIR := "res://data/"
 
 # Tipos de efecto/condición que el código sabe resolver. Agregar uno nuevo =
 # sumarlo acá + su "case" donde se aplica (y su texto de hint).
-const PASSIVE_EFFECTS: Array[String] = [
+## Efectos de almas: los suman las pasivas, los niveles de afinidad y los
+## pactos (SoulBuild.effects). Casi todos se aplican en CombatCore; los de la
+## run (monedas, almas, EXP, curar al ganar), en GameState. Texto: effect.<tipo>.
+const SOUL_EFFECTS: Array[String] = [
 	"damage_reduction_flat", "defend_bonus_multiplier", "damage_bonus_flat",
 	"lifesteal_pct", "crit_chance", "coin_bonus_pct", "thorns_flat",
+	"def_flat", "last_stand", "bleed_on_hit", "bleed_damage_bonus", "bleed_lifesteal_pct",
+	"bleed_apply_mult", "crit_damage_bonus", "crit_marks", "active_power_flat",
+	"cooldown_reduction", "defend_counter", "extra_hits", "start_shield", "shield_mult",
+	"stun_extra_turn", "execute_threshold_bonus", "drain_bonus_pct", "weaken_bleed",
+	"coin_on_crit", "mark_bonus", "soul_chance_pct", "xp_bonus_pct", "heal_after_combat",
 ]
+## Activas: tipo → parámetros que necesita además de poder y recarga
+## (CombatCore las resuelve; texto: active.<tipo>).
+const ACTIVE_TYPES := {
+	"golpe": [], "multigolpe": ["golpes"], "sangrado": ["sangrado"], "aturdir": ["turnos"],
+	"drenar": ["cura"], "escudo": [], "marca": ["marca"], "debilitar": ["debilita", "turnos"],
+	"ejecutar": ["umbral", "mult"],
+}
 const ITEM_EFFECTS: Array[String] = ["curar", "antorcha", "sello_retiro", "ataque_run", "huida_garantizada", "capacidad_alma"]
 const ITEM_TYPES: Array[String] = ["consumible", "pasivo"]
 const SPECIES_TIERS: Array[String] = ["basico", "elite", "jefe"]
@@ -27,6 +42,11 @@ const UNLOCK_CONDITIONS: Array[String] = [
 
 var species: Dictionary = {}
 var souls: Dictionary = {}
+## Sinergias (sinergias.json): afinidades {id: {nombre, icono, rampa,
+## descripcion, niveles: [{cantidad, nombre, efectos}]}} y pactos {id:
+## {nombre, almas: [id, id], efectos}}.
+var affinities: Dictionary = {}
+var pacts: Dictionary = {}
 var items: Dictionary = {}
 var upgrades: Dictionary = {}
 var unlocks: Dictionary = {}
@@ -56,6 +76,9 @@ func reload() -> void:
 	errors.clear()
 	species = _load_dict("species.json")
 	souls = _load_dict("souls.json")
+	var synergies := _load_dict("sinergias.json")
+	affinities = synergies.get("afinidades", {})
+	pacts = synergies.get("pactos", {})
 	items = _load_dict("items.json")
 	upgrades = _load_dict("upgrades.json")
 	unlocks = _load_dict("unlocks.json")
@@ -70,6 +93,7 @@ func reload() -> void:
 
 	_validate_species()
 	_validate_souls()
+	_validate_synergies()
 	_validate_items()
 	_validate_unlocks()
 	_validate_upgrades()
@@ -158,23 +182,51 @@ func stats_for_rank(rank: int) -> Dictionary:
 	return {
 		"hp": roundi(bal_f("stats_for_rank.hp_base", 10) + steps * bal_f("stats_for_rank.hp_per_rank", 2)),
 		"atk": roundi(bal_f("stats_for_rank.atk_base", 1) + steps * bal_f("stats_for_rank.atk_per_rank", 1)),
-		"ability_damage": int(steps * bal_f("stats_for_rank.ability_per_rank", 1.5)),
 	}
 
+## Poder extra de la activa de un alma según el rango del monstruo que la
+## soltó (más fuerte → más poder): (11 − rango) × almas.poder_por_rango.
+func soul_rank_power(rank: int) -> int:
+	return floori((11 - rank) * bal_f("almas.poder_por_rango", 0.5))
+
 ## Arma el alma concreta que suelta un monstruo de rango `rank`: copia de la
-## plantilla de souls.json + el daño de la activa según ESE rango + de dónde
-## salió (para mostrarlo en menús). Estructura igual a la del prototipo:
-## {active:{name,damage}, passive:{name,description,effect}|null, stat_modifiers}.
+## plantilla de souls.json + el poder extra de ESE rango + de dónde salió
+## (para mostrarlo en menús):
+## {id, species, afinidades, active: {name, tipo, poder, recarga, ...},
+##  passive: {name, description, effect} | null, stat_modifiers,
+##  bonus_poder, source_species, source_rank}.
 func make_soul(soul_id: String, rank: int, source_name: String) -> Dictionary:
 	var soul: Dictionary = get_soul(soul_id).duplicate(true)
 	if soul.is_empty():
 		return {}
-	var active: Dictionary = soul.active
-	active["damage"] = stats_for_rank(rank).ability_damage
 	soul["id"] = soul_id
+	soul["bonus_poder"] = soul_rank_power(rank)
 	soul["source_species"] = source_name
 	soul["source_rank"] = rank
 	return soul
+
+## Cuál de las almas de una especie suelta este enemigo (al azar, todas con
+## la misma chance). "" si la especie no tiene almas.
+func roll_soul_id(species_id: String, rng: RandomNumberGenerator) -> String:
+	var ids: Array = get_species(species_id).get("almas", [])
+	if ids.is_empty():
+		return ""
+	return String(ids[rng.randi_range(0, ids.size() - 1)])
+
+## Afinidades en el orden de sinergias.json.
+func affinity_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for k: String in affinities.keys():
+		ids.append(k)
+	return ids
+
+func get_affinity(id: String) -> Dictionary:
+	var d: Dictionary = affinities.get(id, {})
+	return d
+
+func get_pact(id: String) -> Dictionary:
+	var d: Dictionary = pacts.get(id, {})
+	return d
 
 # --- Textos -----------------------------------------------------------------
 
@@ -262,9 +314,14 @@ func _validate_species() -> void:
 			s["rank"] = int(s.rank)
 			if s.rank < 1 or s.rank > 10:
 				_err("%s → '%s': rank debe estar entre 1 y 10" % [F, id])
-		if _req(F, id, s, "soul_id", TYPE_STRING) and not souls.has(s.soul_id):
-			_err("%s → '%s': soul_id '%s' no existe en souls.json" % [F, id, s.soul_id])
 		s["activo"] = bool(s.get("activo", true))
+		# Almas que puede soltar (una al azar). Las activas necesitan al menos una.
+		if _req(F, id, s, "almas", TYPE_ARRAY):
+			for sid: Variant in s.almas:
+				if not souls.has(String(sid)):
+					_err("%s → '%s': el alma '%s' no existe en souls.json" % [F, id, sid])
+			if (s.almas as Array).is_empty() and bool(s.activo):
+				_err("%s → '%s': una especie activa necesita al menos un alma en 'almas'" % [F, id])
 		s["family"] = String(s.get("family", id))
 		s["description"] = String(s.get("description", ""))
 		var tier := String(s.get("tier", "basico"))
@@ -356,18 +413,95 @@ func _validate_souls() -> void:
 	for id: String in souls.keys():
 		var s: Dictionary = souls[id]
 		if _req(F, id, s, "active", TYPE_DICTIONARY):
-			_req(F, id, s.active, "name", TYPE_STRING)
+			_validate_active(F, id, s.active)
 		if _req(F, id, s, "passive", TYPE_DICTIONARY, true) and s.passive != null:
 			var p: Dictionary = s.passive
 			_req(F, id, p, "name", TYPE_STRING)
 			_req(F, id, p, "description", TYPE_STRING)
 			if _req(F, id, p, "effect", TYPE_DICTIONARY):
-				var t_: String = String(p.effect.get("type", ""))
-				if not PASSIVE_EFFECTS.has(t_):
-					_err("%s → '%s': efecto de pasiva desconocido '%s'" % [F, id, t_])
+				_validate_effect(F, id, p.effect)
 		_req(F, id, s, "stat_modifiers", TYPE_DICTIONARY)
 		if _req(F, id, s, "species", TYPE_STRING) and not species.has(s.species):
 			_err("%s → '%s': species '%s' no existe" % [F, id, s.species])
+		if _req(F, id, s, "afinidades", TYPE_ARRAY):
+			var af: Array = s.afinidades
+			if af.is_empty() or af.size() > 2:
+				_err("%s → '%s': un alma tiene 1 o 2 afinidades" % [F, id])
+			for a: Variant in af:
+				if not affinities.has(String(a)):
+					_err("%s → '%s': afinidad '%s' desconocida (ver sinergias.json)" % [F, id, a])
+
+## Activa de un alma: nombre, tipo conocido, poder, recarga (turnos entre
+## usos, 1 = cada turno) y los parámetros de su tipo.
+func _validate_active(F: String, id: String, a: Dictionary) -> void:
+	_req(F, id, a, "name", TYPE_STRING)
+	if not _req(F, id, a, "tipo", TYPE_STRING):
+		return
+	if not ACTIVE_TYPES.has(String(a.tipo)):
+		_err("%s → '%s': tipo de activa '%s' desconocido (usa %s)" % [F, id, a.tipo, ACTIVE_TYPES.keys()])
+		return
+	if _req(F, id, a, "poder", TYPE_FLOAT):
+		a["poder"] = float(a.poder)
+	if _req(F, id, a, "recarga", TYPE_FLOAT):
+		a["recarga"] = maxi(1, int(a.recarga))
+	for param: String in ACTIVE_TYPES[String(a.tipo)]:
+		if not _req(F, id, a, param, TYPE_FLOAT):
+			continue
+		if param in ["golpes", "sangrado", "turnos"]:
+			a[param] = maxi(1, int(a[param]))
+		else:
+			a[param] = float(a[param])
+	a["critico"] = float(a.get("critico", 0.0))
+
+## {type, value} con un tipo de SOUL_EFFECTS.
+func _validate_effect(F: String, id: String, e: Dictionary) -> void:
+	var t_: String = String(e.get("type", ""))
+	if not SOUL_EFFECTS.has(t_):
+		_err("%s → '%s': efecto desconocido '%s'" % [F, id, t_])
+	e["value"] = float(e.get("value", 0))
+
+## Afinidades (niveles en orden creciente, con efectos) y pactos (dos almas
+## distintas que existen, con efectos).
+func _validate_synergies() -> void:
+	const F := "sinergias.json"
+	if affinities.is_empty():
+		_err("%s: faltan las afinidades" % F)
+	for id: String in affinities.keys():
+		var a: Dictionary = affinities[id]
+		_req(F, id, a, "nombre", TYPE_STRING)
+		_req(F, id, a, "icono", TYPE_STRING)
+		_req(F, id, a, "rampa", TYPE_STRING)
+		a["descripcion"] = String(a.get("descripcion", ""))
+		if not _req(F, id, a, "niveles", TYPE_ARRAY):
+			continue
+		var last := 0
+		for lv: Variant in a.niveles:
+			if typeof(lv) != TYPE_DICTIONARY:
+				_err("%s → '%s': cada nivel debe ser un objeto" % [F, id])
+				continue
+			var ld: Dictionary = lv
+			_req(F, id, ld, "nombre", TYPE_STRING)
+			if _req(F, id, ld, "cantidad", TYPE_FLOAT):
+				ld["cantidad"] = int(ld.cantidad)
+				if int(ld.cantidad) <= last:
+					_err("%s → '%s': los niveles van de menos a más almas" % [F, id])
+				last = int(ld.cantidad)
+			if _req(F, id, ld, "efectos", TYPE_ARRAY):
+				for e: Variant in ld.efectos:
+					_validate_effect(F, id, e as Dictionary)
+	for id: String in pacts.keys():
+		var p: Dictionary = pacts[id]
+		_req(F, id, p, "nombre", TYPE_STRING)
+		if _req(F, id, p, "almas", TYPE_ARRAY):
+			var ids: Array = p.almas
+			if ids.size() != 2 or String(ids[0]) == String(ids[1]):
+				_err("%s → pacto '%s': necesita dos almas distintas" % [F, id])
+			for sid: Variant in ids:
+				if not souls.has(String(sid)):
+					_err("%s → pacto '%s': el alma '%s' no existe" % [F, id, sid])
+		if _req(F, id, p, "efectos", TYPE_ARRAY):
+			for e: Variant in p.efectos:
+				_validate_effect(F, id, e as Dictionary)
 
 func _validate_items() -> void:
 	const F := "items.json"
@@ -644,8 +778,9 @@ func _validate_balance() -> void:
 	const F := "balance.json"
 	if _req(F, "raíz", balance, "party", TYPE_ARRAY):
 		var party: Array = balance.party
-		if party.is_empty() or party.size() > 3:
-			_err("%s: 'party' debe tener entre 1 y 3 personajes" % F)
+		# Un solo héroe (decidido 26-oct-2026): el combate es uno contra uno.
+		if party.size() != 1:
+			_err("%s: 'party' debe tener exactamente un personaje" % F)
 		for m: Variant in party:
 			if typeof(m) != TYPE_DICTIONARY:
 				_err("%s: cada personaje de 'party' debe ser un objeto" % F)
@@ -659,7 +794,7 @@ func _validate_balance() -> void:
 			if _req(F, mid, md, "base_atk", TYPE_FLOAT):
 				md["base_atk"] = int(md.base_atk)
 			md["apariencia"] = _normalize_look(F, mid, md.get("apariencia", {}))
-	for path: String in ["floors_per_run", "inventory_capacity", "soul_capacity", "coins.kill_base", "coins.coin_keep_on_death", "soul_drop.normal_base"]:
+	for path: String in ["floors_per_run", "inventory_capacity", "soul_capacity", "coins.kill_base", "coins.coin_keep_on_death", "soul_drop.normal_base", "almas.poder_por_rango"]:
 		if bal(path) == null:
 			_err("%s: falta '%s'" % [F, path])
 	for path: String in ["leveling.max_level", "leveling.points_per_level", "leveling.soul_slot_every", "leveling.xp_kill_base",

@@ -463,10 +463,10 @@ David de estos valores en el resumen final.
 |---|---|
 | Pisos por run | 5 (+ jefe cada uno) |
 | Duración objetivo | 45–60 min |
-| Equipo | 2 personajes (Bjorn, Elena); soportar 1–3 por datos |
+| Equipo | **Confirmado (26-oct-2026): un solo héroe** (Bjorn, personalizable) |
 | Impuesto | **No implementar** como sumidero; en su lugar `coin_keep_on_death = 0.5` |
 | Alcance de bestiario | Persistente entre runs; primera kill = bonus una sola vez |
-| Capacidad de alma | 1 por personaje (mejora/objeto la sube a 2) |
+| Capacidad de alma | **Confirmado (26-oct-2026): 3 al empezar, +1 cada 2 niveles** (el Amuleto de hueso suma una) |
 | Capacidad de inventario | 8 objetos |
 | Tope de mejoras | 5 niveles c/u |
 | Huir | Disponible, éxito = 50% ± 10% por diferencia de rango; no en jefes |

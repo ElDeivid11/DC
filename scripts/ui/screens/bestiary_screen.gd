@@ -64,7 +64,13 @@ func _show_detail(index: int) -> void:
 	if String(sp.get("tier", "")) == "jefe":
 		_show_boss_souls(id)
 	elif int(e.souls_taken) > 0:
-		detail_box.add_child(UISoulCard.new(DataRegistry.make_soul(String(sp.soul_id), int(sp.rank), String(sp.display_name))))
+		# Ya absorbiste alguna: se ven todas las que puede soltar (para planear).
+		var souls: Array = sp.get("almas", [])
+		detail_line(DataRegistry.t("bestiary.souls_count", [souls.size()]), "DetailLabel")
+		for sid: Variant in souls:
+			var soul := DataRegistry.make_soul(String(sid), int(sp.rank), String(sp.display_name))
+			soul.erase("source_rank")
+			detail_box.add_child(UISoulCard.new(soul))
 	else:
 		detail_line(DataRegistry.t("bestiary.soul_unknown"), "DimLabel")
 

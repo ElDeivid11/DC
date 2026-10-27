@@ -537,6 +537,9 @@ RAMPS = {
     "alma": ("ALMA", "ALMA_LUZ", "ALMA_OSC"),
     "sangre": ("RUBRICA", "RUBRICA_CLARA", "RUBRICA_OSC"),
     "amatista": ("AMATISTA", "AMATISTA_LUZ", "AMATISTA_OSC"),
+    # Afinidades de almas (hueso marfil, acero oscuro con brillo de hueso).
+    "hueso": ("HUESO", "VELA_BLANCA", "CENIZA_OSC"),
+    "acero": ("HIERRO_LUZ", "HUESO", "HIERRO_OSC"),
 }
 # Qué rampas se hornean por ícono (las demás no se usan).
 DEFAULT_RAMPS = ("bronce", "vela", "apagado")
@@ -553,6 +556,13 @@ ICON_RAMPS = {
     "tiempo": ("bronce",),
     "muerte": ("sangre", "bronce", "apagado"),
     "victoria": ("moneda", "bronce"),
+    # Afinidades (su color; apagado = nivel sin alcanzar), pactos y estados.
+    "afin_hueso": ("hueso", "apagado"), "afin_sangre": ("sangre", "apagado"),
+    "afin_sombra": ("amatista", "apagado"), "afin_espiritu": ("alma", "apagado"),
+    "afin_acero": ("acero", "apagado"), "afin_fortuna": ("moneda", "apagado"),
+    "pacto": ("alma", "vela", "apagado"),
+    "estado_aturdido": ("vela",), "estado_marca": ("sangre",), "estado_debil": ("amatista",),
+    "escudo": ("bronce", "vela"),
 }
 
 

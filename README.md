@@ -25,7 +25,7 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 | Girar 90° | ← → o A D | Cruceta / stick |
 | Atacar a un enemigo | caminar contra él (= **ataque sorpresa**) | — |
 | Abrir un cofre | caminar contra él | — |
-| Estado del equipo (y **Atributos**) | Tab | Y / △ |
+| Estado del héroe (y **Atributos**, **Almas**) | Tab | Y / △ |
 | Inventario (Enter sobre un objeto lo usa) | I | X / □ |
 | Mapa del piso | M | Select |
 | Pausa | Esc | Start |
@@ -38,25 +38,35 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 - Cada piso es un **bioma** con su paleta, niebla y texturas: Catacumbas del Pozo, Cisterna Anegada, Salones de la Luna, Castillo Carmesí y El Abismo.
 - **Enemigos** en **pixel art grueso** dentro del mundo 3D (estilo Dragon Quest HD-2D): monstruos caricaturescos de calavera enorme, de píxeles gordos, pocos colores y contorno negro (contraste duro con el entorno 3D), con luz con volumen (mapa de normales, sombreado en bandas) y animaciones con anticipación y compresión; miran a la cámara, con vistas de frente, perfil y espalda, y llevan la niebla del entorno. Las hojas se generan por código (`tools/sprites/draw_*.py`, ver su README) y el arte definitivo puede reemplazarlas con el mismo formato; en Opciones → Enemigos se puede volver a los modelos 3D. Los esqueletos: el **esbirro** y el **arquero** (básicos), el **guardián** (élite, con casco de cuernos, hacha y escudo, desde el piso 2) y el **nigromante**, jefe de cada piso, que cambia de nombre, epíteto, color y tamaño piso a piso y trae un espectro y dos esqueletitos. Algunos esqueletos están **dormidos**: parecen un montón de huesos hasta que te acercas.
 - Los enemigos **deambulan y te persiguen**. Si chocas tú primero: **ataque sorpresa** (turno gratis y daño ×1,5). Si te alcanzan **por la espalda o un costado: emboscada** (pegan primero ×1,5).
-- Cada piso tiene un **jefe** que custodia la salida, en su **sala hecha a mano** (la misma en todos los pisos, con las texturas del bioma; el generador la apoya contra un borde y la gira para que la puerta mire al resto del piso): una nave simétrica con alfombra, columnas, braseros y antorchas, el jefe dormido al fondo (un montón de túnica sobre un círculo de runas) y la salida en un nicho detrás. Se entra por una **puerta cerrada** que se abre chocándola; al pasar, la puerta se cierra de un portazo detrás del equipo y empieza la **presentación**, todo sobre el eje de la sala: los braseros se encienden de a pares con el color del jefe, se enciende el círculo, el jefe se levanta, aparece su cartel (nombre y epíteto), se burla y viene por la alfombra hasta el equipo; el combate entra con su barra de vida que se llena (Enter o Esc aceleran la presentación). Al vencerlo se abre la puerta y eliges: **bajar**, **retirarte con el botín** o quedarte.
+- Cada piso tiene un **jefe** que custodia la salida, en su **sala hecha a mano** (la misma en todos los pisos, con las texturas del bioma; el generador la apoya contra un borde y la gira para que la puerta mire al resto del piso): una nave simétrica con alfombra, columnas, braseros y antorchas, el jefe dormido al fondo (un montón de túnica sobre un círculo de runas) y la salida en un nicho detrás. Se entra por una **puerta cerrada** que se abre chocándola; al pasar, la puerta se cierra de un portazo detrás tuyo y empieza la **presentación**, todo sobre el eje de la sala: los braseros se encienden de a pares con el color del jefe, se enciende el círculo, el jefe se levanta, aparece su cartel (nombre y epíteto), se burla y viene por la alfombra hasta ti; el combate entra con su barra de vida que se llena (Enter o Esc aceleran la presentación). Al vencerlo se abre la puerta y eliges: **bajar**, **retirarte con el botín** o quedarte.
 
 ![La presentación del jefe](docs/capturas/jefe_presentacion.gif)
-- **Almas**: a veces un enemigo suelta su alma (los jefes siempre). Se revela al pulsar Continuar; recogerla es opcional y eliges quién la lleva (1 activa + pasiva opcional + modificadores). **No salen de la cripta.**
-- **Niveles** (solo durante la expedición): cada enemigo da EXP a todo el equipo en pie. Cada nivel da **3 puntos** para repartir en **Estado → Atributos** entre VIT, ATQ, DEF, ESP, AGI y SUE (hexágono con el reparto antes de confirmar), y **cada 2 niveles** un personaje puede llevar **un alma más**. El HUD marca con ▲ quién tiene puntos sin repartir.
-- **Objetos**: en cofres y en el suelo. Solo aparecen los ya desbloqueados. Fuera de combate se usan desde el Inventario (las curas solo se ofrecen a los heridos).
+- **Un solo héroe**: la expedición es uno contra uno; el build sale de las almas que juntes.
+- **Almas** (la mecánica principal): a veces un enemigo suelta su alma (los jefes siempre). Cada especie tiene **varias almas distintas** (el esbirro tres, el arquero cuatro, el guardián tres; cada jefe la suya) y suelta una al azar. Se revela al pulsar Continuar, con lo que activaría en tu build; tomarla es opcional y, sin lugar, puedes cambiarla por una que lleves (cada opción dice qué ganas y qué pierdes). Se empieza con **3 espacios** y se gana **uno cada 2 niveles**. **No salen de la cripta.** Cada alma trae:
+  - una **activa con efecto y recarga**: golpe fuerte, varios golpes, sangrado, aturdir, drenar vida, escudo, marcar (el próximo golpe pega más), debilitar o ejecutar (doble daño si al enemigo le queda poca vida). Su poder sale de tu ataque + el rango del monstruo que la soltó + ESP;
+  - una **pasiva** opcional y **modificadores** de estadísticas;
+  - una o dos **afinidades**: Hueso, Sangre, Sombra, Espíritu, Acero y Fortuna. Juntar 2 y 4 almas de la misma afinidad (Fortuna: 2 y 3) activa sus **niveles** (p. ej. Sangre I: tus ataques sangran; Sombra II: críticos ×2,5 que marcan; Hueso II: una vez por combate sobrevives con 1 HP);
+  - **pactos**: dos almas concretas juntas dan un efecto propio (Hemorragia, Lluvia de acero, Muralla de huesos, Verdugo…). Cada tarjeta dice con qué alma pacta.
+  Todo está en **Estado → Almas** (tarjetas con las cifras reales y las sinergias activas o a medias) y en `data/souls.json` y `data/sinergias.json`.
+- **Combate**: Atacar, **Habilidad** (las activas listas, con su daño y recarga), Defender, Objeto y Huir. El enemigo muestra sus estados bajo la barra (sangrado, aturdido, marca, debilitado) y el jefe **avisa** cuando prepara su golpe fuerte (cada 3 turnos): es el momento de Defender.
+- **Niveles** (solo durante la expedición): cada enemigo da EXP. Cada nivel da **3 puntos** para repartir en **Estado → Atributos** entre VIT, ATQ, DEF, ESP, AGI y SUE (hexágono con el reparto antes de confirmar), y **cada 2 niveles** un espacio de alma más. El HUD marca con ▲ si hay puntos sin repartir.
+- **Cofres** en **pixel art** como los enemigos, con una luz dorada propia y destellos que los hacen resaltar en el pasillo; al abrirlos se sacuden, se levanta la tapa y sale un golpe de luz (`tools/sprites/draw_cofre.py`).
+
+  ![Cofre abriéndose](docs/capturas/cofre.png) ![Animaciones del cofre](docs/capturas/cofre_animaciones.gif)
+- **Objetos**: en cofres y en el suelo. Solo aparecen los ya desbloqueados. Fuera de combate se usan desde el Inventario (las curas no se gastan con el HP completo).
 - **Morir** conserva el 50% de las monedas; **retirarse** o **ganar**, el 100%.
 
-## Héroes
+## Héroe
 
-En el Hub, **Héroes** permite cambiar el **nombre** y la **apariencia** de cada personaje (una pestaña por héroe, Q/E): cara, piel, ojos y su color, boca, marcas (cicatriz, pintura de guerra, pecas), pelo y su color, barba, tocado (capucha, cabeza de oso, cinta, casco) y su color, y ropa (túnica, coraza de cuero, armadura, harapos) y su color, más **Al azar** y **Como al principio**. Es solo apariencia (no cambia estadísticas) y se guarda entre expediciones. Los **retratos** son **pixel art grueso**, como los enemigos, armados por capas en el juego (48×48, a escala entera o recortados a la cara en los huecos chicos: HUD, combate, Estado).
+En el Hub, **Héroe** permite cambiar el **nombre** y la **apariencia** del personaje: cara, piel, ojos y su color, boca, marcas (cicatriz, pintura de guerra, pecas), pelo y su color, barba, tocado (capucha, cabeza de oso, cinta, casco) y su color, y ropa (túnica, coraza de cuero, armadura, harapos) y su color, más **Al azar** y **Como al principio**. Es solo apariencia (no cambia estadísticas) y se guarda entre expediciones. Los **retratos** son **pixel art grueso**, como los enemigos, armados por capas en el juego (48×48, a escala entera o recortados a la cara en los huecos chicos: HUD, combate, Estado).
 
-![Héroes](docs/capturas/heroes.png)
+![Héroe](docs/capturas/heroes.png)
 
 ## Entre expediciones (Hub)
 
 - **Mejoras** con monedas, con tope de 5 niveles: Vitalidad, Fuerza, Botín, Provisiones y Sabiduría.
 - **Objetos y desbloqueos**: los objetos nuevos se desbloquean **por condiciones** (llegar al piso 3, destruir 15 esqueletos, huir 3 veces…), nunca con monedas. Se ve el progreso (9/15).
-- **Bestiario**: especies vistas, kills y el alma que dan. La primera kill de cada especie da un bonus una sola vez.
+- **Bestiario**: especies vistas, kills y las almas que dan (al absorber una de esa especie se ven todas). La primera kill de cada especie da un bonus una sola vez.
 - **Estadísticas** y **Opciones**: volumen, pantalla completa, escala de la interfaz (Compacta · Normal · Grande, siempre con el píxel parejo), **imagen** (Clásica PS1 · Crujiente · Limpia), balanceo de cámara al caminar, controles y créditos.
 
 ## La interfaz: «Grimorio de la Cripta»
@@ -67,9 +77,9 @@ Menús de hierro remachado y vitela oscura, títulos góticos con capitular roja
 |---|---|---|
 | ![](docs/capturas/combat.png) | ![](docs/capturas/soul.png) | ![](docs/capturas/summary_revealed.png) |
 
-| Estado → Atributos | Estado → Equipo | Inventario |
+| Estado → Atributos | Estado → Almas (afinidades y pactos) | Inventario |
 |---|---|---|
-| ![](docs/capturas/atributos.png) | ![](docs/capturas/estado_equipo.png) | ![](docs/capturas/inventario.png) |
+| ![](docs/capturas/atributos.png) | ![](docs/capturas/almas.png) | ![](docs/capturas/inventario.png) |
 
 | Mejoras | Bestiario | Pausa |
 |---|---|---|
@@ -88,33 +98,33 @@ Todos se cambian en `data/balance.json` (y en los otros JSON de `data/`) sin toc
 | Decisión abierta | Valor usado |
 |---|---|
 | Pisos por run | 5, con un jefe por piso (`floors_per_run`, `data/floors.json`) |
-| Equipo | 2 personajes, Bjorn y Elena (`party`; admite 1–3) |
+| Equipo | Un héroe, Bjorn: 34 HP, 7 ATK (`party`, con un solo personaje) |
 | "Impuesto" | No hay sumidero: al morir se conserva el 50% (`coins.coin_keep_on_death`) |
 | Bestiario | Persistente; bonus de primera kill = 10 × (11 − rango), una sola vez |
-| Almas | Capacidad 1 por personaje (el Amuleto de hueso la sube). Drop: normal 8% × factor de rango, élite 25%, jefe 100% |
+| Almas | 3 espacios al empezar, +1 cada 2 niveles (y el Amuleto de hueso). Drop: normal 20% × factor de rango, élite 60%, jefe 100%. Poder extra por rango del alma: 0,35 × (11 − rango) (`almas.poder_por_rango`). Afinidades y pactos en `data/sinergias.json` |
 | Inventario | 8 objetos; se empieza con 1 Poción menor (`start_items`) |
-| Mejoras | Tope 5 niveles; coste = base × nivel. Fuerza +0,6 ATK y Vitalidad +1,6 HP por nivel, redondeado (ver *Balance*) |
+| Mejoras | Tope 5 niveles; coste = base × nivel. Fuerza +0,4 ATK y Vitalidad +1,6 HP por nivel, redondeado (ver *Balance*) |
 | Huir | 50% ± 10% por rango de diferencia con la media del piso; no contra jefes. Si fallas, pierdes el turno |
 | Curación entre pisos | 30% del HP máximo al bajar (`heal_between_floors_pct`) |
 | Élites | El esqueleto guardián (especie élite, desde el piso 2) y un 5% de variantes élite de los básicos (`enemies.elite_chance`): stats ×1,25, monedas ×2, ojos ámbar |
 | Enemigos dormidos | Esbirro 50%, arquero 30% (`dormant_chance` en `species.json`); se levantan a 2 pasos (`enemies.wake_radius`) |
-| Jefes | Stats × 1,5; cada 3 turnos usan una habilidad que golpea a todo el equipo. No deambulan: duermen en su sala hasta la presentación, y después el equipo golpea primero (turno gratis ×1,5, como un ataque sorpresa) |
-| Enemigos por rango | HP 7 + 3,3 × (11 − rango), ATK 0,4 + 1,35 × (11 − rango), redondeado (`stats_for_rank`). En los pisos 1–2 queda casi igual que en el prototipo; en los profundos, un ~30% más duro para compensar los niveles |
-| Niveles | Por expedición; tope 10. EXP por kill = 3 + (10 − rango), élite ×1,5, jefe ×4, para cada personaje en pie. Curva `leveling.xp_to_next` (24, 44, 76, 120…: los primeros niveles llegan rápido y los altos cuestan). Al subir: 3 puntos, cura 10% y +1 alma cada 2 niveles |
-| Atributos (por punto) | VIT +1 HP máx. · ATQ +1 ataque cada 4 · DEF −1 daño recibido cada 4 (un golpe nunca baja de 1) · ESP +1 a las habilidades de alma cada 2 · AGI +1,5% crítico y +1,5% huida (promedio del equipo) · SUE +0,5% almas y +2% monedas (suma del equipo) |
+| Jefes | Stats × 1,5; cada 3 turnos, un golpe fuerte (×1,6) que anuncian el turno antes (Defender lo frena a la mitad). No deambulan: duermen en su sala hasta la presentación, y después golpeas primero (turno gratis ×1,5, como un ataque sorpresa). Rangos por piso: 8, 6, 4, 2, 1 |
+| Enemigos por rango | HP 5,25 + 4,75 × (11 − rango), ATK −0,25 + 1,9 × (11 − rango), redondeado (`stats_for_rank`): en el piso 1 casi como antes, mucho más duros en los profundos (las almas y sus sinergias crecen rápido) |
+| Niveles | Por expedición; tope 10. EXP por kill = 3 + (10 − rango), élite ×1,5, jefe ×4, para cada personaje en pie. Curva `leveling.xp_to_next` (24, 44, 76, 120…: los primeros niveles llegan rápido y los altos cuestan). Al subir: 3 puntos, cura 10% y +1 espacio de alma en los niveles 3, 5, 7 y 9 |
+| Atributos (por punto) | VIT +1 HP máx. · ATQ +1 ataque cada 4 · DEF −1 daño recibido cada 4 (un golpe nunca baja de 1) · ESP +1 a las habilidades de alma cada 2 · AGI +1,5% crítico y +1,5% huida · SUE +0,5% almas y +2% monedas |
 | "Completar una run sin pociones" | Cuenta retirarse o ganar (no morir) |
 
 ### Balance
 
-`tools/balance_sim.tscn` juega cientos de runs con las fórmulas reales del juego, con una política simple: atacar, usar la mejor activa, curarse y repartir los puntos de nivel al momento (en ronda entre las 6 estadísticas, o solo VIT/ATQ). Con `-- --set=ruta=valor` se prueban valores sin tocar `balance.json`.
+`tools/balance_sim.tscn` juega cientos de runs con las reglas reales del juego (el mismo `CombatCore` que el combate), con una política simple: curarse con pociones, defenderse cuando el jefe carga su golpe, usar la activa lista que más rinde (o atacar), tomar las almas y cambiarlas si mejora el conjunto (sinergias y poder), y repartir los puntos de nivel al momento (en ronda entre las 6 estadísticas, o solo VIT/ATQ). Con `-- --set=ruta=valor` se prueban valores sin tocar `balance.json`.
 
-| Configuración | Piso medio | Victorias | Nivel al final |
+| Configuración | Piso medio | Victorias | Al final |
 |---|---|---|---|
-| Sin mejoras | 2,4–2,6 | 0–2% | 3 |
-| Todo al máximo (reparto parejo) | 4,5 | ~26% | 5 |
-| Todo al máximo (solo VIT/ATQ) | 4,7 | ~38% | 5 |
+| Sin mejoras | 2,8–2,9 | 11–13% | nivel 3,5 · 2,9 almas · 2 niveles de afinidad · 1,2 pactos |
+| Todo al máximo (reparto parejo) | 4,4 | ~40% | nivel 5 · 4,5 almas · 3,9 niveles · 2,2 pactos |
+| Todo al máximo (solo VIT/ATQ) | 4,6 | ~50% | nivel 5,3 · 4,8 almas · 4,1 niveles · 2,3 pactos |
 
-Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 (lo mismo que antes de los niveles; el muro es el jefe del piso 2), y con todo al máximo al 4–5 con riesgo real. El simulador reproduce que a los jefes siempre se los pelea con ataque sorpresa (antes sorteaba cómo empezaba, y el juego real resultaba más fácil de lo que decía la tabla).
+Coincide con el objetivo de la guía: sin mejoras se llega al piso 2–3 y con todo al máximo al 4–5 con riesgo real (las muertes se reparten entre los pisos 3, 4 y 5). Sin almas al principio, el jefe del piso 1 es el primer muro (bajó a rango 8 al pasar a un solo héroe).
 
 ## Herramientas
 

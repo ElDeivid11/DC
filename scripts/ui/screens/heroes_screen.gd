@@ -1,7 +1,7 @@
 class_name HeroesScreen
 extends UIScreen
-## Héroes (Hub): nombre y apariencia de cada personaje del equipo, una
-## pestaña por héroe (Q/E). A la izquierda, el retrato grande (×4) con el
+## Héroe (Hub): nombre y apariencia del personaje (con más de uno en
+## balance.json → party, una pestaña por héroe, Q/E). A la izquierda, el retrato grande (×4) con el
 ## nombre y los botones Al azar / Como al principio; a la derecha, una fila
 ## por parte y por color (← → los cambian). Se guarda al instante
 ## (MetaState.set_hero) y lo ve la próxima expedición: HUD, combate, Estado.
@@ -23,13 +23,20 @@ func _init() -> void:
 func _ready() -> void:
 	super._ready()
 	_rng.randomize()
-	tabs = UITabs.new()
-	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_child(tabs)
-	for m: Variant in DataRegistry.bal("party", []):
-		var id := String((m as Dictionary).get("id", ""))
-		tabs.add_tab(MetaState.hero_name(id), _editor(id), "estado")
-	tabs.tab_changed.connect(func(_i: int) -> void: _focus_current())
+	var party: Array = DataRegistry.bal("party", [])
+	if party.size() == 1:
+		# Un solo héroe: el editor sin pestañas.
+		var editor := _editor(String((party[0] as Dictionary).get("id", "")))
+		editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		body.add_child(editor)
+	else:
+		tabs = UITabs.new()
+		tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		body.add_child(tabs)
+		for m: Variant in party:
+			var id := String((m as Dictionary).get("id", ""))
+			tabs.add_tab(MetaState.hero_name(id), _editor(id), "estado")
+		tabs.tab_changed.connect(func(_i: int) -> void: _focus_current())
 	add_footer_hint(DataRegistry.t("heroes.hint"))
 	add_footer_button(DataRegistry.t("ui.back"), close)
 	_focus_current.call_deferred()
@@ -99,7 +106,8 @@ func _save(id: String) -> void:
 	MetaState.set_hero(id, p_name, look)
 	SaveSystem.save_meta()
 	(ed.portrait as UIPortrait).set_hero(id)
-	tabs.tab_bar.set_tab_title(_editors.find(ed), MetaState.hero_name(id))
+	if tabs != null:
+		tabs.tab_bar.set_tab_title(_editors.find(ed), MetaState.hero_name(id))
 
 func _apply(id: String, look: Dictionary, p_name: String) -> void:
 	var ed := _editor_of(id)
@@ -120,5 +128,6 @@ func _reset(id: String) -> void:
 	_apply(id, DataRegistry.default_look(id), MetaState.hero_name(id))
 
 func _focus_current() -> void:
-	if tabs.current() < _editors.size():
-		((_editors[tabs.current()] as Dictionary).first as Control).grab_focus()
+	var i := tabs.current() if tabs != null else 0
+	if i < _editors.size():
+		((_editors[i] as Dictionary).first as Control).grab_focus()

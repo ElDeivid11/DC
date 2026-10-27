@@ -101,14 +101,24 @@ func _run() -> void:
 	if run.combat != null:
 		combat = run.combat
 		var kills_before := GameState.kills_total
+		var used_ability := false
 		for turn in 400:
 			if bool(combat.get("finished")):
 				break
 			if not bool(combat.get("busy")):
-				combat.call("_on_attack")
+				# La activa del alma recién tomada (con su recarga); si no, atacar.
+				var core: CombatCore = combat.get("core")
+				if not used_ability and core.soul_count() > 0 and core.ability_ready(0):
+					combat.call("_show_abilities")
+					combat.call("_on_ability", 0)
+					used_ability = true
+					check(not core.ability_ready(0), "usar la activa la deja recargando")
+				else:
+					combat.call("_on_attack")
 			await _wait_frames(2)
+		check(used_ability, "en combate se usa la activa del alma")
 		check(bool(combat.get("finished")), "el combate termina atacando")
-		check(int((combat.get("enemy") as Dictionary).hp) <= 0, "el enemigo cae")
+		check((combat.get("core") as CombatCore).enemy_dead(), "el enemigo cae")
 		combat.call("_after_victory_summary")
 		await _wait_frames(2)
 		if run.combat != null:
@@ -274,35 +284,25 @@ func _check_boss_intro(run: RunController) -> void:
 func eq_cell(a: Vector2i, b: Vector2i, msg: String) -> void:
 	check(a == b, "%s (%s, esperado %s)" % [msg, a, b])
 
-## Inventario fuera de combate: Enter sobre la casilla usa el objeto, se elige
-## a quién en el diálogo, cura y se gasta. Con todos sanos no se gasta.
+## Inventario fuera de combate: Enter sobre la casilla usa el objeto en el
+## héroe, cura y se gasta. Con el HP completo no se gasta.
 func _check_field_items(run: RunController) -> void:
-	var elena := GameState.get_member("elena")
+	var hero := GameState.hero()
 	GameState.inventory.clear()
 	GameState.inventory.append("pocion_menor")
-	elena["hp"] = 1
+	hero["hp"] = 1
 	var inv := InventoryScreen.new(run)
 	run.add_child(inv)
 	await _wait_frames(2)
 	var slot := inv.grid.get_child(0) as UIItemSlot
 	slot.emit_signal("pressed")
 	await _wait_frames(2)
-	var dialog: UIChoiceDialog = null
-	for c in inv.get_children():
-		if c is UIChoiceDialog:
-			dialog = c
-	check(dialog != null, "usar un objeto pregunta a quién")
-	if dialog != null:
-		# Solo los heridos: Elena es la única opción.
-		dialog.call("_answer", 0)
-		await _wait_frames(2)
-		check(int(elena.hp) > 1, "la poción cura fuera de combate")
-		check(GameState.inventory.is_empty(), "la poción se gasta")
-	for m: Dictionary in GameState.party:
-		m["hp"] = GameState.member_max_hp(m)
+	check(int(hero.hp) > 1, "la poción cura fuera de combate")
+	check(GameState.inventory.is_empty(), "la poción se gasta")
+	hero["hp"] = GameState.member_max_hp(hero)
 	GameState.inventory.append("venda")
 	var used: bool = await run.use_item_field(0, inv)
-	check(not used and GameState.inventory.size() == 1, "con todos sanos la venda no se gasta")
+	check(not used and GameState.inventory.size() == 1, "sano, la venda no se gasta")
 	GameState.inventory.clear()
 	inv.queue_free()
 	await _wait_frames(1)

@@ -28,6 +28,8 @@ const CHUNK := 8
 ## Metros que cubre una textura (128 px → 32 texeles por metro).
 const TEX_WORLD := 4.0
 const TEXTURE_SLOTS: Array[String] = ["wall_a", "wall_b", "floor_a", "floor_b", "ceiling"]
+## Hoja del cofre (si balance.json no dice otra).
+const CHEST_SPRITE := "res://assets/sprites/props/cofre.json"
 const DIRS: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
 
 # Oclusión falsa: [mínimo, alcance en metros].
@@ -513,17 +515,30 @@ func _apply_psx_material_recursive(node: Node, tint: Color) -> void:
 	for child in node.get_children():
 		_apply_psx_material_recursive(child, tint)
 
+## Cofre en pixel art (tools/sprites/draw_cofre.py): un EnemySprite con su
+## hoja (reposo con destellos, se abre, abierto) y una luz dorada propia, para
+## que resalte contra el pasillo 3D. Mira hacia el lado abierto de la celda.
+## Valores en balance.json → render.chest.
 func spawn_chest(cell: Vector2i, fd: FloorData) -> Node3D:
-	# Mirando hacia el lado abierto de la celda (no contra la pared).
 	var rot := 0.0
 	for i in 4:
 		var d: Vector2i = [Vector2i(0, 1), Vector2i(1, 0), Vector2i(0, -1), Vector2i(-1, 0)][i]
 		if not fd.is_wall(cell + d):
 			rot = [0.0, 90.0, 180.0, 270.0][i]
 			break
-	var chest := spawn_prop("Chest_1", cell_to_world(cell), rot)
-	if chest:
-		chest.scale = Vector3.ONE * 1.2
+	var glow := Color.html(String(DataRegistry.bal("render.chest.glow", "#ffd27a")))
+	var def := {
+		"sprite": String(DataRegistry.bal("render.chest.sprite", CHEST_SPRITE)),
+		"shadow": 0.75,
+		"light": {"color": glow, "energy": DataRegistry.bal_f("render.chest.light_energy", 0.8),
+			"range": DataRegistry.bal_f("render.chest.light_range", 2.8), "pos": [0.0, 0.9, 0.2], "on_self": false},
+	}
+	var chest := EnemySprite.new()
+	chest.setup(def, Color.WHITE, glow, cell.x * 31 + cell.y * 17)
+	chest.position = cell_to_world(cell)
+	chest.rotation_degrees.y = rot
+	world.add_child(chest)
+	chest.play_role("idle")
 	return chest
 
 func spawn_item(cell: Vector2i) -> Node3D:

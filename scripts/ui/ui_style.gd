@@ -167,6 +167,28 @@ const TOKENS := {
 	"CAPITAL": "RUBRICA_CLARA",
 }
 
+## Color de texto de una rampa de íconos del kit (las afinidades de almas
+## dicen su rampa en sinergias.json: el nombre se pinta del mismo color).
+static func ramp_color(ramp: String) -> Color:
+	match ramp:
+		"hueso":
+			return HUESO
+		"sangre":
+			return RUBRICA_CLARA
+		"amatista":
+			return AMATISTA
+		"alma":
+			return ALMA
+		"acero":
+			return CENIZA
+		"moneda":
+			return MONEDA
+		"vela":
+			return VELA
+		"bronce":
+			return BRONCE_LUZ
+	return TEXT
+
 # --- Escala del pixel art -----------------------------------------------------------
 ## 1 píxel de arte del kit = PIXEL_SCALE px de la UI (ventana base 1280×720).
 const PIXEL_SCALE := 2
@@ -219,6 +241,8 @@ const ICON_IDS: Array[String] = [
 	"habilidad", "hp", "huir", "iniciar", "inventario", "mapa", "mejoras", "monedas", "muerte",
 	"objeto", "opciones", "piso", "retiro", "salir", "stat_agi", "stat_atq", "stat_def", "stat_esp",
 	"stat_sue", "stat_vit", "tiempo", "victoria",
+	"afin_hueso", "afin_sangre", "afin_sombra", "afin_espiritu", "afin_acero", "afin_fortuna",
+	"pacto", "estado_aturdido", "estado_marca", "estado_debil", "escudo",
 ]
 
 ## Color del rango (10 = débil → 1 = fuerte), por cortes dentro de la paleta.

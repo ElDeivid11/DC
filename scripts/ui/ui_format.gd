@@ -29,6 +29,12 @@ static func time(seconds: float) -> String:
 static func pct(f: float) -> String:
 	return "%d%%" % roundi(f * 100.0)
 
+## 2.0 → "×2"; 1.5 → "×1,5" (multiplicadores, con coma decimal).
+static func mult(f: float) -> String:
+	if is_equal_approx(f, roundf(f)):
+		return "×%d" % roundi(f)
+	return "×" + ("%.1f" % f).replace(".", ",")
+
 ## 8 → "VIII" (rangos, pisos y niveles en placas y encabezados; 1..39).
 static func roman(n: int) -> String:
 	if n <= 0 or n >= 40:

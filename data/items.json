@@ -46,7 +46,7 @@
 	},
 	"amuleto_hueso": {
 		"nombre": "Amuleto de hueso",
-		"descripcion": "+1 capacidad de alma para un personaje durante la expedición.",
+		"descripcion": "+1 espacio de alma durante la expedición.",
 		"tipo": "consumible",
 		"retrato": "res://assets/portraits/items/amuleto_hueso.png",
 		"efecto": {"tipo": "capacidad_alma", "valor": 1, "en_combate": false, "fuera_combate": true},
@@ -64,7 +64,7 @@
 	},
 	"talisman_hueso": {
 		"nombre": "Talismán de hueso",
-		"descripcion": "Mientras lo lleves: +1 ataque a todo el equipo durante la expedición.",
+		"descripcion": "Mientras lo lleves: +1 de ataque durante la expedición.",
 		"tipo": "pasivo",
 		"retrato": "res://assets/portraits/items/talisman_hueso.png",
 		"efecto": {"tipo": "ataque_run", "valor": 1, "en_combate": false, "fuera_combate": false},
