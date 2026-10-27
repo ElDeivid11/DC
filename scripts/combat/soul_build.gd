@@ -96,6 +96,37 @@ static func effects(souls: Array) -> Dictionary:
 			_add(fx, e)
 	return fx
 
+## De dónde sale un efecto (el aviso «salta una sinergia» del combate):
+## [{kind: "pact"|"affinity"|"passive", name, group, icon, ramp}], primero
+## los pactos, después los niveles de afinidad y las pasivas.
+static func sources(souls: Array, type: String) -> Array:
+	var out: Array = []
+	for id in active_pacts(souls):
+		var pact := DataRegistry.get_pact(id)
+		if _has_type(pact.efectos, type):
+			out.append({"kind": "pact", "name": String(pact.nombre), "group": "", "icon": "almas", "ramp": "alma"})
+	var counts := affinity_counts(souls)
+	for id in DataRegistry.affinity_ids():
+		if not counts.has(id):
+			continue
+		var af := DataRegistry.get_affinity(id)
+		var levels: Array = af.get("niveles", [])
+		for i in tier_reached(id, int(counts[id])):
+			var lv: Dictionary = levels[i]
+			if _has_type(lv.efectos, type):
+				out.append({"kind": "affinity", "name": String(lv.nombre), "group": String(af.nombre), "icon": String(af.icono), "ramp": String(af.rampa)})
+	for soul: Dictionary in souls:
+		var passive: Variant = soul.get("passive")
+		if passive is Dictionary and String(((passive as Dictionary).get("effect", {}) as Dictionary).get("type", "")) == type:
+			out.append({"kind": "passive", "name": String((passive as Dictionary).get("name", "")), "group": "", "icon": "almas", "ramp": "alma"})
+	return out
+
+static func _has_type(list: Array, type: String) -> bool:
+	for e: Dictionary in list:
+		if String(e.get("type", "")) == type:
+			return true
+	return false
+
 static func _add(fx: Dictionary, e: Dictionary) -> void:
 	var type := String(e.get("type", ""))
 	if type != "":

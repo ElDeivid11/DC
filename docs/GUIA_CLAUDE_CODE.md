@@ -405,8 +405,10 @@ Paleta base (ajustable, definida como constantes en un solo lugar):
 ```
 
 **HUD de exploración**: esquina sup. izq. HP del equipo (barras compactas); sup.
-der. minimapa 7×7 celdas + brújula N/E/S/O; inf. centro mensajes breves; inf.
-der. monedas de la run y piso. Mantener el HUD **fuera del SubViewport** (nítido).
+der. brújula N/E/S/O; inf. centro mensajes breves; inf. der. monedas de la run y
+piso. Mantener el HUD **fuera del SubViewport** (nítido). Sin minimapa (decidido
+27-oct-2026): el mapa es una acción, M baja la mirada y levanta un pergamino
+modelado en 3D con lo descubierto (`FieldMap`).
 
 ### 6.5 Usabilidad mínima
 

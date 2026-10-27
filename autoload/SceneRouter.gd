@@ -32,6 +32,12 @@ const SFX := {
 	"brazier": ["extra_jefe_brasero.wav", -8.0, true],
 	"boss": ["extra_jefe_entrada.wav", -3.0, false],
 	"item": ["extra_equipar_objeto.ogg", -6.0, false],
+	# Combate (sintetizados: tools/audio/make_combat_sfx.py).
+	"hit": ["combate_golpe.wav", -7.0, true],
+	"crit": ["combate_critico.wav", -4.0, true],
+	"hurt": ["combate_herida.wav", -5.0, true],
+	"kill": ["combate_muerte.wav", -3.0, false],
+	"proc": ["combate_sinergia.wav", -9.0, true],
 }
 const SFX_DIR := "res://assets/audio/ui/"
 ## El de monedas se repite en contadores: como mucho uno cada 60 ms.

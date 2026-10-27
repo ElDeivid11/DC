@@ -22,7 +22,7 @@ func _ready() -> void:
 		UIMenuItem.make_item(DataRegistry.t("pause.continue"), close, "continuar"),
 		UIMenuItem.make_item(DataRegistry.t("pause.status"), func() -> void: _open(StatusScreen.new()), "estado"),
 		UIMenuItem.make_item(DataRegistry.t("pause.inventory"), func() -> void: _open(InventoryScreen.new(run)), "inventario"),
-		UIMenuItem.make_item(DataRegistry.t("pause.map"), func() -> void: _open(MapScreen.new(run)), "mapa"),
+		UIMenuItem.make_item(DataRegistry.t("pause.map"), _open_map, "mapa"),
 		UIMenuItem.make_item(DataRegistry.t("pause.options"), func() -> void: _open(OptionsScreen.new(false)), "opciones"),
 		UIMenuItem.make_item(DataRegistry.t("pause.abandon"), _abandon, "retiro", true),
 	]
@@ -40,6 +40,13 @@ func _ready() -> void:
 func _open(screen: UIScreen) -> void:
 	add_child(screen)
 	screen.closed.connect(focus_first)
+
+## El mapa es el pergamino en el mundo (FieldMap): se cierra la pausa y se
+## lo abre.
+func _open_map() -> void:
+	close()
+	if run:
+		run.call("open_field_map")
 
 func _abandon() -> void:
 	var d := UIConfirmDialog.ask(self, DataRegistry.t("pause.abandon_title"), DataRegistry.t("pause.abandon_text", [UIFormat.pct(RunRules.keep_fraction("abandono"))]), DataRegistry.t("pause.abandon_yes"), DataRegistry.t("ui.cancel"), true)

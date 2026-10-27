@@ -71,6 +71,7 @@ func _run() -> void:
 	check(run.fd.enemies.size() > 1, "hay enemigos en el piso")
 	check(run.fd.exit_cell.x >= 0, "hay salida")
 	var first_cells := run.fd.floor_cells().size()
+	await _check_field_map(run)
 
 	DebugTools.force_soul_drop = true
 	run.debug_fight_nearest()
@@ -297,6 +298,36 @@ func _check_boss_intro(run: RunController) -> void:
 	check(after.size() == souls_before + 1 and options.any(func(o: Dictionary) -> bool: return String(o.id) == String((after.back() as Dictionary).id)), "se lleva el alma elegida")
 	check(not run.is_wall(door), "vencer al jefe abre la puerta")
 	check(run.exit_open, "vencer al jefe abre la salida")
+
+func _press(action: String) -> void:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	var up := InputEventAction.new()
+	up.action = action
+	Input.parse_input_event(up)
+
+## Mapa de mano: M baja la mirada y levanta el pergamino (sin moverse);
+## M otra vez lo guarda y devuelve el control.
+func _check_field_map(run: RunController) -> void:
+	var cam := run.player.get_child(0) as Camera3D
+	var cell: Vector2i = run.player.get("grid_pos")
+	_press("open_map")
+	await get_tree().create_timer(0.6).timeout
+	check(run.field_map.is_open and run.field_map.visible, "M abre el mapa de mano")
+	check(cam.rotation_degrees.x < -10.0, "con el mapa, la cámara mira hacia abajo")
+	check(bool(run.player.get("input_locked")), "con el mapa abierto no se camina")
+	check(run.hud.map_legend != null and run.hud.map_legend.visible, "la leyenda aparece en el HUD")
+	_press("move_forward")
+	await _wait_frames(3)
+	eq_cell(run.player.get("grid_pos"), cell, "avanzar con el mapa abierto no mueve")
+	_press("open_map")
+	await get_tree().create_timer(0.5).timeout
+	check(not run.field_map.is_open and not run.field_map.visible, "M otra vez guarda el mapa")
+	check(is_zero_approx(cam.rotation_degrees.x), "la cámara vuelve a mirar al frente")
+	check(not bool(run.player.get("input_locked")), "guardado el mapa, se vuelve a caminar")
+	check(not run.hud.map_legend.visible, "la leyenda se va con el mapa")
 
 func eq_cell(a: Vector2i, b: Vector2i, msg: String) -> void:
 	check(a == b, "%s (%s, esperado %s)" % [msg, a, b])

@@ -35,3 +35,15 @@ Sintetizados por código, sin samples (`python3 -I tools/audio/make_boss_sfx.py`
 | `extra_jefe_portazo.wav` | `door_slam` | La puerta de la sala del jefe se cierra de golpe detrás del equipo |
 | `extra_jefe_brasero.wav` | `brazier` | Se enciende un brasero |
 | `extra_jefe_entrada.wav` | `boss` | El jefe se levanta (golpe grave, coro y campana) |
+
+## Combate (propios)
+
+Sintetizados por código, sin samples (`python3 -I tools/audio/make_combat_sfx.py`): son del proyecto, CC0.
+
+| Archivo | `SceneRouter.play_ui(kind)` | Evento |
+|---|---|---|
+| `combate_golpe.wav` | `hit` | Un golpe del héroe entra (golpe sordo y chasquido) |
+| `combate_critico.wav` | `crit` | Crítico (chasquido seco, hierro que suena y un brillo) |
+| `combate_herida.wav` | `hurt` | El héroe recibe daño |
+| `combate_muerte.wav` | `kill` | El enemigo cae (huesos que se quiebran y el alma que se va) |
+| `combate_sinergia.wav` | `proc` | Salta una sinergia: afinidad, pacto o pasiva |

@@ -16,7 +16,7 @@ const FIXED_KEYS: Array[String] = [
 	"pause.inventory", "pause.map", "pause.options", "pause.abandon", "summary.epitaph_death",
 	"summary.epitaph_victory", "summary.epitaph_retire", "summary.epitaph_abandon",
 	"combat.soul_title", "combat.soul_choice_title", "upgrades.title", "unlocks.title", "bestiary.title",
-	"stats.title", "options.title", "status.title", "inventory.title", "map.title",
+	"stats.title", "options.title", "status.title", "inventory.title",
 	"combat.victory_title", "summary.souls_note",
 	"combat.defeat_title", "combat.fled_title", "combat.replace_title", "exit.title", "exit.title_last",
 	"stats.no_kills",

@@ -27,7 +27,7 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 | Abrir un cofre | caminar contra él | — |
 | Estado del héroe (y **Atributos**, **Almas**) | Tab | Y / △ |
 | Inventario (Enter sobre un objeto lo usa) | I | X / □ |
-| Mapa del piso | M | Select |
+| Mapa (bajas la mirada y abres el pergamino; M o Esc lo guarda) | M | Select |
 | Pausa | Esc | Start |
 | Menús | ↑↓ · Enter · Esc (atrás) · Q/E pestañas | Cruceta · A · B · LB/RB |
 | Panel de debug | F1 (solo en el editor / builds de debug) | — |
@@ -50,7 +50,11 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
   Todo está en **Estado → Almas** (tarjetas con las cifras reales y las sinergias activas o a medias) y en `data/souls.json` y `data/sinergias.json`.
   ![Elegir el alma del jefe](docs/capturas/jefe_almas.png)
 - **Combate**: Atacar, **Habilidad** (las activas listas, con su daño y recarga), Defender, Objeto y Huir. El enemigo muestra sus estados bajo la barra (sangrado, aturdido, marca, debilitado) y el jefe **avisa** cuando prepara su golpe fuerte (cada 3 turnos): es el momento de Defender.
+  Cada golpe **se siente**: números que saltan (los críticos enormes, con «¡Crítico!», destello y un instante de pausa), astillas de hueso, la cámara que se sacude y el enemigo que retrocede, los golpes de una ráfaga uno por uno y su total, el cartel con el nombre de la activa en el color de su afinidad y un **aviso cada vez que salta una sinergia** («Pacto: Hemorragia», «Sangre · Herida abierta»). Recibir daño tiñe los bordes de rojo, y con poca vida late. Al vencer, el enemigo estalla en astillas, su alma sube y aparece «¡Derrotado!». Opciones → «Destellos y sacudones» apaga los destellos, la viñeta y el sacudón.
 - **Niveles** (solo durante la expedición): cada enemigo da EXP. Cada nivel da **3 puntos** para repartir en **Estado → Atributos** entre VIT, ATQ, DEF, ESP, AGI y SUE (hexágono con el reparto antes de confirmar), y **cada 2 niveles** un espacio de alma más. El HUD marca con ▲ si hay puntos sin repartir.
+- **Mapa de mano**: no hay minimapa. Con **M** el héroe baja la mirada y levanta un **pergamino** entre dos varas, dibujado a tinta con lo que ya recorriste (los muros, los cofres, los enemigos que viste, la puerta del jefe y la salida; tú, una flecha roja). Con el mapa abierto no se camina; M o Esc lo guardan.
+
+  ![El mapa de mano](docs/capturas/map.png)
 - **Cofres** en **pixel art** como los enemigos, con una luz dorada propia y destellos que los hacen resaltar en el pasillo; al abrirlos se sacuden, se levanta la tapa y sale un golpe de luz (`tools/sprites/draw_cofre.py`).
 
   ![Cofre abriéndose](docs/capturas/cofre.png) ![Animaciones del cofre](docs/capturas/cofre_animaciones.gif)
@@ -156,7 +160,7 @@ data/       species, souls, items, unlocks, upgrades, floors (con los biomas), b
 assets/     enemies/ (esqueletos adaptados), sprites/enemies/ (hojas de pixel art), textures/<bioma>/ (paredes, pisos, techos), portraits/ (héroes y objetos), fuentes, props
 scenes/     Boot, Hub, Run, RunSummary, ui/UIGallery
 scripts/    run/ (RunController, FloorGenerator, FloorBuilder, reglas, recompensas, desbloqueos)
-            combat/ (CombatManager, pasivas) · world/ (GridPlayer, EnemyVisual, RetroView, FlickerLight)
+            combat/ (CombatCore, CombatManager, CombatFx, almas) · world/ (GridPlayer, EnemySprite/EnemyVisual, RetroView, FlickerLight, FieldMap + MapParchment)
             ui/ (theme, componentes, pantallas, HUD)
 shaders/    psx_viewport_dither (trama PS1 dentro del SubViewport)
 ui/         theme_main.tres (generado por scripts/ui/theme_builder.gd), kit/ (atlas + manifiesto de tools/ui), shaders/

@@ -90,6 +90,12 @@ func _build_general(parent: Control) -> HSlider:
 	UITooltip.attach(bob, DataRegistry.t("options.head_bob_tip"))
 	general.body.add_child(_row("options.head_bob", bob))
 
+	var shake := CheckBox.new()
+	shake.button_pressed = bool(s.get("combat_fx", true))
+	shake.toggled.connect(func(on: bool) -> void: _apply_setting("combat_fx", on))
+	UITooltip.attach(shake, DataRegistry.t("options.combat_fx_tip"))
+	general.body.add_child(_row("options.combat_fx", shake))
+
 	# Pixel art o modelo 3D (para comparar mientras el arte es de prueba).
 	var enemies := OptionButton.new()
 	for key: String in ["options.enemies_sprite", "options.enemies_model"]:

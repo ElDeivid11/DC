@@ -4,7 +4,8 @@ extends CanvasLayer
 ## resolución nativa). Spec 8.6:
 ##   sup. izq.: una placa de hierro por héroe (retrato, nombre, nivel, almas,
 ##              HP, EXP fina y pips de vela si tiene puntos sin repartir)
-##   sup. der.: minimapa en su placa + brújula en cinta (N/E/S/O)
+##   sup. der.: brújula en cinta (N/E/S/O); el mapa es el pergamino de la M
+##              (FieldMap), con su leyenda a la derecha mientras está abierto
 ##   inf. der.: piso en romanos + bioma, y las monedas de la run
 ##   inf. izq.: cinta con atajos (se oculta tras 10 s sin tocar nada)
 ##   inf. centro: mensajes breves y la placa de interacción («[↑] abrir»)
@@ -22,7 +23,6 @@ const RIBBON_H := 26
 
 var party_box: VBoxContainer
 var plates: Array[HeroPlate] = []
-var minimap: UIMinimap
 var compass: UICompass
 var floor_word: Label
 var floor_num: Label
@@ -35,12 +35,18 @@ var interact_panel: PanelContainer
 var interact_key: Control
 var interact_label: Label
 var debug_label: Label
+## Leyenda del mapa de mano (se arma la primera vez que se abre).
+var map_legend: PanelContainer
+var map_open := false
+var _root: Control
+var _interact_key := ""
 var _message_tween: Tween
 var _idle := 0.0
 
 func _ready() -> void:
 	layer = 5
 	var root := Control.new()
+	_root = root
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
@@ -57,7 +63,7 @@ func _ready() -> void:
 		party_box.add_child(plate)
 		plates.append(plate)
 
-	# Minimapa + brújula (sup. der.), del mismo ancho.
+	# Brújula (sup. der.) y, en debug, los datos de la run debajo.
 	var right_col := VBoxContainer.new()
 	right_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	right_col.add_theme_constant_override("separation", 6)
@@ -67,15 +73,8 @@ func _ready() -> void:
 	right_col.offset_right = -m
 	right_col.offset_top = m
 	root.add_child(right_col)
-	var map_panel := PanelContainer.new()
-	map_panel.theme_type_variation = "HudPanel"
-	map_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	right_col.add_child(map_panel)
-	minimap = UIMinimap.new()
-	map_panel.add_child(minimap)
 	compass = UICompass.new()
 	compass.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	compass.custom_minimum_size.x = 0
 	right_col.add_child(compass)
 	debug_label = UILabel.make("", "DetailLabel")
 	debug_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -149,8 +148,8 @@ func _ready() -> void:
 	cap.theme_type_variation = "KeyCap"
 	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	irow.add_child(cap)
-	# «Avanzar» es ↑: se dibuja con la flecha del kit (la del minimapa), que a
-	# este tamaño se lee mejor que el glifo de la fuente.
+	# «Avanzar» es ↑: se dibuja con la flecha del kit, que a este tamaño se
+	# lee mejor que el glifo de la fuente.
 	var key_name := _forward_key()
 	if key_name == "↑" and UIIcon.kit_texture("map_player") != null:
 		interact_key = UISprite.new("map_player")
@@ -199,8 +198,8 @@ func refresh() -> void:
 		biome_label.text = String(DataRegistry.get_theme(GameState.floor_n).get("nombre", "")).to_upper()
 	coins_label.text = UIFormat.number(GameState.run_coins())
 
+## Brújula, placa de interacción y datos de debug después de cada paso.
 func update_map(fd: FloorData, cell: Vector2i, facing: int, markers: Dictionary) -> void:
-	minimap.update_view(fd, GameState.visited, cell, facing, markers)
 	compass.set_facing(facing)
 	_update_interaction(fd, cell, facing, markers)
 	if debug_label.visible:
@@ -226,9 +225,61 @@ func _update_interaction(fd: FloorData, cell: Vector2i, facing: int, markers: Di
 			key = "hud.act_door"
 	if key == "" and not fd.enemy_at(front).is_empty():
 		key = "hud.act_fight"
-	interact_panel.visible = key != ""
+	_interact_key = key
+	interact_panel.visible = key != "" and not map_open
 	if key != "":
 		interact_label.text = DataRegistry.t(key)
+
+## Con el pergamino abierto: la leyenda a la derecha (piso, sellos y cómo
+## guardarlo) y sin la placa de interacción ni los atajos.
+func set_map_open(open: bool) -> void:
+	map_open = open
+	if open and map_legend == null:
+		_build_map_legend()
+	if map_legend:
+		map_legend.visible = open
+	interact_panel.visible = _interact_key != "" and not open
+	hints.visible = not open and _idle < HINTS_IDLE
+
+func _build_map_legend() -> void:
+	var panel := UIPanel.new(DataRegistry.t("map.legend"), "HudPanel")
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.offset_left = -EDGE
+	panel.offset_right = -EDGE
+	panel.body.add_theme_constant_override("separation", 6)
+	_root.add_child(panel)
+	map_legend = panel
+	if not GameState.test_room:
+		var floors := DataRegistry.bal_i("floors_per_run", 5)
+		var floor_row := HBoxContainer.new()
+		floor_row.add_theme_constant_override("separation", 8)
+		floor_row.add_child(UIIcon.make("piso", "bronce"))
+		var floor_label := UILabel.make(DataRegistry.t("hub.last_floor_of", [UIFormat.roman(GameState.floor_n), UIFormat.roman(floors)]).to_upper(), "NumLabel")
+		floor_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		floor_row.add_child(floor_label)
+		panel.body.add_child(floor_row)
+		panel.body.add_child(UIDivider.new(180))
+	for pair: Array in MapParchment.LEGEND:
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 10)
+		var chip := TextureRect.new()
+		chip.texture = ImageTexture.create_from_image(MapParchment.stamp_chip(String(pair[0])))
+		chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		chip.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		line.add_child(chip)
+		var l := UILabel.make(DataRegistry.t(String(pair[1])), "DetailLabel")
+		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		line.add_child(l)
+		panel.body.add_child(line)
+	panel.body.add_child(UIDivider.new(180))
+	var keys := Controls.key_names("open_map")
+	var close_hint := UILabel.make(DataRegistry.t("map.close_hint", [keys[0] if not keys.is_empty() else "M"]), "DetailLabel")
+	close_hint.add_theme_color_override("font_color", UIStyle.TEXT_DIM)
+	panel.body.add_child(close_hint)
 
 ## Primera tecla de «avanzar» (lo que hay que pulsar para interactuar).
 static func _forward_key() -> String:
@@ -279,7 +330,7 @@ func _fit_message() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventJoypadButton or event is InputEventMouseButton:
 		_idle = 0.0
-		if hints and not hints.visible:
+		if hints and not hints.visible and not map_open:
 			hints.visible = true
 
 func _process(delta: float) -> void:

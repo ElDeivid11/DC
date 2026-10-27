@@ -3,8 +3,8 @@ extends Node
 ## Escena de la expedición (Run.tscn). Construye el piso actual de GameState
 ## (generado con semilla, o la sala de pruebas), coloca al jugador y maneja la
 ## exploración: enemigos que patrullan y persiguen, cofres, objetos sueltos,
-## salida custodiada por el jefe, combates y menús (pausa, estado,
-## inventario, mapa).
+## salida custodiada por el jefe, combates, menús (pausa, estado,
+## inventario) y el mapa de mano (M: FieldMap, el pergamino en 3D).
 ##
 ## Arquitectura de renderizado (igual que el prototipo): todo lo 3D vive en un
 ## SubViewport de baja resolución (el pixelado PS1); el HUD, el combate y los
@@ -26,6 +26,8 @@ var player: Node3D
 var hud: RunHud
 var combat: Node = null
 var menu: Control = null
+## El pergamino del mapa (M), colgado de la cámara.
+var field_map: FieldMap
 var dialog_open := false
 var exit_node: Node3D = null
 var exit_open := false
@@ -109,6 +111,9 @@ func _build_floor() -> void:
 	cam.current = true
 	cam.fov = DataRegistry.bal_f("render.fov", 64.0)
 	player.add_child(cam) # antes de entrar al árbol (ver gotcha de @onready en docs)
+	field_map = FieldMap.new(cam)
+	cam.add_child(field_map)
+	field_map.toggled.connect(_on_field_map_toggled)
 	# El charco de luz cálida que acompaña al equipo (la antorcha de mano):
 	# con niebla y sin sol, es lo que deja ver lo que hay cerca.
 	var lamp := FlickerLight.make(
@@ -173,7 +178,7 @@ func _on_player_moved(cell: Vector2i) -> void:
 	if combat == null and cell == fd.exit_cell and exit_open:
 		_exit_dialog()
 
-## Descubre celdas (radio 1 + línea recta hacia adelante) para el minimapa,
+## Descubre celdas (radio 1 + línea recta hacia adelante) para el mapa,
 ## marca especies vistas para el bestiario y refresca el HUD.
 func _after_move() -> void:
 	var cell: Vector2i = player.get("grid_pos")
@@ -197,7 +202,8 @@ func _after_move() -> void:
 		hud.refresh()
 		hud.update_map(fd, cell, facing, map_markers())
 
-## Marcadores conocidos para el minimapa (solo en celdas descubiertas).
+## Marcadores conocidos para el mapa y la placa de interacción (solo en
+## celdas descubiertas).
 func map_markers() -> Dictionary:
 	var m := {}
 	for c: Vector2i in chest_nodes.keys():
@@ -522,6 +528,7 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 			_anim(e, "attack", "combat")
 	)
 	combat.connect("enemy_defeated", func() -> void: _anim(e, "death", ""))
+	combat.connect("impact", func(what: String, strength: float) -> void: _on_combat_impact(e, what, strength))
 	combat.connect("combat_ended", func(outcome: String, result: Dictionary) -> void: _on_combat_ended(e, outcome, result))
 	hud.visible = false
 	_frame_combat_camera(true, e.kind == RunRules.BOSS)
@@ -551,6 +558,37 @@ func _frame_combat_camera(on: bool, boss := false) -> void:
 	tw.tween_property(cam, "position", pos, 0.2)
 	tw.parallel().tween_property(cam, "fov", fov, 0.2)
 	tw.parallel().tween_property(cam, "rotation_degrees:x", pitch, 0.2)
+
+## Golpes del combate en el mundo: sacudón de cámara (Opciones → Destellos
+## y sacudones) y el enemigo que retrocede un paso corto y vuelve.
+func _on_combat_impact(e: Dictionary, kind: String, strength: float) -> void:
+	if bool(MetaState.settings.get("combat_fx", true)):
+		match kind:
+			"crit":
+				_shake(0.3, 0.02 + 0.04 * strength)
+			"kill":
+				_shake(0.45, 0.07)
+			"hurt":
+				_shake(0.3, 0.015 + 0.03 * strength)
+			"hit":
+				_shake(0.15, 0.008 + 0.012 * strength)
+	if kind == "hit" or kind == "crit" or kind == "kill":
+		_knockback(e, 0.05 if kind == "hit" else 0.12)
+
+func _knockback(e: Dictionary, amount: float) -> void:
+	var body: Variant = e.get("node")
+	if body == null or not is_instance_valid(body):
+		return
+	var node := body as Node3D
+	# En reposo, el enemigo está en el centro de su celda.
+	var home := FloorBuilder.cell_to_world(e.cell, node.position.y)
+	var away := home - player.position
+	away.y = 0.0
+	if away.length() < 0.01:
+		return
+	var tw := node.create_tween()
+	tw.tween_property(node, "position", home + away.normalized() * amount, 0.05)
+	tw.tween_property(node, "position", home, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 ## Parpadeo PS1 del modelo al recibir un golpe.
 func _blink(node: Node3D) -> void:
@@ -907,6 +945,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if is_instance_valid(menu):
 		return
+	if field_map.is_open:
+		# Con el mapa en la mano solo se lo guarda (M, Esc o Pausa).
+		if event.is_action_pressed("open_map") or event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause"):
+			get_viewport().set_input_as_handled()
+			close_field_map()
+		return
+	if event.is_action_pressed("open_map"):
+		get_viewport().set_input_as_handled()
+		open_field_map()
+		return
 	var screen: UIScreen = null
 	var pause := false
 	if event.is_action_pressed("pause"):
@@ -916,8 +964,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		screen = StatusScreen.new()
 	elif event.is_action_pressed("open_inventory"):
 		screen = InventoryScreen.new(self)
-	elif event.is_action_pressed("open_map"):
-		screen = MapScreen.new(self)
 	if screen == null:
 		return
 	get_viewport().set_input_as_handled()
@@ -941,6 +987,29 @@ func _open_menu(screen: UIScreen, pause: bool) -> void:
 			player.call("set_input_locked", false)
 			_after_move()
 	)
+
+## M: el héroe baja la mirada y levanta el pergamino (FieldMap) con lo
+## descubierto del piso; no se mueve hasta guardarlo.
+func open_field_map() -> void:
+	if field_map.is_open or combat != null or dialog_open or _intro_running or is_instance_valid(menu) or not GameState.active:
+		return
+	player.call("set_input_locked", true)
+	var pc: Vector2i = player.get("grid_pos")
+	field_map.open(MapParchment.render(fd, GameState.visited, pc, int(player.get("facing")), map_markers(), GameState.floor_n, GameState.run_seed + GameState.floor_n))
+	hud.set_map_open(true)
+	SceneRouter.play_ui("page")
+
+func close_field_map() -> void:
+	if not field_map.is_open:
+		return
+	field_map.close()
+	hud.set_map_open(false)
+	SceneRouter.play_ui("page")
+
+## Guardado el pergamino, vuelve el control.
+func _on_field_map_toggled(is_open: bool) -> void:
+	if not is_open and GameState.active and combat == null and not dialog_open and not is_instance_valid(menu):
+		player.call("set_input_locked", false)
 
 # --- Debug (panel F1 / smoke test) ----------------------------------------------------------
 
@@ -1082,7 +1151,7 @@ func debug_demo(what: String) -> void:
 			for c in fd.floor_cells():
 				if c.distance_to(player.get("grid_pos")) < 9.0:
 					GameState.visited[c] = true
-			_open_menu(MapScreen.new(self), false)
+			open_field_map()
 		"pause":
 			_open_menu(PauseMenu.new(self), true)
 		"boss_soul":

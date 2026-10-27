@@ -102,6 +102,7 @@ func setup(p_hero: Dictionary, p_enemy: Dictionary, mode := "normal") -> Array:
 	if start > 0:
 		_add_shield(start)
 		ev.append({"shield": start, "log": DataRegistry.t("combat.log_start_shield", [start]), "tone": "soul"})
+		_proc(ev, "start_shield")
 	return ev
 
 func hero_dead() -> bool:
@@ -134,6 +135,7 @@ func attack() -> Array:
 	var b := int(_fx("bleed_on_hit"))
 	if b > 0 and not enemy_dead():
 		_add_bleed(b)
+		_proc(ev, "bleed_on_hit")
 	return ev
 
 func defend() -> Array:
@@ -225,6 +227,8 @@ func ability(i: int) -> Array:
 	var who := String(hero.name)
 	var p := ability_power(i) * float(a.poder)
 	cooldowns[i] = recharge(i)
+	# Para la UI: qué activa se usó (el cartel con su nombre).
+	ev.append({"ability": i})
 	match String(a.tipo):
 		"golpe":
 			var h := _strike(p, float(a.get("critico", 0.0)), ev)
@@ -240,16 +244,21 @@ func ability(i: int) -> Array:
 				var h := _strike(p, 0.0, ev)
 				total += int(h.enemy_dmg)
 				done += 1
+				h["combo"] = done
 				any_crit = any_crit or bool(h.crit)
 				if first.is_empty():
 					first = h
 			first["log"] = DataRegistry.t("combat.log_multi", [who, aname, done, total])
 			first["tone"] = "crit" if any_crit else "hit"
+			if done > 1:
+				ev.append({"combo_total": total, "hits": done})
+			_proc(ev, "extra_hits")
 		"sangrado":
 			var h := _strike(p, 0.0, ev)
 			var st := ability_bleed(i)
 			if not enemy_dead():
 				_add_bleed(st)
+				_proc(ev, "bleed_apply_mult")
 			_log_hit(h, "combat.log_bleed_apply", [who, aname, h.enemy_dmg, st])
 		"aturdir":
 			var h := _strike(p, 0.0, ev)
@@ -260,33 +269,47 @@ func ability(i: int) -> Array:
 			else:
 				stun = maxi(stun, ability_stun(i))
 				_log_hit(h, "combat.log_stun", [who, aname, h.enemy_dmg, enemy.name])
+				_proc(ev, "stun_extra_turn")
 		"drenar":
 			var h := _strike(p, 0.0, ev)
-			var healed := _heal(roundi(int(h.enemy_dmg) * (float(a.cura) + _fx("drain_bonus_pct"))), ev)
+			var healed := _heal(roundi(int(h.enemy_dmg) * (float(a.cura) + _fx("drain_bonus_pct"))), ev, true)
 			_log_hit(h, "combat.log_drain", [who, aname, h.enemy_dmg, healed])
+			_proc(ev, "drain_bonus_pct")
 		"escudo":
 			var before := shield
 			_add_shield(ability_shield(i))
 			var s := shield - before
 			ev.append({"shield": s, "log": DataRegistry.t("combat.log_shield", [who, aname, s]), "tone": "soul"})
+			_proc(ev, "shield_mult")
 		"marca":
 			var h := _strike(p, 0.0, ev)
 			var m := float(a.marca) + _fx("mark_bonus")
 			if not enemy_dead():
 				mark = minf(maxf(mark, m), cap("marca", 1.0))
 			_log_hit(h, "combat.log_mark", [who, aname, h.enemy_dmg, roundi(m * 100.0)])
+			_proc(ev, "mark_bonus")
 		"debilitar":
 			var h := _strike(p, 0.0, ev)
 			if not enemy_dead():
 				weak_turns = maxi(weak_turns, int(a.turnos))
 				weak_pct = minf(maxf(weak_pct, float(a.debilita)), cap("debilita", 0.6))
 				_add_bleed(int(_fx("weaken_bleed")))
+				_proc(ev, "weaken_bleed")
 			_log_hit(h, "combat.log_weaken", [who, aname, h.enemy_dmg, enemy.name])
 		"ejecutar":
 			var low := execute_ready(i)
 			var h := _strike(p * (float(a.mult) if low else 1.0), 0.0, ev)
 			_log_hit(h, "combat.log_execute" if low else "combat.log_ability", [who, aname, h.enemy_dmg])
+			if low:
+				h["execute"] = true
+				_proc(ev, "execute_threshold_bonus")
 	return ev
+
+## Para la UI: avisa que saltó una sinergia (si el héroe la tiene); el
+## manager busca de dónde sale (SoulBuild.sources). No cambia nada.
+func _proc(ev: Array, type: String) -> void:
+	if _fx(type) > 0.0:
+		ev.append({"proc": type})
 
 func _log_hit(h: Dictionary, key: String, args: Array) -> void:
 	h["log"] = DataRegistry.t(key, args)
@@ -300,7 +323,8 @@ func _strike(base: float, extra_crit: float, ev: Array) -> Dictionary:
 	var dmg := base + _fx("damage_bonus_flat")
 	if surprise_round:
 		dmg *= _bal("surprise_damage_mult", 1.5)
-	if mark > 0.0:
+	var marked := mark > 0.0
+	if marked:
 		dmg *= 1.0 + mark
 		mark = 0.0
 	var crit := rng.randf() < _fx("crit_chance") + float(hero.crit_bonus) + extra_crit
@@ -310,29 +334,35 @@ func _strike(base: float, extra_crit: float, ev: Array) -> Dictionary:
 	if one_hit:
 		n = maxi(n, int(enemy.hp))
 	enemy["hp"] = int(enemy.hp) - n
-	var h := {"enemy_dmg": n, "crit": crit}
+	var h := {"enemy_dmg": n, "crit": crit, "marked": marked}
 	ev.append(h)
+	if crit:
+		_proc(ev, "crit_chance")
+		_proc(ev, "crit_damage_bonus")
 	var steal := minf(_fx("lifesteal_pct"), cap("robo_de_vida", 0.4))
-	if steal > 0.0:
-		_heal(roundi(n * steal), ev)
+	if steal > 0.0 and _heal(roundi(n * steal), ev, true) > 0:
+		_proc(ev, "lifesteal_pct")
 	if crit:
 		if _fx("crit_marks") > 0.0 and not enemy_dead():
 			mark = minf(maxf(mark, _fx("crit_marks")), cap("marca", 1.0))
+			_proc(ev, "crit_marks")
 		var c := int(_fx("coin_on_crit"))
 		if c > 0:
 			bonus_coins += c
 			ev.append({"coins": c})
+			_proc(ev, "coin_on_crit")
 	return h
 
 ## Cura (sin pasar del máximo). Agrega el evento si curó algo; devuelve cuánto.
-func _heal(amount: int, ev: Array) -> int:
+## steal: viene del enemigo (robo de vida, Drenar): la UI la dibuja viajando.
+func _heal(amount: int, ev: Array, steal := false) -> int:
 	if amount <= 0 or hero_dead():
 		return 0
 	var healed := mini(amount, int(hero.max_hp) - int(hero.hp))
 	if healed <= 0:
 		return 0
 	hero["hp"] = int(hero.hp) + healed
-	ev.append({"heal": healed})
+	ev.append({"heal": healed, "steal": steal})
 	return healed
 
 # --- Turno del enemigo -------------------------------------------------------------
@@ -358,9 +388,10 @@ func enemy_turn_start() -> Array:
 	bleed -= 1
 	enemy["hp"] = int(enemy.hp) - dmg
 	ev.append({"enemy_dmg": dmg, "bleed": true, "log": DataRegistry.t("combat.log_bleed_tick", [enemy.name, dmg]), "tone": "hit"})
+	_proc(ev, "bleed_damage_bonus")
 	var steal := minf(_fx("bleed_lifesteal_pct"), cap("robo_de_vida_sangrado", 0.5))
-	if steal > 0.0:
-		_heal(roundi(dmg * steal), ev)
+	if steal > 0.0 and _heal(roundi(dmg * steal), ev, true) > 0:
+		_proc(ev, "bleed_lifesteal_pct")
 	return ev
 
 ## La acción del enemigo: aturdido pierde el turno; si no, golpea (la
@@ -422,18 +453,23 @@ func _hurt_hero(raw: int, ev: Array) -> void:
 	hero["hp"] = int(hero.hp) - dmg
 	var text := DataRegistry.t("combat.log_enemy_hit_shield", [enemy.name, hero.name, dmg, absorbed]) if absorbed > 0 \
 		else DataRegistry.t("combat.log_enemy_hit", [enemy.name, hero.name, dmg])
-	ev.append({"hero_dmg": dmg, "absorbed": absorbed, "log": text, "tone": "taken"})
+	ev.append({"hero_dmg": dmg, "absorbed": absorbed, "log": text, "tone": "taken", "guarded": defending})
+	if defending:
+		_proc(ev, "defend_bonus_multiplier")
 	if saved:
-		ev.append({"log": DataRegistry.t("combat.log_last_stand", [hero.name]), "tone": "soul"})
+		ev.append({"last_stand": true, "log": DataRegistry.t("combat.log_last_stand", [hero.name]), "tone": "soul"})
+		_proc(ev, "last_stand")
 	var thorns := int(_fx("thorns_flat"))
 	if thorns > 0 and dmg + absorbed > 0 and not enemy_dead():
 		enemy["hp"] = int(enemy.hp) - thorns
-		ev.append({"enemy_dmg": thorns, "log": DataRegistry.t("combat.log_thorns", [hero.name, thorns]), "tone": "soul"})
+		ev.append({"enemy_dmg": thorns, "thorns": true, "log": DataRegistry.t("combat.log_thorns", [hero.name, thorns]), "tone": "soul"})
+		_proc(ev, "thorns_flat")
 	var counter := _fx("defend_counter")
 	if defending and counter > 0.0 and not enemy_dead() and not hero_dead():
 		var c := maxi(roundi(int(hero.atk) * counter), 1)
 		enemy["hp"] = int(enemy.hp) - c
-		ev.append({"enemy_dmg": c, "log": DataRegistry.t("combat.log_counter", [hero.name, c]), "tone": "hit"})
+		ev.append({"enemy_dmg": c, "counter": true, "log": DataRegistry.t("combat.log_counter", [hero.name, c]), "tone": "hit"})
+		_proc(ev, "defend_counter")
 	if hero_dead():
 		hero["hp"] = 0
 		ev.append({"log": DataRegistry.t("combat.log_fallen", [hero.name]), "tone": "taken"})

@@ -5,8 +5,9 @@ extends CanvasLayer
 ##
 ## Uno contra uno: el héroe contra un enemigo. Las reglas están en
 ## CombatCore (sin UI, las mismas que juega el simulador de balance); acá se
-## presentan sus eventos: registro, números que flotan, destellos y señales
-## para animar al enemigo en el mundo 3D.
+## presentan sus eventos: registro, números que saltan, carteles de activas y
+## sinergias, píxeles y destellos (CombatFx), y señales para animar al
+## enemigo y sacudir la cámara en el mundo 3D.
 ##
 ## Autocontenido: recibe todo por propiedades ANTES de add_child(), trabaja
 ## sobre COPIAS (nunca toca GameState) y al terminar reporta por señal:
@@ -35,6 +36,9 @@ signal enemy_hit(damage: int)
 signal enemy_acting(action: String)
 ## El enemigo llegó a 0 HP (antes del resumen de victoria).
 signal enemy_defeated
+## Un golpe fuerte para el mundo 3D (sacudón de cámara, el enemigo que
+## retrocede): kind "hit" | "bleed" | "crit" | "kill" | "hurt"; strength 0..1.
+signal impact(kind: String, strength: float)
 
 # --- Medidas de la UI (px de canvas, ventana base 1280×720) --------------------------
 const EDGE := 16
@@ -51,6 +55,8 @@ const ENEMY_BAR_W := 600
 const CHOICE_W := 368
 ## Un cuadro de las animaciones por pasos (≈ 15 fps).
 const STEP := 0.066
+## Entre los golpes de una multigolpe (se ven uno por uno).
+const COMBO_STEP := 0.13
 ## Estados del enemigo: ícono del kit y rampa.
 const STATUS_ICONS := {
 	"sangrado": ["afin_sangre", "sangre"], "aturdido": ["estado_aturdido", "vela"],
@@ -109,7 +115,8 @@ var breadcrumb: Label
 var menu_box: VBoxContainer
 ## Línea de ayuda al pie de las acciones: qué hace la opción con el foco.
 var menu_help: Label
-var float_layer: Control
+## Números, carteles, píxeles, destellos y viñeta (encima de todo el combate).
+var fx: CombatFx
 ## Diálogo abierto al terminar (resumen, alma, reemplazo).
 var dialog: CombatDialog
 ## Qué muestra el panel de acciones: "actions" | "sub" (submenú) | "wait".
@@ -118,12 +125,22 @@ var _log_tween: Tween
 var _status_key := ""
 ## Adónde vuelve «Volver» desde el reemplazo: la revelación o la elección del jefe.
 var _soul_back := Callable()
+## Cuánto duran los efectos escalonados de la última tanda (el turno
+## siguiente espera a que terminen).
+var _fx_time := 0.0
+## Hit-stop en curso: la escala de tiempo a la que se vuelve (-1 = ninguno).
+var _stop_scale := -1.0
+## Estados del enemigo en el último refresco (para que salten los nuevos).
+var _prev_status := {}
+## Azar solo para lo visual: no gasta el del combate (que es el de la run).
+var _vis_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	layer = 10
 	if rng == null:
 		rng = RandomNumberGenerator.new()
 		rng.randomize()
+	_vis_rng.randomize()
 	core = CombatCore.new(rng)
 	core.god_mode = god_mode
 	core.one_hit = one_hit
@@ -196,10 +213,8 @@ func _build_ui() -> void:
 	_build_enemy()
 	_build_hero_ui()
 	_build_menu()
-	float_layer = Control.new()
-	float_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
-	float_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(float_layer)
+	fx = CombatFx.new()
+	root.add_child(fx)
 	_layout()
 	get_viewport().size_changed.connect(_layout)
 
@@ -358,6 +373,8 @@ func _refresh_ui() -> void:
 	enemy_hp_label.text = "%d/%d" % [maxi(int(core.enemy.hp), 0), int(core.enemy.max_hp)]
 	hero_card.refresh(core.hero, core.shield, core.defending, not busy and not finished)
 	_refresh_statuses()
+	var hp := int(core.hero.hp)
+	fx.set_low_hp(not finished and hp > 0 and hp <= roundi(int(core.hero.max_hp) * _bal("fx.low_hp", 0.3)))
 
 ## Fila de estados del enemigo (se rearma solo si cambió).
 func _refresh_statuses() -> void:
@@ -369,9 +386,11 @@ func _refresh_statuses() -> void:
 	for c in status_row.get_children():
 		status_row.remove_child(c)
 		c.queue_free()
+	var now := {}
 	for st: Dictionary in list:
 		var id := String(st.id)
 		var spec: Array = STATUS_ICONS[id]
+		now[id] = int(st.value)
 		var chip := HBoxContainer.new()
 		chip.add_theme_constant_override("separation", 2)
 		chip.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -383,6 +402,24 @@ func _refresh_statuses() -> void:
 		chip.add_child(l)
 		UITooltip.attach(chip, DataRegistry.t("combat.status." + id, [int(st.value)]) if id != "carga" else DataRegistry.t("combat.status.carga", [String(enemy_data.ability_name)]))
 		status_row.add_child(chip)
+		# Estado nuevo o que creció: salta.
+		if int(st.value) > int(_prev_status.get(id, -1)):
+			_pop_chip(chip, UIStyle.ramp_color(String(spec[1])))
+	_prev_status = now
+
+## Un estado que aparece salta (después de que la fila lo acomoda) y suelta
+## unos píxeles de su color.
+func _pop_chip(chip: Control, color: Color) -> void:
+	var tw := chip.create_tween()
+	tw.tween_interval(STEP)
+	tw.tween_callback(func() -> void:
+		fx.burst(chip.get_global_rect().get_center(), [color, UIStyle.VELA_BLANCA], 8, 150.0))
+	for sc: float in [1.6, 1.25, 1.0]:
+		var k := sc
+		tw.tween_callback(func() -> void:
+			chip.pivot_offset = (chip.size / 2.0).round()
+			chip.scale = Vector2(k, k))
+		tw.tween_interval(STEP)
 
 ## Registro: kind info | hit | taken | heal | soul | crit (color de cada línea).
 func _log(text: String, kind := "info") -> void:
@@ -428,57 +465,237 @@ func _render_log() -> void:
 	_log_tween = last.create_tween()
 	_log_tween.tween_property(last, "visible_characters", last.text.length(), last.text.length() / TYPE_CPS)
 
-## Muestra los eventos de CombatCore en orden: registro, números que flotan,
-## destellos y la señal de golpe al enemigo (para animarlo).
+## Muestra los eventos de CombatCore en orden: registro, cartel de la activa,
+## números que saltan, píxeles, destellos, avisos de sinergia y la señal de
+## golpe al enemigo (para animarlo). Los golpes de una multigolpe salen uno
+## por uno; _fx_time guarda cuánto dura la tanda.
 func _present(events: Array) -> void:
+	var delay := 0.0
+	var procs := {}
 	for ev: Dictionary in events:
 		if ev.has("log"):
 			_log(String(ev.log), String(ev.get("tone", "info")))
+		if ev.has("ability"):
+			_ability_banner(int(ev.ability))
 		if ev.has("enemy_dmg"):
-			var n := int(ev.enemy_dmg)
-			var crit := bool(ev.get("crit", false))
-			enemy_hit.emit(n)
-			_flash(enemy_box, UIStyle.DANGER)
-			var color := UIStyle.ACCENT if crit else (UIStyle.HP if bool(ev.get("bleed", false)) else Color.TRANSPARENT)
-			_float_number(("-%d!" if crit else "-%d") % n, _enemy_float_pos(), "DamageLabel", color)
-			SceneRouter.play_ui("click")
+			if int(ev.get("combo", 0)) > 1:
+				delay += COMBO_STEP
+			_later(delay, _show_enemy_hit.bind(ev))
+		if ev.has("combo_total"):
+			_later(delay + COMBO_STEP, _show_combo.bind(int(ev.hits), int(ev.combo_total)))
 		if ev.has("hero_dmg"):
-			var d := int(ev.hero_dmg)
-			_float_number("-%d" % d, _hero_float_pos(), "DamageLabel")
-			if int(ev.get("absorbed", 0)) > 0:
-				_float_number("-%d" % int(ev.absorbed), _hero_float_pos() + Vector2(-56, 0), "DamageLabel", UIStyle.SOUL_LIGHT)
-			if d > 0:
-				_flash(hero_card, UIStyle.DANGER)
+			_show_hero_hit(ev)
 		if ev.has("heal"):
-			_float_number("+%d" % int(ev.heal), _hero_float_pos() + Vector2(40, 0), "HealLabel")
+			_later(delay, _show_heal.bind(int(ev.heal), bool(ev.get("steal", false))))
 		if ev.has("shield"):
-			_float_number("+%d" % int(ev.shield), _hero_float_pos() + Vector2(-40, 0), "HealLabel", UIStyle.SOUL_LIGHT)
+			_later(delay, _show_shield.bind(int(ev.shield)))
 		if ev.has("coins"):
-			_float_number("+%d" % int(ev.coins), _enemy_float_pos() + Vector2(0, 36), "HealLabel", UIStyle.COIN)
+			_later(delay, _show_coins.bind(int(ev.coins)))
+		if ev.has("last_stand"):
+			_show_last_stand()
+		if ev.has("proc") and not procs.has(String(ev.proc)):
+			procs[String(ev.proc)] = true
+			_later(delay + STEP, _show_proc.bind(String(ev.proc), procs.size() == 1))
+	_fx_time = delay
 
-## Número flotante (daño, curación, crítico): sube 16 px en 8 pasos de 2 px
-## en medio segundo y desaparece.
-func _float_number(text: String, at: Vector2, variation: String, color := Color.TRANSPARENT) -> void:
-	var l := UILabel.make(text, variation)
-	if color.a > 0.0:
-		l.add_theme_color_override("font_color", color)
-	l.position = (at / 2.0).round() * 2.0
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	float_layer.add_child(l)
-	var tw := l.create_tween()
-	for i in 8:
-		tw.tween_interval(0.5 / 8.0)
-		tw.tween_callback(func() -> void: l.position.y -= 2.0)
-	tw.tween_interval(0.2)
-	tw.tween_callback(l.queue_free)
+## Llama a f dentro de `sec` segundos (con el combate: si se cierra, no).
+func _later(sec: float, f: Callable) -> void:
+	if sec <= 0.0:
+		f.call()
+		return
+	var tw := create_tween()
+	tw.tween_interval(sec)
+	tw.tween_callback(f)
 
+## Golpe al enemigo: número (el crítico, enorme), palabra encima (crítico,
+## ejecución, marca, contragolpe, espinas), astillas de hueso, sonido,
+## sacudón y, si es crítico, destello y hit-stop.
+func _show_enemy_hit(ev: Dictionary) -> void:
+	if finished and not core.enemy_dead():
+		return
+	var n := int(ev.enemy_dmg)
+	var crit := bool(ev.get("crit", false))
+	var bleed := bool(ev.get("bleed", false))
+	enemy_hit.emit(n)
+	_flash(enemy_box, UIStyle.DANGER)
+	fx.jolt(enemy_box, 10.0 if crit else 4.0)
+	# Los golpes de una ráfaga, en escalera; los demás, un poco al azar.
+	var combo := int(ev.get("combo", 0))
+	var at := _enemy_center() + Vector2(-80.0 + 64.0 * (combo - 1), 16.0 - 22.0 * (combo - 1)) if combo > 0 else _enemy_float_pos()
+	var color := Color.TRANSPARENT
+	if crit:
+		color = UIStyle.ACCENT
+	elif bleed:
+		color = UIStyle.HP
+	elif bool(ev.get("thorns", false)):
+		color = UIStyle.SOUL_LIGHT
+	fx.number("-%d" % n, at, "DamageLabel", color, UIStyle.FONT_NUM_S * (5 if crit else (2 if bleed else 3)), crit)
+	var word := ""
+	var word_color := UIStyle.ACCENT
+	if crit:
+		word = "combat.fx_crit"
+	elif bool(ev.get("execute", false)):
+		word = "combat.fx_execute"
+		word_color = UIStyle.DANGER
+	elif bool(ev.get("marked", false)):
+		word = "combat.fx_mark"
+		word_color = UIStyle.ramp_color("amatista")
+	elif bool(ev.get("counter", false)):
+		word = "combat.fx_counter"
+		word_color = UIStyle.TEXT
+	elif bool(ev.get("thorns", false)):
+		word = "combat.fx_thorns"
+		word_color = UIStyle.SOUL_LIGHT
+	if word != "":
+		fx.tag(DataRegistry.t(word), at + Vector2(0, -80 if crit else -52), word_color, crit)
+	var colors: Array[Color] = [UIStyle.HUESO, UIStyle.CENIZA, UIStyle.SANGRE_LUZ]
+	if crit:
+		colors = [UIStyle.VELA_BLANCA, UIStyle.ACCENT, UIStyle.EMBER, UIStyle.HUESO]
+	elif bleed:
+		colors = [UIStyle.SANGRE, UIStyle.SANGRE_LUZ, UIStyle.SANGRE_OSC]
+	fx.burst(at, colors, (28 if crit else 10) + mini(n, 18), 440.0 if crit else 260.0)
+	SceneRouter.play_ui("crit" if crit else "hit")
+	impact.emit("crit" if crit else ("bleed" if bleed else "hit"), clampf(float(n) / maxf(float(core.enemy.max_hp), 1.0) * 3.0, 0.3, 1.0))
+	if crit:
+		fx.flash(UIStyle.VELA_BLANCA, 0.25)
+		_hit_stop(_bal("fx.hit_stop_crit", 0.08))
+
+## Multigolpe: el total, al final de la ráfaga.
+func _show_combo(hits: int, total: int) -> void:
+	var at := _enemy_center() + Vector2(170, -10)
+	fx.tag(DataRegistry.t("combat.fx_combo", [hits, total]), at, UIStyle.ACCENT, true)
+	fx.burst(at, [UIStyle.ACCENT, UIStyle.VELA_BLANCA], 14, 220.0)
+
+## Golpe al héroe: número, viñeta roja, la tarjeta que tiembla, sangre,
+## sacudón; lo que absorbe el escudo sale en azul; Defender lo dice.
+func _show_hero_hit(ev: Dictionary) -> void:
+	var d := int(ev.hero_dmg)
+	var absorbed := int(ev.get("absorbed", 0))
+	var at := _hero_float_pos()
+	if d > 0:
+		var hit := float(d) / maxf(float(core.hero.max_hp), 1.0)
+		fx.number("-%d" % d, at, "DamageLabel", Color.TRANSPARENT, UIStyle.FONT_NUM_S * 3)
+		_flash(hero_card, UIStyle.DANGER)
+		fx.jolt(hero_card, 8.0)
+		fx.hurt(0.5 + hit * 2.0)
+		fx.burst(at + Vector2(0, 40), [UIStyle.SANGRE, UIStyle.SANGRE_LUZ, UIStyle.SANGRE_OSC], 8 + mini(d, 16), 240.0)
+		SceneRouter.play_ui("hurt")
+		impact.emit("hurt", clampf(hit * 3.0, 0.3, 1.0))
+	if absorbed > 0:
+		fx.number("-%d" % absorbed, at + Vector2(-60, 0), "DamageLabel", UIStyle.SOUL_LIGHT)
+		fx.burst(at + Vector2(-60, 30), [UIStyle.SOUL, UIStyle.SOUL_LIGHT], 12, 220.0)
+	if bool(ev.get("guarded", false)):
+		fx.tag(DataRegistry.t("combat.fx_guard"), at + Vector2(0, -44), UIStyle.TEXT)
+
+## Cura: verde que sube; si viene del enemigo (robo de vida, Drenar), los
+## píxeles viajan del enemigo a la tarjeta del héroe.
+func _show_heal(n: int, steal: bool) -> void:
+	var at := _hero_float_pos() + Vector2(48, 0)
+	fx.number("+%d" % n, at, "HealLabel")
+	if steal:
+		fx.burst(_enemy_center(), [UIStyle.SANGRE_LUZ, UIStyle.GOOD], 10 + mini(n, 12), 260.0, at + Vector2(0, 40))
+	else:
+		fx.burst(at + Vector2(0, 40), [UIStyle.GOOD, UIStyle.VELA_BLANCA], 12, 160.0, Vector2.INF, true)
+
+## Escudo: esquirlas azules que se juntan sobre la tarjeta.
+func _show_shield(n: int) -> void:
+	var at := _hero_float_pos() + Vector2(-48, 0)
+	fx.number("+%d" % n, at, "HealLabel", UIStyle.SOUL_LIGHT)
+	_flash(hero_card, UIStyle.SOUL)
+	fx.burst(at + Vector2(0, 40), [UIStyle.SOUL, UIStyle.SOUL_LIGHT], 14, 200.0, Vector2.INF, true)
+
+func _show_coins(n: int) -> void:
+	var at := _enemy_center() + Vector2(0, 60)
+	fx.number("+%d" % n, at, "HealLabel", UIStyle.COIN)
+	fx.burst(at, [UIStyle.COIN, UIStyle.MONEDA_LUZ], 12, 200.0, Vector2.INF, true)
+	SceneRouter.play_ui("coin")
+
+## Negarse a caer: destello azul y el grito.
+func _show_last_stand() -> void:
+	fx.flash(UIStyle.SOUL, 0.3)
+	fx.tag(DataRegistry.t("combat.fx_last_stand"), _hero_float_pos() + Vector2(120, -60), UIStyle.SOUL_LIGHT, true)
+	SceneRouter.play_ui("soul")
+
+## Salta una sinergia: cartel con su origen (pacto, nivel de afinidad o
+## pasiva) sobre la tarjeta del héroe. Un sonido por tanda.
+func _show_proc(type: String, sound: bool) -> void:
+	var src := SoulBuild.sources(core.hero.get("souls", []), type)
+	if src.is_empty():
+		return
+	var s: Dictionary = src[0]
+	var text := String(s.name)
+	var color := UIStyle.SOUL_LIGHT
+	match String(s.kind):
+		"pact":
+			text = DataRegistry.t("combat.fx_pact", [s.name])
+		"affinity":
+			text = DataRegistry.t("combat.fx_affinity", [s.group, s.name])
+			color = UIStyle.ramp_color(String(s.ramp))
+	var r := hero_card.get_global_rect()
+	fx.proc_anchor = Vector2(r.position.x, r.position.y - 8.0)
+	fx.proc_banner(text, String(s.icon), String(s.ramp), color)
+	if sound:
+		SceneRouter.play_ui("proc")
+
+## Cartel de la activa: su nombre en el color de su (primera) afinidad.
+func _ability_banner(i: int) -> void:
+	var souls: Array = core.hero.get("souls", [])
+	if i < 0 or i >= souls.size():
+		return
+	var afs: Array = (souls[i] as Dictionary).get("afinidades", [])
+	var af := DataRegistry.get_affinity(String(afs[0])) if not afs.is_empty() else {}
+	var r := enemy_box.get_global_rect()
+	fx.ability_banner(String(core.active_of(i).get("name", "")), String(af.get("icono", "almas")), String(af.get("rampa", "alma")), r.end.y + 12.0)
+
+## La muerte del enemigo: astillas por todos lados, el alma que sube,
+## destello, «¡Derrotado!», el golpe más fuerte y su hit-stop; la barra y el
+## nombre se apagan.
+func _kill_fx() -> void:
+	var at := _enemy_center()
+	fx.burst(at, [UIStyle.HUESO, UIStyle.CENIZA, UIStyle.VELA_BLANCA, UIStyle.SANGRE_LUZ], 48, 540.0)
+	fx.burst(at, [UIStyle.SOUL, UIStyle.SOUL_LIGHT], 16, 180.0, Vector2.INF, true)
+	fx.flash(UIStyle.VELA_BLANCA, 0.4)
+	fx.tag(DataRegistry.t("combat.fx_kill"), at + Vector2(0, -90), UIStyle.ACCENT, true)
+	SceneRouter.play_ui("kill")
+	impact.emit("kill", 1.0)
+	_hit_stop(_bal("fx.hit_stop_kill", 0.14))
+	var tw := enemy_box.create_tween()
+	tw.tween_interval(0.35)
+	for a: float in [0.6, 0.3, 0.0]:
+		var alpha := a
+		tw.tween_callback(func() -> void: enemy_box.modulate.a = alpha)
+		tw.tween_interval(STEP)
+
+## Hit-stop: el mundo se congela un instante (crítico, muerte). Se apaga con
+## Opciones → Destellos y sacudones.
+func _hit_stop(sec: float) -> void:
+	if sec <= 0.0 or not fx.screen_fx or _stop_scale >= 0.0:
+		return
+	_stop_scale = Engine.time_scale
+	Engine.time_scale = _stop_scale * 0.05
+	var tw := create_tween().set_ignore_time_scale(true)
+	tw.tween_interval(sec)
+	tw.tween_callback(_end_hit_stop)
+
+func _end_hit_stop() -> void:
+	if _stop_scale >= 0.0:
+		Engine.time_scale = _stop_scale
+		_stop_scale = -1.0
+
+func _exit_tree() -> void:
+	_end_hit_stop()
+
+## Dónde saltan los números del enemigo: sobre su cuerpo, un poco al azar.
 func _enemy_float_pos() -> Vector2:
+	return _enemy_center() + Vector2(_vis_rng.randf_range(-44.0, 44.0), _vis_rng.randf_range(-20.0, 20.0))
+
+func _enemy_center() -> Vector2:
 	var vp := root.get_viewport_rect().size
-	return Vector2(vp.x * 0.5 - 16.0 + rng.randf_range(-30.0, 30.0), vp.y * 0.26)
+	return Vector2(vp.x * 0.5, vp.y * 0.42)
 
 func _hero_float_pos() -> Vector2:
 	var r := hero_card.get_global_rect()
-	return Vector2(r.position.x + r.size.x * 0.55, r.position.y - 52.0)
+	return Vector2(r.position.x + r.size.x * 0.55, r.position.y - 40.0)
 
 ## Destello de un cuadro (por pasos, sin fundido).
 func _flash(control: Control, color: Color) -> void:
@@ -690,13 +907,16 @@ func _end_hero_turn() -> void:
 	_refresh_ui()
 	match core.after_hero_action():
 		"victory":
+			if _fx_time > 0.0:
+				# La ráfaga termina de verse antes de que caiga.
+				await get_tree().create_timer(_fx_time).timeout
 			_finish(true)
 		"free_turn":
 			_log(DataRegistry.t("combat.enemy_stunned", [core.enemy.name]))
-			await get_tree().create_timer(_bal("enemy_turn_delay", 0.35)).timeout
+			await get_tree().create_timer(_bal("enemy_turn_delay", 0.35) + _fx_time).timeout
 			_start_turn()
 		_:
-			await get_tree().create_timer(_bal("enemy_turn_delay", 0.35)).timeout
+			await get_tree().create_timer(_bal("enemy_turn_delay", 0.35) + _fx_time).timeout
 			_enemy_turn()
 
 func _on_attack() -> void:
@@ -819,7 +1039,11 @@ func _finish(victory: bool) -> void:
 		return
 	_log(DataRegistry.t("combat.log_victory"), "crit")
 	enemy_defeated.emit()
-	_show_victory()
+	_kill_fx()
+	# Un momento para verlo caer antes del resumen (si nadie abrió otro).
+	_later(_bal("fx.kill_pause", 0.8), func() -> void:
+		if not is_instance_valid(dialog):
+			_show_victory())
 
 ## Resumen de victoria: libro de cuentas con monedas y EXP, subida de nivel,
 ## primera muerte de la especie (con sello) y el aviso del alma.
@@ -1069,6 +1293,28 @@ func debug_lose() -> void:
 		return
 	core.hero["hp"] = 0
 	_finish(false)
+
+## Capturas y pruebas visuales: muestra efectos sin tocar el combate.
+## "crit" | "hit" | "hurt" | "combo" | "heal" | "proc" (la primera sinergia
+## que tenga el héroe) | "kill" | "low_hp".
+func debug_fx(what: String) -> void:
+	match what:
+		"crit", "hit":
+			_present([{"enemy_dmg": 24 if what == "crit" else 9, "crit": what == "crit"}])
+		"hurt":
+			_present([{"hero_dmg": 7, "absorbed": 0}])
+		"combo":
+			_present([{"ability": 0}, {"enemy_dmg": 6, "combo": 1}, {"enemy_dmg": 7, "combo": 2}, {"enemy_dmg": 6, "combo": 3}, {"combo_total": 19, "hits": 3}])
+		"heal":
+			_present([{"enemy_dmg": 8}, {"heal": 4, "steal": true}])
+		"proc":
+			for type: String in SoulBuild.effects(core.hero.get("souls", [])).keys():
+				_present([{"proc": type}])
+				break
+		"kill":
+			_kill_fx()
+		"low_hp":
+			fx.set_low_hp(true)
 
 
 ## Tarjeta del héroe: [retrato] Nombre [guardia] [escudo n] ······ 20/30

@@ -96,7 +96,8 @@
 		},
 		"enemy_turn_delay": 0.35,
 		"enemy_attack_windup": 0.3,
-		"flee_stun_turns": 2
+		"flee_stun_turns": 2,
+		"fx": {"hit_stop_crit": 0.08, "hit_stop_kill": 0.14, "kill_pause": 0.8, "low_hp": 0.3}
 	},
 	"flee": {
 		"base": 0.5,
@@ -130,7 +131,8 @@
 		"flicker_hz": 10.0,
 		"head_bob": 0.04,
 		"boss_room_height": 3.5,
-		"chest": {"sprite": "res://assets/sprites/props/cofre.json", "glow": "#ffd27a", "light_energy": 0.45, "light_range": 2.4}
+		"chest": {"sprite": "res://assets/sprites/props/cofre.json", "glow": "#ffd27a", "light_energy": 0.45, "light_range": 2.4},
+		"map": {"pitch": 24.0, "open_time": 0.32, "close_time": 0.2, "paper_shade": 0.25}
 	},
 	"boss_room": {
 		"brazier_inset": 0.42,
