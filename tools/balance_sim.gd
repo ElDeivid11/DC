@@ -75,6 +75,9 @@ var _log: Array = []
 ## Muertes contra el jefe del piso / total.
 var _boss_deaths := 0
 var _deaths := 0
+## Cofres abiertos y premios de su tragaperras (por símbolo) en la tanda.
+var _chests := 0
+var _chest_prizes := {}
 ## % de HP al terminar el piso 1 (para ver si queda trivial).
 var _floor1_hp: Array[float] = []
 ## Acciones del héroe: attack | ability | defend | heal → cantidad.
@@ -222,6 +225,8 @@ func _run_batch(runs: int, upgrade_level: int, unlock_all: bool) -> void:
 	_floor1_hp.clear()
 	_boss_deaths = 0
 	_deaths = 0
+	_chests = 0
+	_chest_prizes.clear()
 	_actions.clear()
 	_offered.clear()
 	_taken.clear()
@@ -239,6 +244,10 @@ func _summary_line(label: String) -> String:
 	line += " | muertes contra jefes: %d%%" % roundi(100.0 * _boss_deaths / maxf(_deaths, 1))
 	line += " | al final: nivel %.1f, almas %.1f, niveles de afinidad %.1f, pactos %.1f" % [_avg_of("level"), _avg_of("souls"), _avg_of("tiers"), _avg_of("pacts")]
 	line += " | turnos: " + _actions_text()
+	var won := 0
+	for k: Variant in _chest_prizes.keys():
+		won += int(_chest_prizes[k])
+	line += " | cofres con premio: %d%% %s" % [roundi(100.0 * won / maxf(_chests, 1)), str(_chest_prizes)]
 	return line
 
 func _actions_text() -> String:
@@ -318,8 +327,14 @@ func _play_run(rec: Dictionary) -> int:
 			rec["at3"] = {"pacts": SoulBuild.active_pacts(m.souls), "dominant": _dominant(m.souls)}
 		var def := DataRegistry.get_floor(n)
 		var species_pool := FloorGenerator.species_pool(int(def.rank_min), int(def.rank_max))
-		# Botín del piso: cofres y objetos sueltos.
-		for c in int(def.chests) + int(def.floor_items):
+		# Botín del piso: cofres (con su tragaperras, como en el juego) y
+		# objetos sueltos.
+		for c in int(def.chests):
+			var chest := GameState.open_chest(rng, pool, false)
+			if String(chest.prize) != "":
+				_chest_prizes[String(chest.prize)] = int(_chest_prizes.get(String(chest.prize), 0)) + 1
+			_chests += 1
+		for c in int(def.floor_items):
 			var id := FloorGenerator.roll_item(rng, pool)
 			if id != "":
 				GameState.add_item(id, false)

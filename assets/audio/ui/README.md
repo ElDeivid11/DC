@@ -47,3 +47,14 @@ Sintetizados por código, sin samples (`python3 -I tools/audio/make_combat_sfx.p
 | `combate_herida.wav` | `hurt` | El héroe recibe daño |
 | `combate_muerte.wav` | `kill` | El enemigo cae (huesos que se quiebran y el alma que se va) |
 | `combate_sinergia.wav` | `proc` | Salta una sinergia: afinidad, pacto o pasiva |
+
+## Tragaperras de los cofres (propios)
+
+Sintetizados por código, sin samples (`python3 -I tools/audio/make_chest_sfx.py`): son del proyecto, CC0.
+
+| Archivo | `SceneRouter.play_ui(kind)` | Evento |
+|---|---|---|
+| `cofre_tic.wav` | `slot_tick` | Un símbolo pasa por la línea mientras gira el rodillo |
+| `cofre_rodillo.wav` | `slot_stop` | Un rodillo se clava |
+| `cofre_casi.wav` | `slot_near` | Dos iguales y el tercero no («¡Casi!») |
+| `cofre_premio.wav` | `slot_win` | Tres iguales: premio |

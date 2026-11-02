@@ -44,6 +44,47 @@ static func chest_coins(floor_n: int, rng: RandomNumberGenerator) -> int:
 	var base := DataRegistry.bal_i("coins.chest_per_floor", 6) * maxi(floor_n, 1)
 	return base + rng.randi_range(0, int(float(base) / 2.0))
 
+## Símbolo de relleno de los rodillos: nunca da premio.
+const SLOT_FILLER := "calavera"
+
+## Tragaperras del cofre: el resultado se decide ANTES de girar (como en una
+## de verdad) y los rodillos solo lo muestran: {reels: [a, b, c], prize: ""
+## o el símbolo de los tres iguales}. Premio con chest_slots.premio_chance
+## (símbolo por peso de chest_slots.premios); si no, a veces «casi» (los dos
+## primeros iguales y el tercero no: la tensión del último rodillo); si no,
+## los dos primeros distintos. force (debug y capturas): un premio o "casi".
+static func chest_slots(rng: RandomNumberGenerator, force := "") -> Dictionary:
+	var weights: Dictionary = DataRegistry.bal("chest_slots.premios", {})
+	var all: Array[String] = [SLOT_FILLER]
+	for k: Variant in weights.keys():
+		all.append(String(k))
+	if weights.has(force) or (force == "" and rng.randf() < DataRegistry.bal_f("chest_slots.premio_chance", 0.1)):
+		var s := force if weights.has(force) else _weighted_pick(weights, rng)
+		return {"reels": [s, s, s], "prize": s}
+	if force == "casi" or (force == "" and rng.randf() < DataRegistry.bal_f("chest_slots.casi_chance", 0.35)):
+		var s := _weighted_pick(weights, rng)
+		var other := s
+		while other == s:
+			other = all[rng.randi_range(0, all.size() - 1)]
+		return {"reels": [s, s, other], "prize": ""}
+	var a := all[rng.randi_range(0, all.size() - 1)]
+	var b := a
+	while b == a:
+		b = all[rng.randi_range(0, all.size() - 1)]
+	return {"reels": [a, b, all[rng.randi_range(0, all.size() - 1)]], "prize": ""}
+
+## Una clave de {clave: peso} al azar según su peso.
+static func _weighted_pick(weights: Dictionary, rng: RandomNumberGenerator) -> String:
+	var total := 0.0
+	for k: Variant in weights.keys():
+		total += float(weights[k])
+	var pick := rng.randf() * total
+	for k: Variant in weights.keys():
+		pick -= float(weights[k])
+		if pick < 0.0:
+			return String(k)
+	return String(weights.keys().back())
+
 ## Probabilidad de que suelte alma. Jefe 100%; élite fija; normal = base ×
 ## factor de rango (más fuerte → más chance). Sabiduría suma puntos porcentuales.
 static func soul_drop_chance(rank: int, kind: String, wisdom_pct: float) -> float:

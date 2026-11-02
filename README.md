@@ -58,6 +58,9 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 - **Cofres** en **pixel art** como los enemigos, con una luz dorada propia y destellos que los hacen resaltar en el pasillo; al abrirlos se sacuden, se levanta la tapa y sale un golpe de luz (`tools/sprites/draw_cofre.py`).
 
   ![Cofre abriéndose](docs/capturas/cofre.png) ![Animaciones del cofre](docs/capturas/cofre_animaciones.gif)
+- Al abrir un cofre sale una **tragaperras**: tres rodillos con monedas, pociones, almas, trofeos y calaveras que se clavan uno a uno. El cofre da lo de siempre (monedas del piso y un objeto), y si salen **tres iguales hay premio** (1 de cada 10 cofres): tres monedas, las monedas ×2; tres pociones, un objeto más; tres almas, racha de alma +4 (la próxima alma, más cerca); tres trofeos (el más raro), las monedas ×3 y un objeto más. Si los dos primeros coinciden, el tercero frena despacio con la línea latiendo… y a veces es un «¡Casi!». Las monedas suben de a poco, con el ×2 a la vista. Enter para los rodillos y después cierra.
+
+  ![La tragaperras del cofre](docs/capturas/cofre_tragaperras.gif) ![Premio: tres trofeos](docs/capturas/cofre_premio.png)
 - **Objetos**: en cofres y en el suelo. Solo aparecen los ya desbloqueados. Fuera de combate se usan desde el Inventario (las curas no se gastan con el HP completo).
 - **Morir** conserva el 50% de las monedas; **retirarse** o **ganar**, el 100%.
 
@@ -108,6 +111,7 @@ Todos se cambian en `data/balance.json` (y en los otros JSON de `data/`) sin toc
 | Bestiario | Persistente; bonus de primera kill = 10 × (11 − rango), una sola vez |
 | Almas | 3 espacios al empezar, +1 cada 2 niveles (y el Amuleto de hueso). Drop: normal 20% × factor de rango, élite 60%, jefe 100% (elegir 1 de 3, `almas.opciones_jefe`); +5% por cada enemigo seguido sin alma (`soul_drop.pity_per_kill`). Poder extra por rango del alma: 0,35 × (11 − rango) (`almas.poder_por_rango`); recarga mínima 2 (`almas.recarga_minima`). Afinidades y pactos en `data/sinergias.json` |
 | Inventario | 8 objetos; se empieza con 1 Poción menor (`start_items`) |
+| Tragaperras de los cofres | Premio (tres iguales) en el 10% de los cofres (`chest_slots.premio_chance`); «casi» en el 35% de los demás. Premios por peso: monedas ×2 (50), objeto extra (30), racha de alma +4 (15), trofeo = monedas ×3 + objeto (5) |
 | Mejoras | Tope 5 niveles; coste = base × nivel. Fuerza +0,4 ATK y Vitalidad +1,6 HP por nivel, redondeado (ver *Balance*) |
 | Huir | 50% ± 10% por rango de diferencia con la media del piso; no contra jefes. Si fallas, pierdes el turno |
 | Curación entre pisos | 30% del HP máximo al bajar (`heal_between_floors_pct`) |

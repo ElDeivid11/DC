@@ -26,6 +26,8 @@ var player: Node3D
 var hud: RunHud
 var combat: Node = null
 var menu: Control = null
+## La tragaperras del cofre abierto (UIChestSlots), mientras gira.
+var chest_slots: UIChestSlots = null
 ## El pergamino del mapa (M), colgado de la cámara.
 var field_map: FieldMap
 var dialog_open := false
@@ -244,23 +246,18 @@ func _pickup_at(cell: Vector2i) -> void:
 		EventBus.hud_message.emit(DataRegistry.t("run.inventory_full", [it.nombre]))
 		SceneRouter.play_ui("error")
 
+## Abrir un cofre: se levanta la tapa y sale la tragaperras (UIChestSlots)
+## con lo que ya sorteó GameState.open_chest (monedas, objetos y el premio si
+## salen tres iguales). Mientras gira no se camina ni hay menús, y el HUD se
+## esconde (sus monedas adelantarían el resultado). Lo que no entra en el
+## inventario queda en el suelo, en el cofre o al lado.
 func _open_chest(cell: Vector2i) -> void:
 	var node: Node3D = chest_nodes[cell]
 	chest_nodes.erase(cell)
-	var coins := RunRules.chest_coins(GameState.floor_n, GameState.rng)
-	GameState.add_coins(coins, "chests")
-	var id := FloorGenerator.roll_item(GameState.rng, MetaState.available_items())
-	# Las monedas van en un toast dorado («◈ +12 monedas»); el mensaje de
-	# abajo solo cuenta qué objeto había dentro.
-	UIToast.show(get_tree(), DataRegistry.t("run.chest_toast", [coins]), "coin")
-	if id != "":
-		var it := DataRegistry.get_item(id)
-		if GameState.add_item(id):
-			EventBus.hud_message.emit(DataRegistry.t("run.chest_item", [it.nombre]))
-		else:
-			# Inventario lleno: el objeto queda en el piso, al lado del cofre abierto.
-			item_nodes[cell] = {"node": builder.spawn_item(cell), "item_id": id}
-			EventBus.hud_message.emit(DataRegistry.t("run.chest_item_left", [it.nombre]))
+	var r := GameState.open_chest(GameState.rng, MetaState.available_items(), true, DebugTools.force_chest_prize)
+	DebugTools.force_chest_prize = ""
+	for id: Variant in r.left:
+		_drop_item_near(cell, String(id))
 	# Se abre (sacudón, tapa, golpe de luz) y queda abierto con la luz baja.
 	var chest := node as EnemyBody
 	if chest != null and chest.play_role("open", "opened") > 0.0:
@@ -268,8 +265,35 @@ func _open_chest(cell: Vector2i) -> void:
 			chest.light.create_tween().tween_property(chest.light, "base_energy", chest.light.base_energy * 0.35, 0.8)
 	else:
 		node.queue_free()
-	SceneRouter.play_ui("coin")
 	_after_move()
+	dialog_open = true
+	player.call("set_input_locked", true)
+	hud.visible = false
+	var layer := CanvasLayer.new()
+	layer.layer = 15
+	add_child(layer)
+	chest_slots = UIChestSlots.new(r)
+	layer.add_child(chest_slots)
+	chest_slots.finished.connect(func() -> void:
+		layer.queue_free()
+		chest_slots = null
+		dialog_open = false
+		hud.visible = true
+		if GameState.active and combat == null:
+			player.call("set_input_locked", false)
+		for id: Variant in r.left:
+			EventBus.hud_message.emit(DataRegistry.t("run.chest_item_left", [DataRegistry.get_item(String(id)).nombre]))
+		_after_move())
+
+## Deja un objeto en el suelo: en esa celda o en una vecina libre.
+func _drop_item_near(cell: Vector2i, id: String) -> void:
+	var spots: Array[Vector2i] = [cell]
+	for d in DIRS:
+		spots.append(cell + d)
+	for c in spots:
+		if not item_nodes.has(c) and not is_wall(c) and fd.enemy_at(c).is_empty() and c != player.get("grid_pos") and c != fd.exit_cell:
+			item_nodes[c] = {"node": builder.spawn_item(c), "item_id": id}
+			return
 
 # --- Enemigos ----------------------------------------------------------------------------
 
@@ -1117,9 +1141,11 @@ func debug_boss_entrance(intro := false) -> void:
 		_boss_intro()
 
 ## Abre el cofre de enfrente (capturas de la animación de apertura).
-func debug_open_front() -> void:
+## Abre el cofre de enfrente; prize ("trofeo", "casi"...) fuerza la tragaperras.
+func debug_open_front(prize := "") -> void:
 	var cell: Vector2i = player.call("facing_cell")
 	if chest_nodes.has(cell):
+		DebugTools.force_chest_prize = prize
 		_open_chest(cell)
 
 func debug_heal_party() -> void:

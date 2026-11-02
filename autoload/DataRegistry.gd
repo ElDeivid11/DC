@@ -24,6 +24,9 @@ const SOUL_EFFECTS: Array[String] = [
 	"stun_extra_turn", "execute_threshold_bonus", "drain_bonus_pct", "weaken_bleed",
 	"coin_on_crit", "mark_bonus", "soul_chance_pct", "xp_bonus_pct", "heal_after_combat",
 ]
+## Premios de la tragaperras de los cofres (GameState.open_chest los aplica).
+const CHEST_PRIZES: Array[String] = ["moneda", "objeto", "alma", "trofeo"]
+
 ## Activas: tipo → parámetros que necesita además de poder y recarga
 ## (CombatCore las resuelve; texto: active.<tipo>).
 const ACTIVE_TYPES := {
@@ -811,6 +814,18 @@ func _validate_balance() -> void:
 	for it: Variant in bal("start_items", []):
 		if not items.has(String(it)):
 			_err("%s: start_items incluye '%s', que no existe" % [F, it])
+	# Tragaperras de los cofres: premios con peso y probabilidades en [0, 1].
+	var prizes: Variant = bal("chest_slots.premios")
+	if typeof(prizes) != TYPE_DICTIONARY or (prizes as Dictionary).is_empty():
+		_err("%s: chest_slots.premios debe ser {símbolo: peso}" % F)
+	else:
+		for k: Variant in (prizes as Dictionary).keys():
+			if not CHEST_PRIZES.has(String(k)) or float((prizes as Dictionary)[k]) <= 0.0:
+				_err("%s: chest_slots.premios.%s: símbolo desconocido (%s) o peso no positivo" % [F, k, ", ".join(CHEST_PRIZES)])
+	for path: String in ["chest_slots.premio_chance", "chest_slots.casi_chance"]:
+		var v := bal_f(path, -1.0)
+		if v < 0.0 or v > 1.0:
+			_err("%s: %s debe estar entre 0 y 1" % [F, path])
 
 func _validate_texts() -> void:
 	for k: String in texts.keys():

@@ -22,6 +22,9 @@ extends Node
 ##                        lado, con la placa de interacción)
 ##   --message=texto      casi al final, muestra ese mensaje en el HUD
 ##   --souls=a,b,c        con --run: el héroe lleva esas almas (ids de souls.json)
+##   --burst=N            además, desde --call, guarda un cuadro cada N como
+##                        <out>_000.png, _001.png… (para armar GIFs; con
+##                        --fixed-fps 60 antes de --path el tiempo es exacto)
 
 var _scene_path := "res://scenes/ui/UIGallery.tscn"
 var _out := "user://screenshot.png"
@@ -34,6 +37,7 @@ var _message := ""
 var _face_chest := false
 var _chest_dist := 1
 var _souls: PackedStringArray = PackedStringArray()
+var _burst := 0
 var _scene: Node
 
 func _ready() -> void:
@@ -60,6 +64,8 @@ func _ready() -> void:
 				_chest_dist = maxi(1, int(arg.get_slice("=", 1)))
 		elif arg.begins_with("--souls="):
 			_souls = arg.substr(8).split(",")
+		elif arg.begins_with("--burst="):
+			_burst = maxi(1, int(arg.substr(8)))
 		elif arg == "--demo":
 			_demo_meta()
 		elif arg == "--run":
@@ -113,6 +119,11 @@ func _capture() -> void:
 					_scene.call(parts[0])
 		if i == int(_frames / 2.0) - 1 and _face_chest:
 			_put_in_front_of_chest()
+		var since := i - int(_frames / 2.0)
+		if _burst > 0 and since >= 0 and since % _burst == 0:
+			await RenderingServer.frame_post_draw
+			var shot := get_viewport().get_texture().get_image()
+			shot.save_png("%s_%03d.png" % [_out.get_basename(), floori(since / float(_burst))])
 		if i == _frames - 6:
 			if _message != "":
 				EventBus.hud_message.emit(_message)

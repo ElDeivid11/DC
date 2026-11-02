@@ -38,6 +38,11 @@ const SFX := {
 	"hurt": ["combate_herida.wav", -5.0, true],
 	"kill": ["combate_muerte.wav", -3.0, false],
 	"proc": ["combate_sinergia.wav", -9.0, true],
+	# Tragaperras de los cofres (sintetizados: tools/audio/make_chest_sfx.py).
+	"slot_tick": ["cofre_tic.wav", -16.0, true],
+	"slot_stop": ["cofre_rodillo.wav", -6.0, true],
+	"slot_near": ["cofre_casi.wav", -8.0, false],
+	"slot_win": ["cofre_premio.wav", -3.0, false],
 }
 const SFX_DIR := "res://assets/audio/ui/"
 ## El de monedas se repite en contadores: como mucho uno cada 60 ms.

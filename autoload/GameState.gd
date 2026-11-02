@@ -419,6 +419,43 @@ func add_coins(amount: int, category: String) -> void:
 	coin_breakdown[category] = int(coin_breakdown.get(category, 0)) + amount
 	EventBus.coins_changed.emit(run_coins())
 
+## Abre un cofre: monedas del piso, un objeto de la tabla y la tragaperras
+## (RunRules.chest_slots). Con tres iguales hay premio: moneda = monedas ×2,
+## trofeo = monedas ×3 y un objeto más, objeto = un objeto más, alma = racha
+## de alma (la próxima alma, más cerca: suma a soul_dry_streak). Lo usan
+## RunController y el simulador de balance. Devuelve lo necesario para
+## mostrarlo: {coins_base, coins, items, left (no entraron en el
+## inventario), reels, prize, streak}. force: ver RunRules.chest_slots.
+func open_chest(p_rng: RandomNumberGenerator, item_pool: Array[String], announce := true, force := "") -> Dictionary:
+	var base := RunRules.chest_coins(floor_n, p_rng)
+	var ids: Array[String] = []
+	var first := FloorGenerator.roll_item(p_rng, item_pool)
+	if first != "":
+		ids.append(first)
+	var slots := RunRules.chest_slots(p_rng, force)
+	var prize := String(slots.prize)
+	var coins := base
+	var streak := 0
+	match prize:
+		"moneda":
+			coins = base * DataRegistry.bal_i("chest_slots.monedas_mult", 2)
+		"trofeo":
+			coins = base * DataRegistry.bal_i("chest_slots.trofeo_mult", 3)
+		"alma":
+			streak = DataRegistry.bal_i("chest_slots.racha_alma", 4)
+			soul_dry_streak += streak
+	if prize == "objeto" or prize == "trofeo":
+		var extra := FloorGenerator.roll_item(p_rng, item_pool)
+		if extra != "":
+			ids.append(extra)
+	add_coins(coins, "chests")
+	var left: Array[String] = []
+	for id in ids:
+		if not add_item(id, announce):
+			left.append(id)
+	return {"coins_base": base, "coins": coins, "items": ids, "left": left,
+		"reels": slots.reels, "prize": prize, "streak": streak}
+
 func register_seen(species_id: String) -> void:
 	seen_species[species_id] = true
 

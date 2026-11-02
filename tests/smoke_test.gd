@@ -130,6 +130,7 @@ func _run() -> void:
 	DebugTools.god_mode = false
 	check(int(GameState.get_member("bjorn").xp) > 0 or int(GameState.get_member("bjorn").level) > 1, "las kills dan EXP")
 
+	await _check_chest(run)
 	await _check_field_items(run)
 	await _check_attributes()
 
@@ -307,6 +308,46 @@ func _press(action: String) -> void:
 	var up := InputEventAction.new()
 	up.action = action
 	Input.parse_input_event(up)
+
+## Cofre: abrirlo saca la tragaperras (sin caminar mientras gira); Enter
+## para los rodillos, Enter otra vez cierra, y las monedas quedan cobradas.
+func _check_chest(run: RunController) -> void:
+	var cells: Array = run.chest_nodes.keys()
+	check(not cells.is_empty(), "hay cofres en el piso")
+	if cells.is_empty():
+		return
+	var cell: Vector2i = cells[0]
+	var spot := Vector2i(-1, -1)
+	var facing := 0
+	for f in 4:
+		var c: Vector2i = cell - RunController.DIRS[f]
+		if not run.is_wall(c) and run.fd.enemy_at(c).is_empty():
+			spot = c
+			facing = f
+			break
+	check(spot.x >= 0, "el cofre tiene una celda libre al lado")
+	if spot.x < 0:
+		return
+	run.debug_teleport("%d,%d,%d" % [spot.x, spot.y, facing])
+	await _wait_frames(2)
+	var before := GameState.run_coins()
+	run.debug_open_front("trofeo")
+	await _wait_frames(2)
+	var slots := run.chest_slots
+	check(slots != null, "abrir el cofre saca la tragaperras")
+	if slots == null:
+		return
+	check(bool(run.player.get("input_locked")) and not run.hud.visible, "mientras gira no se camina y el HUD se esconde")
+	check(GameState.run_coins() > before, "las monedas del cofre se cobran")
+	check(String(slots.result.prize) == "trofeo", "el premio forzado sale")
+	slots.advance()
+	await get_tree().create_timer(1.2).timeout
+	check(slots.stage == "result", "Enter para los rodillos y muestra el resultado (%s)" % slots.stage)
+	slots.advance()
+	await get_tree().create_timer(0.4).timeout
+	check(run.chest_slots == null, "Enter otra vez la cierra")
+	check(not bool(run.player.get("input_locked")) and run.hud.visible, "cerrada, vuelve el control y el HUD")
+	check(not run.chest_nodes.has(cell), "el cofre queda abierto")
 
 ## Mapa de mano: M baja la mirada y levanta el pergamino (sin moverse);
 ## M otra vez lo guarda y devuelve el control.

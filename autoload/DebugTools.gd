@@ -4,6 +4,9 @@ extends CanvasLayer
 ## todos los eventos del EventBus en user://debug.log.
 
 var force_soul_drop := false
+## Premio de la tragaperras del próximo cofre ("" = al azar; un símbolo o
+## "casi"). Se gasta al abrirlo. Capturas: debug_open_front:trofeo.
+var force_chest_prize := ""
 var force_surprise := false
 var god_mode := false
 var one_hit := false

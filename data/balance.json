@@ -66,6 +66,14 @@
 		"boss": 1.0,
 		"pity_per_kill": 0.05
 	},
+	"chest_slots": {
+		"premio_chance": 0.1,
+		"casi_chance": 0.35,
+		"premios": {"moneda": 50, "objeto": 30, "alma": 15, "trofeo": 5},
+		"monedas_mult": 2,
+		"trofeo_mult": 3,
+		"racha_alma": 4
+	},
 	"almas": {
 		"poder_por_rango": 0.35,
 		"recarga_minima": 2,
