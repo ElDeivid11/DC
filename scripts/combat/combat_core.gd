@@ -10,14 +10,31 @@ extends RefCounted
 ##   {enemy_dmg: n, crit: bool, bleed: bool}            golpe al enemigo
 ##   {hero_dmg: n, absorbed: n}                         golpe al héroe
 ##   {heal: n} · {shield: n} · {coins: n}               cura, escudo, monedas
+##   {enemy_action: id} · {enemy_heal: n}               lo que hace el enemigo
+##   {impetu: n} · {impetu_spent: n} · {perfect_block}  Ímpetu y bloqueo perfecto
 ## (un evento puede traer varias claves a la vez).
 ##
 ## Turno: begin_hero_turn() → attack() | ability(i) | defend() | heal_hero()
 ## → after_hero_action() dice si sigue el enemigo; su turno es
 ## enemy_turn_start() (sangrado) → enemy_intent() (para animar) → enemy_act().
 ##
+## INTENCIONES: el enemigo sigue un patrón de acciones en ciclo (species.json
+## → patron) y la próxima siempre se sabe (intent_preview): golpe, fuerte,
+## rafaga (varios golpes chicos), guardia (recibe menos hasta su próxima
+## acción), preparar (su próximo golpe pega el doble) y drenar (se cura con
+## lo que pega). Defender justo contra un golpe fuerte o cargado es un
+## BLOQUEO PERFECTO: frena más, da Ímpetu y baja las recargas.
+## ÍMPETU: Atacar lo carga (hasta combat.impetu.max) y la próxima activa lo
+## gasta entero: +combat.impetu.por_punto por punto a su poder.
+## RASGOS de élite (enemy.traits): blindado, vampirico, furioso, espinoso, veloz.
+##
 ## Las almas dan: activas con efectos y recarga (DataRegistry.ACTIVE_TYPES),
 ## y efectos sumados de pasivas, afinidades y pactos (SoulBuild.effects).
+
+## Acciones del patrón de un enemigo.
+const ENEMY_ACTIONS: Array[String] = ["golpe", "fuerte", "rafaga", "guardia", "preparar", "drenar"]
+## Rasgos de élite.
+const ENEMY_TRAITS: Array[String] = ["blindado", "vampirico", "furioso", "espinoso", "veloz"]
 
 var rng: RandomNumberGenerator
 ## {id, name, hp, max_hp, atk, def, ability_bonus, crit_bonus, souls}
@@ -45,6 +62,19 @@ var weak_pct := 0.0
 var surprise_round := false
 var ambush_pending := false
 var enemy_turns := 0
+## Patrón del enemigo y por dónde va (la próxima acción es pattern[pattern_i]).
+var pattern: Array[String] = ["golpe"]
+var pattern_i := 0
+## «Preparó»: su próximo golpe pega × combat.acciones.preparar.
+var enemy_charged := false
+## En guardia hasta su próxima acción: recibe menos de cada golpe.
+var enemy_guard := false
+## Rasgos de élite y la furia acumulada del «furioso» (acciones hechas).
+var traits: Array[String] = []
+var rage := 0
+## Ímpetu del héroe (ver arriba).
+var impetu := 0
+var _perfect_given := false
 ## Monedas ganadas en el combate (críticos con Puntería codiciosa).
 var bonus_coins := 0
 var god_mode := false
@@ -91,6 +121,25 @@ func setup(p_hero: Dictionary, p_enemy: Dictionary, mode := "normal") -> Array:
 		"max_hp": int(p_enemy.get("hp", 1)), "atk": int(p_enemy.get("atk", 1)),
 		"kind": String(p_enemy.get("kind", RunRules.NORMAL)), "ability_name": String(p_enemy.get("ability_name", "")),
 	}
+	pattern.clear()
+	for a: Variant in p_enemy.get("pattern", []):
+		if ENEMY_ACTIONS.has(String(a)):
+			pattern.append(String(a))
+	if pattern.is_empty():
+		# Sin patrón: golpes, y los jefes un golpe fuerte cada tres.
+		if String(enemy.kind) == RunRules.BOSS:
+			pattern.assign(["golpe", "golpe", "fuerte"])
+		else:
+			pattern.assign(["golpe"])
+	pattern_i = 0
+	traits.clear()
+	for t: Variant in p_enemy.get("traits", []):
+		if ENEMY_TRAITS.has(String(t)):
+			traits.append(String(t))
+	enemy_charged = false
+	enemy_guard = false
+	rage = 0
+	impetu = 0
 	fx = SoulBuild.effects(hero.souls)
 	cooldowns.clear()
 	for i in (hero.souls as Array).size():
@@ -114,14 +163,15 @@ func enemy_dead() -> bool:
 # --- Turno del héroe ----------------------------------------------------------------
 
 ## Empieza el turno del héroe: bajan las recargas y deja de defender. Si el
-## jefe va a usar su habilidad en el próximo turno, lo avisa (para Defender).
+## enemigo va a pegar fuerte en su próximo turno, lo avisa (para Defender).
 func begin_hero_turn() -> Array:
 	defending = false
 	for i in cooldowns.size():
 		cooldowns[i] = maxi(cooldowns[i] - 1, 0)
 	var ev: Array = []
-	if enemy_special_next():
-		ev.append({"log": DataRegistry.t("combat.log_boss_charge", [enemy.name, enemy.ability_name]), "tone": "taken"})
+	if enemy_heavy_next():
+		var what := String(enemy.ability_name) if String(enemy.ability_name) != "" else DataRegistry.t("combat.heavy_name")
+		ev.append({"log": DataRegistry.t("combat.log_boss_charge", [enemy.name, what]), "tone": "taken"})
 	return ev
 
 func attack() -> Array:
@@ -136,7 +186,21 @@ func attack() -> Array:
 	if b > 0 and not enemy_dead():
 		_add_bleed(b)
 		_proc(ev, "bleed_on_hit")
+	_gain_impetu(int(_bal("impetu.por_ataque", 1)), ev)
 	return ev
+
+## Ímpetu máximo y cuánto multiplica ahora el poder de la próxima activa.
+static func impetu_max() -> int:
+	return int(_bal("impetu.max", 3))
+
+func impetu_mult() -> float:
+	return 1.0 + impetu * _bal("impetu.por_punto", 0.2)
+
+func _gain_impetu(n: int, ev: Array) -> void:
+	var before := impetu
+	impetu = mini(impetu + n, impetu_max())
+	if impetu > before:
+		ev.append({"impetu": impetu})
 
 func defend() -> Array:
 	defending = true
@@ -186,9 +250,10 @@ func recharge(i: int) -> int:
 	var floor_ := mini(base, maxi(1, DataRegistry.bal_i("almas.recarga_minima", 2)))
 	return maxi(floor_, base - int(_fx("cooldown_reduction")))
 
-## Daño de un golpe de la activa sin crítico ni marca (para el menú).
+## Daño de un golpe de la activa sin crítico ni marca, con el Ímpetu que
+## hay ahora (para el menú).
 func ability_hit(i: int) -> int:
-	return maxi(roundi(ability_power(i) * float(active_of(i).get("poder", 1.0)) + _fx("damage_bonus_flat")), 1)
+	return maxi(roundi(ability_power(i) * float(active_of(i).get("poder", 1.0)) * impetu_mult() + _fx("damage_bonus_flat")), 1)
 
 ## Golpes de una multigolpe (con Lluvia de acero).
 func ability_hits(i: int) -> int:
@@ -197,7 +262,7 @@ func ability_hits(i: int) -> int:
 
 ## Escudo que da una activa de tipo escudo.
 func ability_shield(i: int) -> int:
-	return roundi(ability_power(i) * float(active_of(i).get("poder", 1.0)) * (1.0 + _fx("shield_mult")))
+	return roundi(ability_power(i) * float(active_of(i).get("poder", 1.0)) * (1.0 + _fx("shield_mult")) * impetu_mult())
 
 ## Sangrado que aplica (con Hemorragia).
 func ability_bleed(i: int) -> int:
@@ -225,7 +290,8 @@ func ability(i: int) -> Array:
 	var a := active_of(i)
 	var aname := String(a.name)
 	var who := String(hero.name)
-	var p := ability_power(i) * float(a.poder)
+	var p := ability_power(i) * float(a.poder) * impetu_mult()
+	var spent := impetu
 	cooldowns[i] = recharge(i)
 	# Para la UI: qué activa se usó (el cartel con su nombre).
 	ev.append({"ability": i})
@@ -303,6 +369,10 @@ func ability(i: int) -> Array:
 			if low:
 				h["execute"] = true
 				_proc(ev, "execute_threshold_bonus")
+	# El Ímpetu se gasta entero en la activa (ya está en p y en el escudo).
+	if spent > 0:
+		impetu = 0
+		ev.append({"impetu_spent": spent})
 	return ev
 
 ## Para la UI: avisa que saltó una sinergia (si el héroe la tiene); el
@@ -330,12 +400,26 @@ func _strike(base: float, extra_crit: float, ev: Array) -> Dictionary:
 	var crit := rng.randf() < _fx("crit_chance") + float(hero.crit_bonus) + extra_crit
 	if crit:
 		dmg *= minf(_bal("crit_mult", 2.0) + _fx("crit_damage_bonus"), cap("critico_mult", 3.0))
+	# El enemigo en guardia o blindado recibe menos de cada golpe.
+	if enemy_guard:
+		dmg *= 1.0 - _bal("acciones.guardia", 0.5)
+	if traits.has("blindado"):
+		dmg *= 1.0 - _bal("rasgos.blindado", 0.3)
 	var n := maxi(roundi(dmg), 1)
 	if one_hit:
 		n = maxi(n, int(enemy.hp))
 	enemy["hp"] = int(enemy.hp) - n
-	var h := {"enemy_dmg": n, "crit": crit, "marked": marked}
+	var h := {"enemy_dmg": n, "crit": crit, "marked": marked, "blocked": enemy_guard}
 	ev.append(h)
+	# Espinoso: cada golpe que recibe pincha al héroe (no mata; el escudo absorbe).
+	if traits.has("espinoso") and not enemy_dead() and not god_mode:
+		var prick := maxi(roundi(int(enemy.atk) * _bal("rasgos.espinoso", 0.15)), 1)
+		var soaked := mini(shield, prick)
+		shield -= soaked
+		prick = mini(prick - soaked, int(hero.hp) - 1)
+		if prick > 0 or soaked > 0:
+			hero["hp"] = int(hero.hp) - maxi(prick, 0)
+			ev.append({"hero_dmg": maxi(prick, 0), "absorbed": soaked, "spikes": true, "log": DataRegistry.t("combat.log_spikes", [enemy.name, maxi(prick, 0)]), "tone": "taken"})
 	if crit:
 		_proc(ev, "crit_chance")
 		_proc(ev, "crit_damage_bonus")
@@ -367,17 +451,66 @@ func _heal(amount: int, ev: Array, steal := false) -> int:
 
 # --- Turno del enemigo -------------------------------------------------------------
 
-## ¿La próxima acción del enemigo es la habilidad de jefe? (cada N turnos
-## suyos; aturdido no cuenta).
-func enemy_special_next() -> bool:
-	var every := int(_bal("boss_ability_every", 3))
-	return String(enemy.kind) == RunRules.BOSS and every > 0 and stun == 0 and (enemy_turns + 1) % every == 0
+## La próxima acción del patrón.
+func next_action() -> String:
+	return pattern[pattern_i % pattern.size()]
 
-## Qué va a hacer: "stunned" | "special" | "attack".
+## ¿Su próximo golpe es fuerte, o viene cargado? (aturdido no cuenta).
+## Defender justo ahí es un bloqueo perfecto.
+func enemy_heavy_next() -> bool:
+	if stun > 0 or enemy_dead():
+		return false
+	var a := next_action()
+	return a == "fuerte" or (enemy_charged and _action_hits(a) > 0)
+
+## Qué va a hacer: "stunned" o la acción del patrón.
 func enemy_intent() -> String:
+	return "stunned" if stun > 0 else next_action()
+
+## Para la UI: qué viene y cuánto dolería cada golpe sin defender (con la
+## DEF y las reducciones del héroe, sin contar el escudo):
+## {action, hits, dmg, heavy}.
+func intent_preview() -> Dictionary:
 	if stun > 0:
-		return "stunned"
-	return "special" if enemy_special_next() else "attack"
+		return {"action": "stunned", "hits": 0, "dmg": 0, "heavy": false}
+	var a := next_action()
+	var hits := _action_hits(a)
+	return {"action": a, "hits": hits, "dmg": _mitigated(maxi(roundi(_scaled(float(int(enemy.atk)), a)), 0), 0.0) if hits > 0 else 0, "heavy": enemy_heavy_next()}
+
+## Golpes de una acción (0 = no pega).
+func _action_hits(action: String) -> int:
+	match action:
+		"golpe":
+			return 2 if traits.has("veloz") else 1
+		"fuerte", "drenar":
+			return 1
+		"rafaga":
+			return maxi(int(_bal("acciones.rafaga_golpes", 3)), 1)
+	return 0
+
+## Daño de cada golpe de una acción a partir del ataque: su multiplicador,
+## la carga, la emboscada, debilitado y la furia.
+func _scaled(base: float, action: String) -> float:
+	var raw := base
+	match action:
+		"golpe":
+			if traits.has("veloz"):
+				raw *= _bal("rasgos.veloz", 0.6)
+		"fuerte":
+			raw *= _bal("acciones.fuerte", 1.6)
+		"rafaga":
+			raw *= _bal("acciones.rafaga", 0.45)
+		"drenar":
+			raw *= _bal("acciones.drenar", 1.0)
+	if enemy_charged:
+		raw *= _bal("acciones.preparar", 2.0)
+	if ambush_pending:
+		raw *= _bal("ambush_damage_mult", 1.5)
+	if weak_turns > 0:
+		raw *= 1.0 - weak_pct
+	if traits.has("furioso"):
+		raw *= 1.0 + minf(rage * _bal("rasgos.furioso", 0.1), _bal("rasgos.furioso_max", 0.5))
+	return raw
 
 ## Al empezar su turno el sangrado le hace daño (y baja uno).
 func enemy_turn_start() -> Array:
@@ -394,12 +527,11 @@ func enemy_turn_start() -> Array:
 		_proc(ev, "bleed_lifesteal_pct")
 	return ev
 
-## La acción del enemigo: aturdido pierde el turno; si no, golpea (la
-## habilidad de jefe pega más fuerte; Defender la frena).
+## La acción del enemigo: aturdido pierde el turno (y no avanza su patrón);
+## si no, hace la que tocaba y pasa a la siguiente.
 func enemy_act() -> Array:
 	var ev: Array = []
-	var intent := enemy_intent()
-	if intent == "stunned":
+	if stun > 0:
 		stun -= 1
 		if stun == 0:
 			stun_resist = maxi(1, DataRegistry.bal_i("combat.stun_resist_actions", 2))
@@ -407,19 +539,50 @@ func enemy_act() -> Array:
 	else:
 		enemy_turns += 1
 		stun_resist = maxi(stun_resist - 1, 0)
-		var raw: float
-		if intent == "special":
-			raw = int(enemy.atk) * _bal("boss_ability_mult", 1.6)
-			ev.append({"log": DataRegistry.t("combat.log_boss_ability", [enemy.name, enemy.ability_name]), "tone": "taken"})
-		else:
-			var variance := int(_bal("damage_variance", 1))
-			raw = int(enemy.atk) + rng.randi_range(-variance, variance)
-		if ambush_pending:
-			raw *= _bal("ambush_damage_mult", 1.5)
-			ambush_pending = false
-		if weak_turns > 0:
-			raw *= 1.0 - weak_pct
-		_hurt_hero(maxi(roundi(raw), 0), ev)
+		enemy_guard = false
+		_perfect_given = false
+		var action := next_action()
+		pattern_i += 1
+		ev.append({"enemy_action": action})
+		var hits := _action_hits(action)
+		match action:
+			"guardia":
+				enemy_guard = true
+				ev.append({"log": DataRegistry.t("combat.log_enemy_guard", [enemy.name]), "tone": "info"})
+			"preparar":
+				enemy_charged = true
+				ev.append({"log": DataRegistry.t("combat.log_enemy_prepare", [enemy.name]), "tone": "taken"})
+			_:
+				var base := float(int(enemy.atk))
+				if action == "golpe":
+					var variance := int(_bal("damage_variance", 1))
+					base += rng.randi_range(-variance, variance)
+				var heavy := action == "fuerte" or enemy_charged
+				var raw := maxi(roundi(_scaled(base, action)), 0)
+				if action == "fuerte":
+					var what := String(enemy.ability_name) if String(enemy.ability_name) != "" else DataRegistry.t("combat.heavy_name")
+					ev.append({"log": DataRegistry.t("combat.log_boss_ability", [enemy.name, what]), "tone": "taken"})
+				elif action == "rafaga":
+					ev.append({"log": DataRegistry.t("combat.log_enemy_flurry", [enemy.name, hits]), "tone": "taken"})
+				var dealt := 0
+				for k in hits:
+					if hero_dead():
+						break
+					dealt += _hurt_hero(raw, ev, heavy)
+				enemy_charged = false
+				# Se cura con lo que pegó: Drenar y el rasgo vampírico.
+				var back := 0.0
+				if action == "drenar":
+					back += _bal("acciones.drenar_cura", 0.5)
+				if traits.has("vampirico"):
+					back += _bal("rasgos.vampirico", 0.5)
+				if back > 0.0 and dealt > 0 and not enemy_dead():
+					var healed := mini(roundi(dealt * back), int(enemy.max_hp) - int(enemy.hp))
+					if healed > 0:
+						enemy["hp"] = int(enemy.hp) + healed
+						ev.append({"enemy_heal": healed, "log": DataRegistry.t("combat.log_enemy_heal", [enemy.name, healed]), "tone": "taken"})
+		ambush_pending = false
+		rage += 1
 	# Debilitado dura turnos del enemigo (actúe o no).
 	if weak_turns > 0:
 		weak_turns -= 1
@@ -427,19 +590,30 @@ func enemy_act() -> Array:
 			weak_pct = 0.0
 	return ev
 
-## Golpe al héroe: Defender bloquea un % (más con algunas pasivas), las
-## reducciones planas pueden dejarlo en 0, la DEF (puntos + Armazón) no baja
-## de 1, el escudo absorbe, Negarse a caer salva una vez; después espinas y
-## el contragolpe de Maestro de armas.
-func _hurt_hero(raw: int, ev: Array) -> void:
+## Lo que queda de un golpe después de Defender (block), las reducciones
+## planas (pueden dejarlo en 0) y la DEF (puntos + Armazón, no baja de 1).
+func _mitigated(raw: int, block: float) -> int:
 	var dmg := raw
-	if defending:
-		var block := clampf(_bal("defend_block", 0.5) + _fx("defend_bonus_multiplier"), 0.0, _bal("defend_block_max", 0.9))
+	if block > 0.0:
 		dmg = int(dmg * (1.0 - block))
 	dmg = maxi(dmg - int(_fx("damage_reduction_flat")), 0)
 	var def := int(hero.def) + int(_fx("def_flat"))
 	if def > 0 and dmg > 1:
 		dmg = maxi(dmg - def, 1)
+	return dmg
+
+## Golpe al héroe: Defender bloquea un % (más con algunas pasivas; contra un
+## golpe fuerte o cargado es un bloqueo perfecto), reducciones y DEF, el
+## escudo absorbe, Negarse a caer salva una vez; después espinas y el
+## contragolpe de Maestro de armas. Devuelve el HP que le sacó.
+func _hurt_hero(raw: int, ev: Array, heavy := false) -> int:
+	var perfect := defending and heavy
+	var block := 0.0
+	if defending:
+		block = clampf(_bal("defend_block", 0.5) + _fx("defend_bonus_multiplier"), 0.0, _bal("defend_block_max", 0.9))
+		if perfect:
+			block = maxf(block, _bal("bloqueo_perfecto.bloqueo", 0.8))
+	var dmg := _mitigated(raw, block)
 	if god_mode:
 		dmg = 0
 	var absorbed := mini(shield, dmg)
@@ -453,9 +627,17 @@ func _hurt_hero(raw: int, ev: Array) -> void:
 	hero["hp"] = int(hero.hp) - dmg
 	var text := DataRegistry.t("combat.log_enemy_hit_shield", [enemy.name, hero.name, dmg, absorbed]) if absorbed > 0 \
 		else DataRegistry.t("combat.log_enemy_hit", [enemy.name, hero.name, dmg])
-	ev.append({"hero_dmg": dmg, "absorbed": absorbed, "log": text, "tone": "taken", "guarded": defending})
+	ev.append({"hero_dmg": dmg, "absorbed": absorbed, "log": text, "tone": "taken", "guarded": defending, "perfect": perfect})
 	if defending:
 		_proc(ev, "defend_bonus_multiplier")
+	# Bloqueo perfecto (una vez por acción del enemigo): Ímpetu y recargas.
+	if perfect and not _perfect_given and not hero_dead():
+		_perfect_given = true
+		var cut := int(_bal("bloqueo_perfecto.recarga", 1))
+		for i in cooldowns.size():
+			cooldowns[i] = maxi(cooldowns[i] - cut, 0)
+		ev.append({"perfect_block": true, "log": DataRegistry.t("combat.log_perfect", [hero.name]), "tone": "soul"})
+		_gain_impetu(int(_bal("bloqueo_perfecto.impetu", 1)), ev)
 	if saved:
 		ev.append({"last_stand": true, "log": DataRegistry.t("combat.log_last_stand", [hero.name]), "tone": "soul"})
 		_proc(ev, "last_stand")
@@ -473,11 +655,13 @@ func _hurt_hero(raw: int, ev: Array) -> void:
 	if hero_dead():
 		hero["hp"] = 0
 		ev.append({"log": DataRegistry.t("combat.log_fallen", [hero.name]), "tone": "taken"})
+	return dmg
 
 # --- Para la UI ----------------------------------------------------------------------
 
 ## Estados del enemigo para mostrar: [{id, value}] (sangrado, aturdido,
-## marca en %, debilitado en turnos, carga = prepara la habilidad de jefe).
+## marca en %, debilitado en turnos, guardia en % que frena). Lo que viene
+## (golpe fuerte, cargado...) va aparte: intent_preview().
 func enemy_statuses() -> Array:
 	var out: Array = []
 	if bleed > 0:
@@ -488,6 +672,6 @@ func enemy_statuses() -> Array:
 		out.append({"id": "marca", "value": roundi(mark * 100.0)})
 	if weak_turns > 0:
 		out.append({"id": "debil", "value": weak_turns})
-	if enemy_special_next():
-		out.append({"id": "carga", "value": 0})
+	if enemy_guard:
+		out.append({"id": "guardia", "value": roundi(_bal("acciones.guardia", 0.5) * 100.0)})
 	return out

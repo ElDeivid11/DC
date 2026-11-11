@@ -325,6 +325,15 @@ func _validate_species() -> void:
 					_err("%s → '%s': el alma '%s' no existe en souls.json" % [F, id, sid])
 			if (s.almas as Array).is_empty() and bool(s.activo):
 				_err("%s → '%s': una especie activa necesita al menos un alma en 'almas'" % [F, id])
+		# Patrón de combate: acciones en ciclo (CombatCore.ENEMY_ACTIONS). Sin
+		# patrón, solo golpea.
+		var patron: Array = s.get("patron", ["golpe"])
+		if patron.is_empty():
+			_err("%s → '%s': 'patron' no puede estar vacío" % [F, id])
+		for a: Variant in patron:
+			if not CombatCore.ENEMY_ACTIONS.has(String(a)):
+				_err("%s → '%s': acción '%s' desconocida en 'patron' (usa %s)" % [F, id, a, CombatCore.ENEMY_ACTIONS])
+		s["patron"] = patron
 		s["family"] = String(s.get("family", id))
 		s["description"] = String(s.get("description", ""))
 		var tier := String(s.get("tier", "basico"))
@@ -814,6 +823,9 @@ func _validate_balance() -> void:
 	for it: Variant in bal("start_items", []):
 		if not items.has(String(it)):
 			_err("%s: start_items incluye '%s', que no existe" % [F, it])
+	for rasgo: Variant in bal("enemies.elite_traits", []):
+		if not CombatCore.ENEMY_TRAITS.has(String(rasgo)):
+			_err("%s: enemies.elite_traits incluye '%s', que no existe (usa %s)" % [F, rasgo, CombatCore.ENEMY_TRAITS])
 	# Tragaperras de los cofres: premios con peso y probabilidades en [0, 1].
 	var prizes: Variant = bal("chest_slots.premios")
 	if typeof(prizes) != TYPE_DICTIONARY or (prizes as Dictionary).is_empty():

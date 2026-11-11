@@ -81,7 +81,8 @@ static func test_room() -> FloorData:
 	]
 	for i in layout.size():
 		var row: Array = layout[i]
-		var e := make_enemy(row[0], String(row[1]), String(row[3]), int(row[2]))
+		var e := make_enemy(row[0], String(row[1]), String(row[3]), int(row[2]),
+			"blindado" if String(row[3]) == RunRules.ELITE else "", String(DataRegistry.get_species(String(row[1])).almas[0]))
 		e["dormant"] = bool(row[4])
 		e["variant_seed"] = i * 7919
 		if e.kind == RunRules.BOSS:
@@ -104,8 +105,10 @@ static func test_room() -> FloorData:
 
 ## rank < 0 = el rango base de la especie. Una especie de tier "elite" ya es
 ## élite por sí misma (modelo propio): no lleva sufijo, tinte ni escala extra;
-## eso queda para las básicas que salen como variante élite.
-static func make_enemy(cell: Vector2i, species_id: String, kind: String, rank := -1) -> Dictionary:
+## eso queda para las básicas que salen como variante élite. trait: rasgo de
+## élite (va en el nombre: «Esqueleto guardián blindado»). soul_id: el alma
+## que guarda (su llama se ve antes de pelear); "" = se sortea al soltarla.
+static func make_enemy(cell: Vector2i, species_id: String, kind: String, rank := -1, trait_id := "", soul_id := "") -> Dictionary:
 	var sp := DataRegistry.get_species(species_id)
 	var visual: Dictionary = sp.get("visual", {})
 	var e := {
@@ -114,8 +117,9 @@ static func make_enemy(cell: Vector2i, species_id: String, kind: String, rank :=
 		"rank": int(sp.rank) if rank < 0 else rank,
 		"kind": kind,
 		"display_name": String(sp.display_name),
-		# Alma fija (jefes, de floors.json); "" = una de su especie al azar.
-		"soul_id": "",
+		# El alma que guarda (los jefes, la de floors.json).
+		"soul_id": soul_id,
+		"trait": trait_id,
 		"scale_mult": 1.0,
 		"tint": Color.WHITE,
 		"eye_color": visual.get("eye_color", Color.WHITE),
@@ -131,6 +135,8 @@ static func make_enemy(cell: Vector2i, species_id: String, kind: String, rank :=
 		e["tint"] = Color(float(tint[0]), float(tint[1]), float(tint[2]))
 		# Ojos ámbar: la élite se reconoce en la oscuridad antes de verla entera.
 		e["eye_color"] = Color.html(String(DataRegistry.bal("enemies.elite_eye", "#ffb040")))
+	if trait_id != "":
+		e["display_name"] = DataRegistry.t("enemy.trait_name", [sp.display_name, DataRegistry.t("trait." + trait_id)])
 	return e
 
 ## Especies que pueden salir como enemigo común entre los rangos dados:
@@ -148,8 +154,10 @@ static func species_pool(rank_min: int, rank_max: int) -> Array[String]:
 
 ## Sorteo de un enemigo común: especie ponderada por "peso", rango al azar en
 ## el cruce (rank_range de la especie ∩ rango del piso) y tipo: las especies
-## "elite" siempre lo son; las básicas, con enemies.elite_chance.
-## Devuelve {species_id, rank, kind}. Lo usan el generador y tools/balance_sim.
+## "elite" siempre lo son; las básicas, con enemies.elite_chance. Las élites
+## traen un rasgo (enemies.elite_traits) y todos, el alma que guardan.
+## Devuelve {species_id, rank, kind, trait, soul_id}. Lo usan el generador y
+## tools/balance_sim.
 static func roll_enemy(rng: RandomNumberGenerator, pool: Array[String], rank_min: int, rank_max: int) -> Dictionary:
 	var total := 0.0
 	for sid in pool:
@@ -169,7 +177,11 @@ static func roll_enemy(rng: RandomNumberGenerator, pool: Array[String], rank_min
 		kind = RunRules.ELITE
 	elif rng.randf() < DataRegistry.bal_f("enemies.elite_chance", 0.1):
 		kind = RunRules.ELITE
-	return {"species_id": chosen, "rank": rank, "kind": kind}
+	var trait_id := ""
+	var pool_traits: Array = DataRegistry.bal("enemies.elite_traits", [])
+	if kind == RunRules.ELITE and not pool_traits.is_empty():
+		trait_id = String(pool_traits[rng.randi_range(0, pool_traits.size() - 1)])
+	return {"species_id": chosen, "rank": rank, "kind": kind, "trait": trait_id, "soul_id": DataRegistry.roll_soul_id(chosen, rng)}
 
 ## Datos del jefe de floors.json sobre un enemigo ya armado.
 static func _apply_boss_def(boss: Dictionary, b: Dictionary) -> void:
@@ -473,7 +485,7 @@ static func _place_enemies(fd: FloorData, rng: RandomNumberGenerator, def: Dicti
 		if near:
 			continue
 		var roll := roll_enemy(rng, pool, int(def.rank_min), int(def.rank_max))
-		var e := make_enemy(c, String(roll.species_id), String(roll.kind), int(roll.rank))
+		var e := make_enemy(c, String(roll.species_id), String(roll.kind), int(roll.rank), String(roll.trait), String(roll.soul_id))
 		e["facing"] = rng.randi_range(0, 3)
 		# Dormido: tirado en el piso como un montón de huesos hasta que el
 		# equipo se acerca (o lo pisa).

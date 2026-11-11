@@ -8,6 +8,7 @@
 		"family": "esqueleto",
 		"description": "Huesos viejos que alguien obligó a seguir trabajando. Pega con lo que encontró en el camino.",
 		"almas": ["esbirro_tajo", "esbirro_escudazo", "esbirro_terco"],
+		"patron": ["golpe", "golpe", "fuerte"],
 		"dormant_chance": 0.5,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_esbirro.glb",
@@ -39,6 +40,7 @@
 		"family": "esqueleto",
 		"description": "Todavía apunta con un ojo cerrado, aunque ya no tenga párpados.",
 		"almas": ["arquero_flecha", "arquero_doble", "arquero_veneno", "arquero_fantasma"],
+		"patron": ["golpe", "preparar", "golpe", "rafaga"],
 		"dormant_chance": 0.3,
 		"visual": {
 			"model_path": "res://assets/enemies/esqueleto_picaro.glb",
@@ -67,6 +69,7 @@
 		"family": "esqueleto",
 		"description": "Sigue cumpliendo una guardia que nadie recuerda haberle dado. El escudo no es de adorno.",
 		"almas": ["guardian_hacha", "guardian_muro", "guardian_cabezazo"],
+		"patron": ["guardia", "fuerte", "golpe"],
 		"rank_range": [2, 6],
 		"tier": "elite",
 		"peso": 1.5,
@@ -103,6 +106,7 @@
 		"family": "esqueleto",
 		"description": "Custodia cada escalera hacia abajo. Habla con los muertos y los muertos le contestan.",
 		"almas": ["jefe_novicio", "jefe_osario", "jefe_ahogado", "jefe_archi", "jefe_senor"],
+		"patron": ["golpe", "drenar", "fuerte"],
 		"dormant_chance": 0.0,
 		"visual": {
 			"model_path": "res://assets/enemies/nigromante.glb",

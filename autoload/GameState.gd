@@ -292,12 +292,13 @@ func pity_bonus() -> float:
 func soul_drop_chance(rank: int, kind: String) -> float:
 	return RunRules.soul_drop_chance(rank, kind, soul_chance_bonus())
 
-## Sorteo del alma de un enemigo común (o élite): "" si no suelta. `force`
-## (debug) la hace caer siempre.
-func roll_soul(species_id: String, rank: int, kind: String, p_rng: RandomNumberGenerator, force := false) -> String:
+## Sorteo del alma de un enemigo común (o élite): "" si no suelta (se le
+## escapa). `force` (debug) la hace caer siempre. held: el alma que guarda
+## ese enemigo (la que se le ve); "" = una de su especie al azar.
+func roll_soul(species_id: String, rank: int, kind: String, p_rng: RandomNumberGenerator, force := false, held := "") -> String:
 	if not force and p_rng.randf() >= soul_drop_chance(rank, kind):
 		return ""
-	return DataRegistry.roll_soul_id(species_id, p_rng)
+	return held if held != "" else DataRegistry.roll_soul_id(species_id, p_rng)
 
 ## Al ganar un combate contra un enemigo común: si no soltó alma la racha
 ## sube (la próxima es más probable); si soltó, vuelve a cero. Los jefes no
@@ -455,6 +456,13 @@ func open_chest(p_rng: RandomNumberGenerator, item_pool: Array[String], announce
 			left.append(id)
 	return {"coins_base": base, "coins": coins, "items": ids, "left": left,
 		"reels": slots.reels, "prize": prize, "streak": streak}
+
+## Botín de élite: a veces deja un objeto (enemies.elite_item_chance).
+## "" = nada. Lo usan RunController y el simulador.
+func roll_elite_loot(kind: String, p_rng: RandomNumberGenerator, item_pool: Array[String]) -> String:
+	if kind != RunRules.ELITE or p_rng.randf() >= DataRegistry.bal_f("enemies.elite_item_chance", 0.0):
+		return ""
+	return FloorGenerator.roll_item(p_rng, item_pool)
 
 func register_seen(species_id: String) -> void:
 	seen_species[species_id] = true

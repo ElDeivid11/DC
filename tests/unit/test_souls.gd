@@ -193,20 +193,129 @@ func test_topes_de_acumulacion() -> void:
 	boss.fx["stun_extra_turn"] = 5.0
 	eq(boss.ability_stun(0), DataRegistry.bal_i("combat.boss_stun_max", 1), "a un jefe se lo aturde poco")
 
-func test_golpe_cargado_del_jefe() -> void:
-	var c := _core([], 999, 10, RunRules.BOSS)
-	var every := DataRegistry.bal_i("combat.boss_ability_every", 3)
-	for i in every - 1:
-		check(not c.enemy_special_next(), "turno %d: ataque normal" % (i + 1))
+func test_golpe_fuerte_y_bloqueo_perfecto() -> void:
+	# Sin patrón, un jefe da dos golpes y uno fuerte; el fuerte se anuncia.
+	var c := _core([_soul("esbirro_tajo")], 999, 10, RunRules.BOSS)
+	for i in 2:
+		check(not c.enemy_heavy_next(), "turno %d: ataque normal" % (i + 1))
 		c.enemy_act()
-	check(c.enemy_special_next(), "lo anuncia antes")
-	check(c.begin_hero_turn().size() > 0, "el registro avisa que carga")
+	check(c.enemy_heavy_next(), "lo anuncia antes")
+	eq(String(c.intent_preview().action), "fuerte", "la intención dice que viene el golpe fuerte")
+	check(c.begin_hero_turn().size() > 0, "el registro avisa")
 	c.hero["hp"] = 999
 	c.hero["max_hp"] = 999
+	c.cooldowns[0] = 3
+	c.defend()
+	var ev := c.enemy_act()
+	var heavy := roundi(10 * DataRegistry.bal_f("combat.acciones.fuerte", 1.6))
+	eq(999 - int(c.hero.hp), int(heavy * (1.0 - DataRegistry.bal_f("combat.bloqueo_perfecto.bloqueo", 0.8))), "el bloqueo perfecto frena más que Defender")
+	check(ev.any(func(e: Dictionary) -> bool: return e.has("perfect_block")), "avisa el bloqueo perfecto")
+	eq(c.impetu, 1, "da Ímpetu")
+	eq(c.cooldowns[0], 2, "y baja las recargas")
+	# Defender un golpe común es solo la mitad, sin premio.
+	c.begin_hero_turn()
+	c.hero["hp"] = 999
 	c.defend()
 	c.enemy_act()
-	var defended := 999 - int(c.hero.hp)
-	eq(defended, int(roundi(10 * DataRegistry.bal_f("combat.boss_ability_mult", 1.6)) * (1.0 - DataRegistry.bal_f("combat.defend_block", 0.5))), "Defender frena la mitad")
+	check(999 - int(c.hero.hp) <= int(11 * (1.0 - DataRegistry.bal_f("combat.defend_block", 0.5))), "Defender un golpe común frena la mitad")
+	eq(c.impetu, 1, "sin Ímpetu extra")
+
+func test_patron_e_intenciones() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var c := CombatCore.new(rng)
+	c.setup(_hero([], 999), {"name": "Arquero", "hp": 100, "atk": 10, "kind": "normal", "pattern": ["guardia", "preparar", "golpe", "rafaga", "drenar"]})
+	eq(c.enemy_intent(), "guardia", "empieza por la primera acción")
+	c.enemy_act()
+	check(c.enemy_guard, "en guardia")
+	eq(int(c.enemy.hp), 100, "no pegó")
+	c.attack()
+	var guard_dmg := 100 - int(c.enemy.hp)
+	check(guard_dmg <= roundi(7 * (1.0 - DataRegistry.bal_f("combat.acciones.guardia", 0.5))), "en guardia recibe menos (%d)" % guard_dmg)
+	c.enemy_act()
+	check(c.enemy_charged and not c.enemy_guard, "toma impulso y baja la guardia")
+	check(c.enemy_heavy_next(), "el golpe cargado cuenta como fuerte")
+	var before := int(c.hero.hp)
+	c.enemy_act()
+	var charged := before - int(c.hero.hp)
+	check(charged >= roundi(9 * DataRegistry.bal_f("combat.acciones.preparar", 2.0)), "el golpe cargado pega el doble (%d)" % charged)
+	check(not c.enemy_charged, "y gasta la carga")
+	var p := c.intent_preview()
+	eq(String(p.action), "rafaga", "sigue la ráfaga")
+	eq(int(p.hits), DataRegistry.bal_i("combat.acciones.rafaga_golpes", 3), "con sus golpes")
+	before = int(c.hero.hp)
+	var ev := c.enemy_act()
+	eq(ev.filter(func(e: Dictionary) -> bool: return e.has("hero_dmg")).size(), int(p.hits), "un evento por golpe")
+	eq(before - int(c.hero.hp), int(p.dmg) * int(p.hits), "la intención dice lo que saca")
+	c.enemy["hp"] = 50
+	c.enemy_act()
+	check(int(c.enemy.hp) > 50, "Drenar lo cura")
+	eq(c.enemy_intent(), "guardia", "y el patrón vuelve a empezar")
+	# Aturdido no avanza el patrón.
+	c.stun = 1
+	eq(c.enemy_intent(), "stunned", "aturdido")
+	c.enemy_act()
+	eq(c.enemy_intent(), "guardia", "al despertar sigue donde estaba")
+
+func test_impetu() -> void:
+	var c := _core([_soul("esbirro_tajo")], 9999)
+	var base := c.ability_hit(0)
+	c.attack()
+	c.attack()
+	eq(c.impetu, 2, "Atacar carga Ímpetu")
+	for i in 5:
+		c.attack()
+	eq(c.impetu, CombatCore.impetu_max(), "con tope")
+	check(c.ability_hit(0) > base, "la activa pega más con Ímpetu (%d → %d)" % [base, c.ability_hit(0)])
+	var ev := c.ability(0)
+	eq(c.impetu, 0, "la activa lo gasta entero")
+	check(ev.any(func(e: Dictionary) -> bool: return int(e.get("impetu_spent", 0)) == CombatCore.impetu_max()), "y lo avisa")
+
+func test_rasgos_de_elite() -> void:
+	var mk := func(t: String) -> CombatCore:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 5
+		var c := CombatCore.new(rng)
+		c.setup(_hero([], 500, 10), {"name": "Élite", "hp": 1000, "atk": 20, "kind": "elite", "traits": [t]})
+		return c
+	var plain: CombatCore = mk.call("")
+	plain.attack()
+	var normal := 1000 - int(plain.enemy.hp)
+	var armored: CombatCore = mk.call("blindado")
+	armored.attack()
+	check(1000 - int(armored.enemy.hp) < normal, "blindado recibe menos")
+	var vamp: CombatCore = mk.call("vampirico")
+	vamp.enemy["hp"] = 500
+	vamp.enemy_act()
+	check(int(vamp.enemy.hp) > 500, "vampírico se cura al pegar")
+	var fury: CombatCore = mk.call("furioso")
+	fury.enemy_act()
+	var first := 500 - int(fury.hero.hp)
+	for i in 8:
+		fury.hero["hp"] = 500
+		fury.enemy_act()
+	var later := 500 - int(fury.hero.hp)
+	check(later > first, "furioso pega cada vez más (%d → %d)" % [first, later])
+	check(later <= roundi(21 * (1.0 + DataRegistry.bal_f("combat.rasgos.furioso_max", 0.5))), "con tope")
+	var spiky: CombatCore = mk.call("espinoso")
+	spiky.attack()
+	check(int(spiky.hero.hp) < 500, "espinoso pincha al que le pega")
+	spiky.hero["hp"] = 1
+	spiky.attack()
+	eq(int(spiky.hero.hp), 1, "pero no mata")
+	var fast: CombatCore = mk.call("veloz")
+	var ev := fast.enemy_act()
+	eq(ev.filter(func(e: Dictionary) -> bool: return e.has("hero_dmg")).size(), 2, "veloz pega dos veces")
+
+func test_patrones_de_especies() -> void:
+	for id in DataRegistry.species_ids():
+		var patron: Array = DataRegistry.get_species(id).patron
+		check(not patron.is_empty(), "%s tiene patrón" % id)
+		check(patron.any(func(a: Variant) -> bool: return String(a) in ["golpe", "fuerte", "rafaga", "drenar"]), "%s pega alguna vez" % id)
+	for a in CombatCore.ENEMY_ACTIONS:
+		check(DataRegistry.has_text("combat.intent." + a) and DataRegistry.has_text("combat.intent_tip." + a), "la acción %s tiene textos" % a)
+	for t in CombatCore.ENEMY_TRAITS:
+		check(DataRegistry.has_text("trait." + t) and DataRegistry.has_text("trait.%s_desc" % t), "el rasgo %s tiene textos" % t)
 
 func test_sorpresa_y_emboscada() -> void:
 	var s := _core([], 100, 5, "normal", "surprise")

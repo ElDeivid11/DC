@@ -342,7 +342,7 @@ func _play_run(rec: Dictionary) -> int:
 		for k in fights:
 			# Mismo sorteo que el generador de pisos (especie, rango y tipo).
 			var roll := FloorGenerator.roll_enemy(rng, species_pool, int(def.rank_min), int(def.rank_max))
-			if not _fight(String(roll.species_id), int(roll.rank), String(roll.kind), def):
+			if not _fight(String(roll.species_id), int(roll.rank), String(roll.kind), def, String(roll.trait), String(roll.soul_id)):
 				_deaths += 1
 				return n
 			_heal_between_fights()
@@ -384,7 +384,7 @@ func _best_heal_item(in_combat: bool) -> int:
 ## Un combate con CombatCore (las reglas del juego) y una política simple:
 ## curarse con poción bajo el 30%; defenderse si el jefe carga su golpe y
 ## queda poca vida; si no, la activa lista que más rinde (o atacar). true = ganó.
-func _fight(species_id: String, rank: int, kind: String, floor_def: Dictionary) -> bool:
+func _fight(species_id: String, rank: int, kind: String, floor_def: Dictionary, trait_id := "", held := "") -> bool:
 	var stats := RunRules.enemy_stats(rank, kind)
 	var r := rng.randf()
 	var mode := "surprise" if r < START_SURPRISE else ("ambush" if r < START_SURPRISE + START_AMBUSH else "normal")
@@ -395,7 +395,8 @@ func _fight(species_id: String, rank: int, kind: String, floor_def: Dictionary) 
 		mode = "boss"
 	var m := GameState.hero()
 	var core := CombatCore.new(rng)
-	core.setup(GameState.combat_hero(m), {"name": "", "hp": stats.hp, "atk": stats.atk, "kind": kind}, mode)
+	core.setup(GameState.combat_hero(m), {"name": "", "hp": stats.hp, "atk": stats.atk, "kind": kind,
+		"pattern": DataRegistry.get_species(species_id).get("patron", []), "traits": [trait_id] if trait_id != "" else []}, mode)
 	if core.ambush_pending:
 		core.enemy_act()
 	for turn in 80:
@@ -424,6 +425,9 @@ func _fight(species_id: String, rank: int, kind: String, floor_def: Dictionary) 
 	GameState.add_xp(GameState.kill_xp(rank, kind))
 	_spend_points()
 	GameState.heal_after_victory()
+	var loot := GameState.roll_elite_loot(kind, rng, MetaState.available_items())
+	if loot != "":
+		GameState.add_item(loot, false)
 	if _forced_mode:
 		return true
 	# Las mismas funciones que el juego: el jefe deja elegir entre varias; el
@@ -434,7 +438,7 @@ func _fight(species_id: String, rank: int, kind: String, floor_def: Dictionary) 
 			options.append(DataRegistry.make_soul(sid, rank, "sim"))
 		_offer_choice(options)
 	else:
-		var sid := GameState.roll_soul(species_id, rank, kind, rng)
+		var sid := GameState.roll_soul(species_id, rank, kind, rng, false, held)
 		GameState.register_soul_roll(kind, sid != "")
 		if sid != "":
 			_offer_soul(DataRegistry.make_soul(sid, rank, "sim"))
@@ -485,10 +489,6 @@ func _policy_act(core: CombatCore) -> void:
 		core.heal_hero(int(it.efecto.valor), "")
 		_count_action("heal")
 		return
-	if core.enemy_special_next() and hp_pct < 0.6 and core.shield <= 0:
-		core.defend()
-		_count_action("defend")
-		return
 	var best := -1
 	var best_v := _attack_value(core)
 	for i in core.soul_count():
@@ -498,6 +498,12 @@ func _policy_act(core: CombatCore) -> void:
 		if v > best_v:
 			best_v = v
 			best = i
+	# Viene un golpe fuerte (o cargado): Defender es un bloqueo perfecto,
+	# salvo que el enemigo caiga antes con lo mejor que hay a mano.
+	if core.enemy_heavy_next() and best_v < float(int(core.enemy.hp)):
+		core.defend()
+		_count_action("defend")
+		return
 	if best >= 0:
 		core.ability(best)
 		_count_action("ability")

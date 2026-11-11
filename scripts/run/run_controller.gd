@@ -498,7 +498,7 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 			soul_options.append(DataRegistry.make_soul(sid, rank, String(e.display_name) if sid == String(e.get("soul_id", "")) else from_name))
 	else:
 		# Sabiduría, SUE, Buena estrella y la racha sin alma suman puntos.
-		var sid := GameState.roll_soul(String(e.species_id), rank, kind, GameState.rng, DebugTools.force_soul_drop)
+		var sid := GameState.roll_soul(String(e.species_id), rank, kind, GameState.rng, DebugTools.force_soul_drop, String(e.get("soul_id", "")))
 		if sid != "":
 			soul = DataRegistry.make_soul(sid, rank, String(e.display_name))
 	e["dropped_soul"] = not soul.is_empty() or not soul_options.is_empty()
@@ -528,6 +528,8 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 		"name": e.display_name, "rank": rank, "hp": stats.hp, "atk": stats.atk,
 		"kind": kind, "species_id": e.species_id,
 		"ability_name": String(DataRegistry.get_soul(String(e.get("soul_id", ""))).get("active", {}).get("name", "")),
+		"pattern": species.get("patron", []),
+		"traits": [String(e.trait)] if String(e.get("trait", "")) != "" else [],
 	})
 	combat.set("hero_data", hero)
 	combat.set("inventory", GameState.inventory.duplicate())
@@ -548,7 +550,10 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 		_anim(e, "hit", "combat")
 	)
 	combat.connect("enemy_acting", func(action: String) -> void:
-		if action != "ability" or _anim(e, "ability", "combat") <= 0.0:
+		if action == "taunt":
+			# En guardia o tomando impulso: no pega.
+			_anim(e, "taunt", "combat")
+		elif action != "ability" or _anim(e, "ability", "combat") <= 0.0:
 			_anim(e, "attack", "combat")
 	)
 	combat.connect("enemy_defeated", func() -> void: _anim(e, "death", ""))
@@ -654,6 +659,14 @@ func _on_combat_ended(e: Dictionary, outcome: String, result: Dictionary) -> voi
 					ri = -1
 				GameState.add_soul(String(pick.member_id), pick.soul, ri)
 				EventBus.hud_message.emit(DataRegistry.t("run.soul_taken", [GameState.get_member(String(pick.member_id)).name, pick.soul.active.name]))
+			# Las élites a veces dejan un objeto.
+			var loot := GameState.roll_elite_loot(String(e.kind), GameState.rng, MetaState.available_items())
+			if loot != "":
+				if GameState.add_item(loot):
+					EventBus.hud_message.emit(DataRegistry.t("run.elite_loot", [e.display_name, DataRegistry.get_item(loot).nombre]))
+				else:
+					_drop_item_near(e.cell, loot)
+					EventBus.hud_message.emit(DataRegistry.t("run.chest_item_left", [DataRegistry.get_item(loot).nombre]))
 			# Musgo de cripta: cura al ganar.
 			var healed := GameState.heal_after_victory()
 			if healed > 0:

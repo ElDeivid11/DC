@@ -60,7 +60,17 @@ const COMBO_STEP := 0.13
 ## Estados del enemigo: ícono del kit y rampa.
 const STATUS_ICONS := {
 	"sangrado": ["afin_sangre", "sangre"], "aturdido": ["estado_aturdido", "vela"],
-	"marca": ["estado_marca", "sangre"], "debil": ["estado_debil", "amatista"], "carga": ["muerte", "sangre"],
+	"marca": ["estado_marca", "sangre"], "debil": ["estado_debil", "amatista"], "guardia": ["escudo", "vela"],
+}
+## Rasgos de élite e intenciones del enemigo: ícono del kit y rampa.
+const TRAIT_ICONS := {
+	"blindado": ["escudo", "bronce"], "vampirico": ["hp", "sangre"], "furioso": ["stat_atq", "vela"],
+	"espinoso": ["afin_hueso", "hueso"], "veloz": ["stat_agi", "vela"],
+}
+const INTENT_ICONS := {
+	"golpe": ["atacar", "bronce"], "fuerte": ["muerte", "sangre"], "rafaga": ["atacar", "vela"],
+	"guardia": ["escudo", "bronce"], "preparar": ["estado_marca", "sangre"], "drenar": ["hp", "sangre"],
+	"stunned": ["estado_aturdido", "vela"],
 }
 
 # --- Configuración (la pasa RunController antes de add_child) ---------------------
@@ -105,6 +115,11 @@ var enemy_bar: UIStatBar
 var enemy_hp_label: Label
 var enemy_badge: UIRankBadge
 var status_row: HBoxContainer
+## Lo que el enemigo va a hacer en su próximo turno (cinta bajo la barra).
+var intent_panel: PanelContainer
+var intent_icon: UIIcon
+var intent_label: Label
+var _intent_key := ""
 var bottom: BoxContainer
 var hero_card: HeroCard
 var log_panel: PanelContainer
@@ -260,6 +275,20 @@ func _build_enemy() -> void:
 	status_row.custom_minimum_size.y = UIStyle.ICON_SIZE
 	status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	enemy_box.add_child(status_row)
+	# Intención: «[ícono] Golpe fuerte: 12», en rojo si conviene defenderse.
+	intent_panel = PanelContainer.new()
+	intent_panel.theme_type_variation = "RibbonSmall"
+	intent_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	intent_panel.mouse_filter = Control.MOUSE_FILTER_PASS
+	enemy_box.add_child(intent_panel)
+	var irow := HBoxContainer.new()
+	irow.add_theme_constant_override("separation", 6)
+	intent_panel.add_child(irow)
+	intent_icon = UIIcon.make("atacar", "bronce")
+	irow.add_child(intent_icon)
+	intent_label = UILabel.make("", "DetailLabel")
+	intent_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	irow.add_child(intent_label)
 
 ## Abajo a la izquierda: la tarjeta del héroe + el registro (al lado o
 ## encima, según el ancho; ver _layout).
@@ -371,12 +400,50 @@ func _layout_enemy(vp: Vector2, avail: float) -> void:
 func _refresh_ui() -> void:
 	enemy_bar.animate_to(maxi(int(core.enemy.hp), 0), int(core.enemy.max_hp))
 	enemy_hp_label.text = "%d/%d" % [maxi(int(core.enemy.hp), 0), int(core.enemy.max_hp)]
-	hero_card.refresh(core.hero, core.shield, core.defending, not busy and not finished)
+	hero_card.refresh(core.hero, core.shield, core.defending, not busy and not finished, core.impetu)
 	_refresh_statuses()
+	_refresh_intent()
 	var hp := int(core.hero.hp)
 	fx.set_low_hp(not finished and hp > 0 and hp <= roundi(int(core.hero.max_hp) * _bal("fx.low_hp", 0.3)))
 
-## Fila de estados del enemigo (se rearma solo si cambió).
+## Cinta de intención: qué hará el enemigo en su próximo turno y cuánto
+## dolería sin defender. En rojo si es un golpe fuerte o cargado.
+func _refresh_intent() -> void:
+	intent_panel.visible = not finished and not core.enemy_dead()
+	if not intent_panel.visible:
+		return
+	var p := core.intent_preview()
+	var key := str(p)
+	if key == _intent_key:
+		return
+	var first := _intent_key == ""
+	_intent_key = key
+	var action := String(p.action)
+	var spec: Array = INTENT_ICONS[action]
+	intent_icon.set_icon(String(spec[0]), String(spec[1]))
+	var hits := int(p.hits)
+	var text := DataRegistry.t("combat.intent." + action)
+	match action:
+		"golpe":
+			text = DataRegistry.t("combat.intent.golpe_x", [hits, int(p.dmg)]) if hits > 1 else DataRegistry.t("combat.intent.golpe", [int(p.dmg)])
+		"fuerte":
+			var what := String(enemy_data.get("ability_name", ""))
+			text = DataRegistry.t("combat.intent.fuerte", [what if what != "" else DataRegistry.t("combat.heavy_name").capitalize(), int(p.dmg)])
+		"rafaga":
+			text = DataRegistry.t("combat.intent.rafaga", [hits, int(p.dmg)])
+		"drenar":
+			text = DataRegistry.t("combat.intent.drenar", [int(p.dmg)])
+	var heavy := bool(p.heavy)
+	if heavy and action != "fuerte":
+		text += DataRegistry.t("combat.intent.charged")
+	intent_label.text = text
+	intent_label.add_theme_color_override("font_color", UIStyle.DANGER if heavy else UIStyle.TEXT)
+	UITooltip.attach(intent_panel, DataRegistry.t("combat.intent_tip.heavy") if heavy else DataRegistry.t("combat.intent_tip." + action))
+	if not first:
+		_flash(intent_panel, UIStyle.DANGER if heavy else UIStyle.ACCENT)
+
+## Fila de estados del enemigo (se rearma solo si cambió): primero sus
+## rasgos de élite (fijos), después los estados.
 func _refresh_statuses() -> void:
 	var list := core.enemy_statuses() if not finished else []
 	var key := str(list)
@@ -386,6 +453,19 @@ func _refresh_statuses() -> void:
 	for c in status_row.get_children():
 		status_row.remove_child(c)
 		c.queue_free()
+	if not finished:
+		for t in core.traits:
+			var tspec: Array = TRAIT_ICONS[t]
+			var tchip := HBoxContainer.new()
+			tchip.add_theme_constant_override("separation", 2)
+			tchip.mouse_filter = Control.MOUSE_FILTER_PASS
+			tchip.add_child(UIIcon.make(String(tspec[0]), String(tspec[1])))
+			var tl := UILabel.make(DataRegistry.t("trait." + t).to_upper(), "NumSmallLabel")
+			tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			tl.add_theme_color_override("font_color", UIStyle.ACCENT)
+			tchip.add_child(tl)
+			UITooltip.attach(tchip, _trait_tip(t))
+			status_row.add_child(tchip)
 	var now := {}
 	for st: Dictionary in list:
 		var id := String(st.id)
@@ -395,17 +475,27 @@ func _refresh_statuses() -> void:
 		chip.add_theme_constant_override("separation", 2)
 		chip.mouse_filter = Control.MOUSE_FILTER_PASS
 		chip.add_child(UIIcon.make(String(spec[0]), String(spec[1])))
-		var txt := DataRegistry.t("combat.status_carga") if id == "carga" else (DataRegistry.t("combat.status_pct", [int(st.value)]) if id == "marca" else str(int(st.value)))
+		var txt := DataRegistry.t("combat.status_guard", [int(st.value)]) if id == "guardia" else (DataRegistry.t("combat.status_pct", [int(st.value)]) if id == "marca" else str(int(st.value)))
 		var l := UILabel.make(txt, "NumSmallLabel")
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		l.add_theme_color_override("font_color", UIStyle.DANGER if id == "carga" else UIStyle.TEXT)
 		chip.add_child(l)
-		UITooltip.attach(chip, DataRegistry.t("combat.status." + id, [int(st.value)]) if id != "carga" else DataRegistry.t("combat.status.carga", [String(enemy_data.ability_name)]))
+		UITooltip.attach(chip, DataRegistry.t("combat.status." + id, [int(st.value)]))
 		status_row.add_child(chip)
 		# Estado nuevo o que creció: salta.
 		if int(st.value) > int(_prev_status.get(id, -1)):
 			_pop_chip(chip, UIStyle.ramp_color(String(spec[1])))
 	_prev_status = now
+
+## Qué hace un rasgo de élite, con sus cifras de balance.json.
+static func _trait_tip(t: String) -> String:
+	match t:
+		"blindado":
+			return DataRegistry.t("trait.blindado_desc", [roundi(DataRegistry.bal_f("combat.rasgos.blindado", 0.3) * 100.0)])
+		"vampirico":
+			return DataRegistry.t("trait.vampirico_desc", [roundi(DataRegistry.bal_f("combat.rasgos.vampirico", 0.5) * 100.0)])
+		"furioso":
+			return DataRegistry.t("trait.furioso_desc", [roundi(DataRegistry.bal_f("combat.rasgos.furioso", 0.1) * 100.0), roundi(DataRegistry.bal_f("combat.rasgos.furioso_max", 0.5) * 100.0)])
+	return DataRegistry.t("trait.%s_desc" % t)
 
 ## Un estado que aparece salta (después de que la fila lo acomoda) y suelta
 ## unos píxeles de su color.
@@ -493,6 +583,14 @@ func _present(events: Array) -> void:
 			_later(delay, _show_coins.bind(int(ev.coins)))
 		if ev.has("last_stand"):
 			_show_last_stand()
+		if ev.has("perfect_block"):
+			_show_perfect_block()
+		if ev.has("impetu_spent"):
+			fx.tag(DataRegistry.t("combat.fx_impetu", [int(ev.impetu_spent)]), _enemy_center() + Vector2(-170, -30), UIStyle.ACCENT, true)
+		if ev.has("enemy_heal"):
+			_later(delay + STEP * 3.0, _show_enemy_heal.bind(int(ev.enemy_heal)))
+		if ev.has("enemy_action"):
+			_show_enemy_action(String(ev.enemy_action))
 		if ev.has("proc") and not procs.has(String(ev.proc)):
 			procs[String(ev.proc)] = true
 			_later(delay + STEP, _show_proc.bind(String(ev.proc), procs.size() == 1))
@@ -540,6 +638,9 @@ func _show_enemy_hit(ev: Dictionary) -> void:
 	elif bool(ev.get("marked", false)):
 		word = "combat.fx_mark"
 		word_color = UIStyle.ramp_color("amatista")
+	elif bool(ev.get("blocked", false)):
+		word = "combat.fx_blocked"
+		word_color = UIStyle.TEXT_DIM
 	elif bool(ev.get("counter", false)):
 		word = "combat.fx_counter"
 		word_color = UIStyle.TEXT
@@ -584,7 +685,7 @@ func _show_hero_hit(ev: Dictionary) -> void:
 	if absorbed > 0:
 		fx.number("-%d" % absorbed, at + Vector2(-60, 0), "DamageLabel", UIStyle.SOUL_LIGHT)
 		fx.burst(at + Vector2(-60, 30), [UIStyle.SOUL, UIStyle.SOUL_LIGHT], 12, 220.0)
-	if bool(ev.get("guarded", false)):
+	if bool(ev.get("guarded", false)) and not bool(ev.get("perfect", false)):
 		fx.tag(DataRegistry.t("combat.fx_guard"), at + Vector2(0, -44), UIStyle.TEXT)
 
 ## Cura: verde que sube; si viene del enemigo (robo de vida, Drenar), los
@@ -609,6 +710,28 @@ func _show_coins(n: int) -> void:
 	fx.number("+%d" % n, at, "HealLabel", UIStyle.COIN)
 	fx.burst(at, [UIStyle.COIN, UIStyle.MONEDA_LUZ], 12, 200.0, Vector2.INF, true)
 	SceneRouter.play_ui("coin")
+
+## Bloqueo perfecto: destello azul, el cartel y el sonido de sinergia.
+func _show_perfect_block() -> void:
+	fx.flash(UIStyle.SOUL, 0.22)
+	fx.tag(DataRegistry.t("combat.fx_perfect"), _hero_float_pos() + Vector2(130, -70), UIStyle.SOUL_LIGHT, true)
+	fx.burst(_hero_float_pos() + Vector2(0, 40), [UIStyle.SOUL_LIGHT, UIStyle.VELA_BLANCA, UIStyle.ACCENT], 22, 300.0)
+	SceneRouter.play_ui("proc")
+
+## El enemigo se cura (Drenar, vampírico): verde sobre él.
+func _show_enemy_heal(n: int) -> void:
+	var at := _enemy_center() + Vector2(90, -30)
+	fx.number("+%d" % n, at, "HealLabel", UIStyle.DANGER)
+	fx.burst(_hero_float_pos() + Vector2(0, 30), [UIStyle.SANGRE, UIStyle.SANGRE_LUZ], 12, 260.0, at)
+
+## Acciones del enemigo que no pegan: se dicen sobre él.
+func _show_enemy_action(action: String) -> void:
+	match action:
+		"guardia":
+			fx.tag(DataRegistry.t("combat.fx_enemy_guard"), _enemy_center() + Vector2(0, -60), UIStyle.TEXT)
+		"preparar":
+			fx.tag(DataRegistry.t("combat.fx_enemy_prepare"), _enemy_center() + Vector2(0, -60), UIStyle.DANGER)
+			SceneRouter.play_ui("error")
 
 ## Negarse a caer: destello azul y el grito.
 func _show_last_stand() -> void:
@@ -809,11 +932,12 @@ func _show_actions() -> void:
 	if has_abilities:
 		ability_tip = DataRegistry.t("combat.ability_tip", [n_ready, core.soul_count()])
 	_show_menu(DataRegistry.t("combat.actions"), [
-		{"text": DataRegistry.t("combat.attack"), "on": _on_attack, "icon": "atacar", "tip": DataRegistry.t("combat.attack_tip", [int(core.hero.atk)])},
+		{"text": DataRegistry.t("combat.attack"), "on": _on_attack, "icon": "atacar", "tip": DataRegistry.t("combat.attack_tip", [int(core.hero.atk)])
+			+ (DataRegistry.t("combat.attack_tip_impetu") if core.impetu < CombatCore.impetu_max() else "")},
 		{"text": DataRegistry.t("combat.ability"), "on": _show_abilities, "icon": "habilidad", "disabled": not has_abilities,
 			"tip": ability_tip, "value": "%d/%d" % [n_ready, core.soul_count()] if has_abilities else "", "value_color": UIStyle.SOUL},
 		{"text": DataRegistry.t("combat.defend"), "on": _on_defend, "icon": "stat_def",
-			"tip": DataRegistry.t("combat.defend_tip_charge") if core.enemy_special_next() else DataRegistry.t("combat.defend_tip")},
+			"tip": DataRegistry.t("combat.defend_tip_charge", [roundi(_bal("bloqueo_perfecto.bloqueo", 0.8) * 100.0)]) if core.enemy_heavy_next() else DataRegistry.t("combat.defend_tip")},
 		{"text": DataRegistry.t("combat.item"), "on": _show_items, "icon": "objeto", "disabled": usable.is_empty(),
 			"tip": DataRegistry.t("combat.item_tip") if not usable.is_empty() else DataRegistry.t("combat.item_none")},
 		{"text": DataRegistry.t("combat.flee_pct", [UIFormat.pct(flee_chance)]) if not is_boss else DataRegistry.t("combat.flee"),
@@ -994,7 +1118,7 @@ func _enemy_turn() -> void:
 			return
 	var intent := core.enemy_intent()
 	if intent != "stunned":
-		enemy_acting.emit("ability" if intent == "special" else "attack")
+		enemy_acting.emit("ability" if intent == "fuerte" or intent == "drenar" else ("taunt" if intent == "guardia" or intent == "preparar" else "attack"))
 		var windup := _bal("enemy_attack_windup", 0.3)
 		if windup > 0.0:
 			await get_tree().create_timer(windup).timeout
@@ -1336,6 +1460,8 @@ class HeroCard extends PanelContainer:
 	var level_label: Label
 	var xp_bar: UIStatBar
 	var flame: UIFlameCursor
+	var impetu_pips: UIPips
+	var _impetu := 0
 	var _data: Dictionary
 
 	func _init(m: Dictionary) -> void:
@@ -1395,6 +1521,11 @@ class HeroCard extends PanelContainer:
 		soul_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		soul_label.clip_text = true
 		soul_row.add_child(soul_label)
+		# Ímpetu: Atacar lo carga; la próxima activa lo gasta.
+		impetu_pips = UIPips.new(0, CombatCore.impetu_max(), "vela")
+		impetu_pips.mouse_filter = Control.MOUSE_FILTER_PASS
+		UITooltip.attach(impetu_pips, DataRegistry.t("combat.impetu_tip", [roundi(DataRegistry.bal_f("combat.impetu.por_punto", 0.2) * 100.0)]))
+		soul_row.add_child(impetu_pips)
 		var xp_row := HBoxContainer.new()
 		xp_row.add_theme_constant_override("separation", 8)
 		box.add_child(xp_row)
@@ -1416,7 +1547,10 @@ class HeroCard extends PanelContainer:
 		flame.visible = false
 		holder.add_child(flame)
 
-	func refresh(h: Dictionary, shield: int, defending: bool, acting: bool) -> void:
+	func refresh(h: Dictionary, shield: int, defending: bool, acting: bool, impetu := 0) -> void:
+		if impetu != _impetu:
+			_impetu = impetu
+			impetu_pips.setup(impetu, CombatCore.impetu_max(), "vela")
 		var hp := int(h.hp)
 		var max_hp := int(h.max_hp)
 		var fallen := hp <= 0
