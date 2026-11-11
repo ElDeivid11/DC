@@ -35,6 +35,11 @@ var exit_node: Node3D = null
 var exit_open := false
 var chest_nodes: Dictionary = {}     # Vector2i -> Node3D
 var item_nodes: Dictionary = {}      # Vector2i -> {node, item_id}
+## Eventos de sala (fuente, santuario, mercader, forja): celda ->
+## {node, type, used, options | stock}. Bloquean su celda, como los cofres.
+var event_nodes: Dictionary = {}
+## Trampas sin saltar: celda -> Node3D.
+var trap_nodes: Dictionary = {}
 ## Sala del jefe (FloorBuilder.build_boss_room): {door, braziers, circle}.
 var boss_room: Dictionary = {}
 ## La puerta de la sala del jefe está cerrada (bloquea el paso).
@@ -102,6 +107,10 @@ func _build_floor() -> void:
 			v.light.base_energy = 0.0
 	for c in fd.chests:
 		chest_nodes[c] = builder.spawn_chest(c, fd)
+	for ev: Dictionary in fd.events:
+		event_nodes[ev.cell] = {"node": builder.spawn_event(String(ev.type), ev.cell, fd), "type": String(ev.type), "used": false}
+	for c in fd.traps:
+		trap_nodes[c] = builder.spawn_trap(c)
 	for it: Dictionary in fd.items:
 		item_nodes[it.cell] = {"node": builder.spawn_item(it.cell), "item_id": it.item_id}
 	if fd.exit_cell.x >= 0:
@@ -149,7 +158,11 @@ func _process(delta: float) -> void:
 # --- Interfaz que usa GridPlayer -------------------------------------------------------
 
 func is_wall(cell: Vector2i) -> bool:
-	return fd.is_wall(cell) or fd.solid.has(cell) or chest_nodes.has(cell) or (_door_closed and cell == fd.boss_door)
+	return fd.is_wall(cell) or fd.solid.has(cell) or _prop_at(cell) or (_door_closed and cell == fd.boss_door)
+
+## ¿Hay un cofre o un evento de sala ocupando la celda?
+func _prop_at(cell: Vector2i) -> bool:
+	return chest_nodes.has(cell) or event_nodes.has(cell)
 
 func get_enemy_at(cell: Vector2i) -> bool:
 	return not fd.enemy_at(cell).is_empty()
@@ -158,6 +171,9 @@ func get_enemy_at(cell: Vector2i) -> bool:
 func try_interact(cell: Vector2i, _p: Node3D) -> bool:
 	if chest_nodes.has(cell):
 		_open_chest(cell)
+		return true
+	if event_nodes.has(cell):
+		_use_event(cell)
 		return true
 	if cell == fd.boss_door and _door_closed:
 		_open_boss_door()
@@ -172,6 +188,7 @@ func try_interact(cell: Vector2i, _p: Node3D) -> bool:
 
 func _on_player_moved(cell: Vector2i) -> void:
 	_pickup_at(cell)
+	_check_trap(cell)
 	_after_move()
 	if _wants_boss_intro(cell):
 		_boss_intro()
@@ -214,6 +231,12 @@ func map_markers() -> Dictionary:
 	for c: Vector2i in item_nodes.keys():
 		if GameState.visited.has(c):
 			m[c] = "item"
+	for c: Vector2i in event_nodes.keys():
+		if GameState.visited.has(c) or _touches_visited(c):
+			m[c] = String(event_nodes[c].type)
+	for c: Vector2i in trap_nodes.keys():
+		if GameState.visited.has(c):
+			m[c] = "trampa"
 	var pc: Vector2i = player.get("grid_pos")
 	for e: Dictionary in fd.enemies:
 		var ec: Vector2i = e.cell
@@ -285,6 +308,127 @@ func _open_chest(cell: Vector2i) -> void:
 			EventBus.hud_message.emit(DataRegistry.t("run.chest_item_left", [DataRegistry.get_item(String(id)).nombre]))
 		_after_move())
 
+# --- Eventos de sala --------------------------------------------------------------------
+
+## Chocar un evento lo usa: fuente (cura una vez), santuario (una bendición
+## a cambio de sangre), mercader (objetos por monedas de la run) o forja
+## (templar, fundir o sacrificar almas). Las reglas, en GameState.
+func _use_event(cell: Vector2i) -> void:
+	if dialog_open or combat != null:
+		return
+	var ev: Dictionary = event_nodes[cell]
+	if String(ev.type) == "forja":
+		SceneRouter.play_ui("open")
+		_open_menu(ForgeScreen.new(), false)
+		return
+	dialog_open = true
+	player.call("set_input_locked", true)
+	match String(ev.type):
+		"fuente":
+			await _use_fountain(ev)
+		"santuario":
+			await _use_shrine(ev)
+		"mercader":
+			await _use_merchant(ev)
+	dialog_open = false
+	if GameState.active and combat == null:
+		player.call("set_input_locked", false)
+	_after_move()
+
+func _spend_event(ev: Dictionary) -> void:
+	ev["used"] = true
+	var body := ev.node as EnemyBody
+	if body:
+		body.play_role("used")
+		if body.light:
+			body.light.create_tween().tween_property(body.light, "base_energy", body.light.base_energy * 0.15, 0.8)
+
+func _use_fountain(ev: Dictionary) -> void:
+	if bool(ev.used):
+		EventBus.hud_message.emit(DataRegistry.t("event.fountain_dry"))
+		return
+	var m := GameState.hero()
+	var amount := mini(roundi(GameState.member_max_hp(m) * DataRegistry.bal_f("eventos.fuente_cura", 0.4)), GameState.member_max_hp(m) - int(m.hp))
+	var d := UIChoiceDialog.ask(self, DataRegistry.t("event.fountain_title"), DataRegistry.t("event.fountain_text", [amount]), [DataRegistry.t("event.fountain_drink")], DataRegistry.t("event.leave"))
+	var choice: int = await d.chosen
+	if choice != 0:
+		return
+	var healed := GameState.drink_fountain()
+	_spend_event(ev)
+	SceneRouter.play_ui("item")
+	UIToast.show(get_tree(), DataRegistry.t("event.fountain_healed", [healed]), "good")
+
+func _use_shrine(ev: Dictionary) -> void:
+	if bool(ev.used):
+		EventBus.hud_message.emit(DataRegistry.t("event.shrine_spent"))
+		return
+	if not ev.has("options"):
+		ev["options"] = GameState.roll_blessings(GameState.rng)
+	var ids: Array = ev.options
+	if ids.is_empty():
+		EventBus.hud_message.emit(DataRegistry.t("event.shrine_spent"))
+		return
+	if not GameState.can_pray():
+		EventBus.hud_message.emit(DataRegistry.t("event.shrine_weak", [GameState.shrine_cost()]))
+		SceneRouter.play_ui("error")
+		return
+	var options: Array = []
+	for id: Variant in ids:
+		var b := DataRegistry.get_blessing(String(id))
+		options.append(DataRegistry.t("event.shrine_option", [b.nombre, b.descripcion]))
+	var d := UIChoiceDialog.ask(self, DataRegistry.t("event.shrine_title"), DataRegistry.t("event.shrine_text", [GameState.shrine_cost()]), options, DataRegistry.t("event.leave"))
+	var choice: int = await d.chosen
+	if choice < 0 or not GameState.pray(String(ids[choice])):
+		return
+	_spend_event(ev)
+	_shake(0.25, 0.03)
+	SceneRouter.play_ui("soul")
+	UIToast.show(get_tree(), DataRegistry.t("event.shrine_blessed", [DataRegistry.get_blessing(String(ids[choice])).nombre]), "soul")
+
+func _use_merchant(ev: Dictionary) -> void:
+	if not ev.has("stock"):
+		ev["stock"] = GameState.roll_shop(GameState.rng, MetaState.available_items())
+	var stock: Array = ev.stock
+	while not stock.is_empty():
+		var options: Array = []
+		for id: Variant in stock:
+			options.append(DataRegistry.t("event.merchant_option", [DataRegistry.get_item(String(id)).nombre, GameState.shop_price(String(id))]))
+		var d := UIChoiceDialog.ask(self, DataRegistry.t("event.merchant_title"), DataRegistry.t("event.merchant_text", [GameState.run_coins()]), options, DataRegistry.t("event.leave"))
+		var choice: int = await d.chosen
+		if choice < 0:
+			return
+		var id := String(stock[choice])
+		match GameState.buy_item(id):
+			"":
+				stock.remove_at(choice)
+				SceneRouter.play_ui("coin")
+				UIToast.show(get_tree(), DataRegistry.t("event.merchant_bought", [DataRegistry.get_item(id).nombre]), "coin")
+				hud.refresh()
+			"coins":
+				SceneRouter.play_ui("error")
+				UIToast.show(get_tree(), DataRegistry.t("event.merchant_poor"), "danger")
+			"full":
+				SceneRouter.play_ui("error")
+				UIToast.show(get_tree(), DataRegistry.t("event.merchant_full"), "danger")
+	EventBus.hud_message.emit(DataRegistry.t("event.merchant_empty"))
+
+## Pisar una trampa: salta (una vez). La AGI puede esquivarla; si no,
+## lastima (sin matar), con sacudón.
+func _check_trap(cell: Vector2i) -> void:
+	if not trap_nodes.has(cell):
+		return
+	var node: Node3D = trap_nodes[cell]
+	trap_nodes.erase(cell)
+	FloorBuilder.spring_trap(node)
+	var r := GameState.spring_trap(GameState.rng)
+	if bool(r.dodged):
+		SceneRouter.play_ui("slot_stop")
+		EventBus.hud_message.emit(DataRegistry.t("event.trap_dodged"))
+	else:
+		SceneRouter.play_ui("hurt")
+		_shake(0.3, 0.05)
+		UIToast.show(get_tree(), DataRegistry.t("event.trap_hit", [int(r.dmg)]), "danger")
+
 ## Deja un objeto en el suelo: en esa celda o en una vecina libre.
 func _drop_item_near(cell: Vector2i, id: String) -> void:
 	var spots: Array[Vector2i] = [cell]
@@ -307,6 +451,8 @@ func _enemies_act() -> void:
 	var pc: Vector2i = player.get("grid_pos")
 	var blocked := {}
 	for c: Vector2i in chest_nodes.keys():
+		blocked[c] = true
+	for c: Vector2i in event_nodes.keys():
 		blocked[c] = true
 	if _door_closed:
 		blocked[fd.boss_door] = true
@@ -340,7 +486,7 @@ func _enemies_act() -> void:
 		if d <= aggro:
 			for dir in DIRS:
 				var n := ec + dir
-				if int(dist.get(n, 9999)) < d and not occupied.has(n) and not chest_nodes.has(n) and n != fd.exit_cell:
+				if int(dist.get(n, 9999)) < d and not occupied.has(n) and not _prop_at(n) and n != fd.exit_cell:
 					target = n
 					break
 		elif GameState.rng.randf() < wander:
@@ -783,7 +929,7 @@ func _boss_approach(e: Dictionary) -> void:
 		var next := ec
 		for dir in DIRS:
 			var n := ec + dir
-			if int(dist.get(n, 9999)) < int(dist.get(next, 9999)) and fd.enemy_at(n).is_empty() and not chest_nodes.has(n):
+			if int(dist.get(n, 9999)) < int(dist.get(next, 9999)) and fd.enemy_at(n).is_empty() and not _prop_at(n):
 				next = n
 		if next == ec:
 			break

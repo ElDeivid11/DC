@@ -1,0 +1,41 @@
+{
+	"version": 1,
+	"sheet": "fuente.png",
+	"glow": "fuente_glow.png",
+	"normal": "fuente_normal.png",
+	"frame": [
+		32,
+		38
+	],
+	"columns": 16,
+	"pivot": [
+		16,
+		36
+	],
+	"pixels_per_meter": 24,
+	"flat_light": true,
+	"self_light": 0.35,
+	"anims": {
+		"idle": {
+			"loop": true,
+			"fps": 5.0,
+			"dirs": {
+				"s": [
+					0,
+					1,
+					2,
+					3
+				]
+			}
+		},
+		"used": {
+			"loop": true,
+			"fps": 1.0,
+			"dirs": {
+				"s": [
+					4
+				]
+			}
+		}
+	}
+}

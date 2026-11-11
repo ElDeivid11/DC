@@ -5,14 +5,19 @@ func test_datos_sin_errores() -> void:
 	eq(DataRegistry.errors.size(), 0, "errores de datos: %s" % [DataRegistry.errors])
 
 func test_stats_for_rank_formula() -> void:
-	# Fórmula del prototipo (Main.stats_for_rank): base + pasos × por_rango, con
-	# pasos = 11 − rango. Los valores por rango pueden ser fraccionarios desde
-	# que hay niveles (balance.json → stats_for_rank), así que se redondea.
+	# base + pasos × por_rango (pasos = 11 − rango), más una curva que solo
+	# endurece los rangos fuertes: (pasos − curve_from)² × curva. Los valores
+	# pueden ser fraccionarios (balance.json → stats_for_rank): se redondea.
+	var from := DataRegistry.bal_i("stats_for_rank.curve_from", 3)
 	for rank in range(1, 11):
 		var steps := 11 - rank
+		var deep := maxi(steps - from, 0)
 		var s := DataRegistry.stats_for_rank(rank)
-		eq(int(s.hp), roundi(DataRegistry.bal_f("stats_for_rank.hp_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.hp_per_rank", 0.0)), "hp rango %d" % rank)
-		eq(int(s.atk), roundi(DataRegistry.bal_f("stats_for_rank.atk_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.atk_per_rank", 0.0)), "atk rango %d" % rank)
+		eq(int(s.hp), roundi(DataRegistry.bal_f("stats_for_rank.hp_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.hp_per_rank", 0.0) + deep * deep * DataRegistry.bal_f("stats_for_rank.hp_curve", 0.0)), "hp rango %d" % rank)
+		eq(int(s.atk), roundi(DataRegistry.bal_f("stats_for_rank.atk_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.atk_per_rank", 0.0) + deep * deep * DataRegistry.bal_f("stats_for_rank.atk_curve", 0.0)), "atk rango %d" % rank)
+		if steps <= from:
+			# El piso 1 (rangos débiles) no cambia con la curva.
+			eq(int(s.hp), roundi(DataRegistry.bal_f("stats_for_rank.hp_base", 0.0) + steps * DataRegistry.bal_f("stats_for_rank.hp_per_rank", 0.0)), "rango %d sin curva" % rank)
 		if rank < 10:
 			var weaker := DataRegistry.stats_for_rank(rank + 1)
 			check(int(s.hp) > int(weaker.hp) and int(s.atk) >= int(weaker.atk), "rango %d más fuerte que %d" % [rank, rank + 1])

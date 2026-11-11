@@ -127,6 +127,12 @@ static func _has_type(list: Array, type: String) -> bool:
 			return true
 	return false
 
+## Suma efectos sueltos (bendiciones) a un diccionario de efectos().
+static func add_effects(fx: Dictionary, list: Array) -> void:
+	for e: Variant in list:
+		if e is Dictionary:
+			_add(fx, e)
+
 static func _add(fx: Dictionary, e: Dictionary) -> void:
 	var type := String(e.get("type", ""))
 	if type != "":

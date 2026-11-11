@@ -131,6 +131,7 @@ func _run() -> void:
 	check(int(GameState.get_member("bjorn").xp) > 0 or int(GameState.get_member("bjorn").level) > 1, "las kills dan EXP")
 
 	await _check_chest(run)
+	await _check_events(run)
 	await _check_field_items(run)
 	await _check_attributes()
 
@@ -349,6 +350,42 @@ func _check_chest(run: RunController) -> void:
 	check(not bool(run.player.get("input_locked")) and run.hud.visible, "cerrada, vuelve el control y el HUD")
 	check(not run.chest_nodes.has(cell), "el cofre queda abierto")
 
+## Eventos de sala: la fuente cura una vez (chocándola y eligiendo Beber) y
+## una trampa salta al pisarla, sin matar.
+func _check_events(run: RunController) -> void:
+	var fountain := Vector2i(-1, -1)
+	for c: Vector2i in run.event_nodes.keys():
+		if String(run.event_nodes[c].type) == "fuente":
+			fountain = c
+	check(fountain.x >= 0, "el piso 1 tiene una fuente")
+	check(run.is_wall(fountain), "los eventos ocupan su celda")
+	var hero := GameState.hero()
+	if fountain.x >= 0:
+		hero["hp"] = 1
+		run._use_event(fountain)
+		await _wait_frames(3)
+		var dlg: UIChoiceDialog = null
+		for c in run.get_children():
+			if c is UIChoiceDialog:
+				dlg = c
+		check(dlg != null, "chocar la fuente pregunta si beber")
+		if dlg != null:
+			dlg.call("_answer", 0)
+			await _wait_frames(3)
+		check(int(hero.hp) > 1, "beber de la fuente cura")
+		check(bool(run.event_nodes[fountain].used), "y se seca")
+		check(not run.dialog_open and not bool(run.player.get("input_locked")), "después vuelve el control")
+		hero["hp"] = GameState.member_max_hp(hero)
+	check(not run.trap_nodes.is_empty(), "el piso 1 tiene trampas")
+	if not run.trap_nodes.is_empty():
+		var trap: Vector2i = run.trap_nodes.keys()[0]
+		var before := int(hero.hp)
+		run._check_trap(trap)
+		await _wait_frames(2)
+		check(not run.trap_nodes.has(trap), "la trampa salta una sola vez")
+		check(int(hero.hp) <= before and int(hero.hp) >= 1, "y lastima sin matar")
+		hero["hp"] = GameState.member_max_hp(hero)
+
 ## Mapa de mano: M baja la mirada y levanta el pergamino (sin moverse);
 ## M otra vez lo guarda y devuelve el control.
 func _check_field_map(run: RunController) -> void:
@@ -433,7 +470,7 @@ func _open_all_screens() -> void:
 	var screens: Array = [
 		HeroesScreen.new(), UpgradesScreen.new(), UnlocksScreen.new(), BestiaryScreen.new(), StatsScreen.new(),
 		OptionsScreen.new(true), OptionsScreen.new(false), StatusScreen.new(),
-		InventoryScreen.new(null), PauseMenu.new(null),
+		InventoryScreen.new(null), PauseMenu.new(null), ForgeScreen.new(),
 	]
 	for s: Node in screens:
 		get_tree().root.add_child(s)

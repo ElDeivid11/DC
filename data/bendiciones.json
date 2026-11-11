@@ -1,0 +1,10 @@
+{
+	"filo": {"nombre": "Filo bendito", "descripcion": "+1 de daño a cada golpe.", "icono": "stat_atq", "efectos": [{"type": "damage_bonus_flat", "value": 1}]},
+	"piedra": {"nombre": "Piel de piedra", "descripcion": "−1 al daño de cada golpe que recibas.", "icono": "stat_def", "efectos": [{"type": "damage_reduction_flat", "value": 1}]},
+	"ojo": {"nombre": "Ojo certero", "descripcion": "+6% de crítico.", "icono": "stat_agi", "efectos": [{"type": "crit_chance", "value": 0.06}]},
+	"sed": {"nombre": "Sed de sangre", "descripcion": "Te curas el 5% del daño que haces.", "icono": "hp", "rampa": "sangre", "efectos": [{"type": "lifesteal_pct", "value": 0.05}]},
+	"eco": {"nombre": "Eco del altar", "descripcion": "+1 al poder de tus habilidades.", "icono": "stat_esp", "efectos": [{"type": "active_power_flat", "value": 1}]},
+	"manto": {"nombre": "Manto de ceniza", "descripcion": "Empiezas cada combate con 4 de escudo.", "icono": "escudo", "efectos": [{"type": "start_shield", "value": 4}]},
+	"codicia": {"nombre": "Codicia", "descripcion": "+25% de monedas por cada enemigo.", "icono": "monedas", "rampa": "moneda", "efectos": [{"type": "coin_bonus_pct", "value": 0.25}]},
+	"estrella": {"nombre": "Buena estrella", "descripcion": "+10% de que un enemigo suelte su alma.", "icono": "almas", "efectos": [{"type": "soul_chance_pct", "value": 10}]}
+}

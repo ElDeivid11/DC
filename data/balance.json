@@ -8,7 +8,10 @@
 		"hp_base": 5.25,
 		"hp_per_rank": 4.75,
 		"atk_base": -0.25,
-		"atk_per_rank": 1.9
+		"atk_per_rank": 1.9,
+		"curve_from": 3,
+		"hp_curve": 0.25,
+		"atk_curve": 0.08
 	},
 	"floors_per_run": 5,
 	"start_items": ["pocion_menor"],
@@ -67,6 +70,18 @@
 		"elite": 0.6,
 		"boss": 1.0,
 		"pity_per_kill": 0.05
+	},
+	"eventos": {
+		"fuente_cura": 0.3,
+		"santuario_costo": 0.25,
+		"santuario_opciones": 2,
+		"trampa_dano": 0.12,
+		"trampa_esquive_max": 0.6,
+		"mercader_stock": 3,
+		"mercader_precio": 10,
+		"forja_templar": 8,
+		"forja_sacrificio": 4,
+		"forja_fundir_rangos": 2
 	},
 	"chest_slots": {
 		"premio_chance": 0.1,

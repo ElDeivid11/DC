@@ -23,6 +23,11 @@ var enemies: Array = []
 var chests: Array[Vector2i] = []
 ## {cell, item_id}
 var items: Array = []
+## Eventos de sala que bloquean su celda y se usan chocándolos: {cell, type}
+## (FloorGenerator.EVENT_TYPES: fuente, santuario, mercader, forja).
+var events: Array = []
+## Trampas de pinchos: celdas de piso que lastiman al pisarlas (una vez).
+var traps: Array[Vector2i] = []
 ## Decoración (no bloquea): {prop, pos (Vector3 en mundo), rot}
 var props: Array = []
 ## Columnas decorativas: posición en mundo (Vector3) del centro de la base.

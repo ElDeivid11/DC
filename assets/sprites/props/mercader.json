@@ -1,0 +1,32 @@
+{
+	"version": 1,
+	"sheet": "mercader.png",
+	"glow": "mercader_glow.png",
+	"normal": "mercader_normal.png",
+	"frame": [
+		31,
+		42
+	],
+	"columns": 16,
+	"pivot": [
+		13,
+		40
+	],
+	"pixels_per_meter": 24,
+	"flat_light": true,
+	"self_light": 0.35,
+	"anims": {
+		"idle": {
+			"loop": true,
+			"fps": 2.5,
+			"dirs": {
+				"s": [
+					0,
+					1,
+					2,
+					3
+				]
+			}
+		}
+	}
+}

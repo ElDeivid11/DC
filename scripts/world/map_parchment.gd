@@ -26,6 +26,11 @@ const STAMPS := {
 	"door": ["#####", "#.#.#", "#.#.#", "#.#.#", "#####"],
 	"exit": ["....#", "...##", "..###", ".####", "#####"],
 	"exit_open": ["....#", "...##", "..###", ".####", "#####"],
+	"fuente": ["..#..", ".#.#.", "#...#", "#####", ".###."],
+	"santuario": ["#...#", "#####", ".#.#.", ".###.", "#####"],
+	"mercader": [".###.", "#####", "#.#.#", "#####", "#####"],
+	"forja": ["#####", ".###.", "..#..", ".###.", "#####"],
+	"trampa": ["#.#.#", ".....", "#.#.#", ".....", "#.#.#"],
 }
 ## Romanos y la N de la rosa de los vientos (3×5 y 4×5).
 const GLYPHS := {
@@ -42,6 +47,8 @@ const LEGEND: Array = [
 	["player", "map.you"], ["enemy", "map.enemy"], ["boss", "map.boss"],
 	["chest", "map.chest"], ["item", "map.item"], ["door", "map.door"],
 	["exit", "map.exit"], ["exit_open", "map.exit_open"],
+	["fuente", "map.fuente"], ["santuario", "map.santuario"], ["mercader", "map.mercader"],
+	["forja", "map.forja"], ["trampa", "map.trampa"],
 ]
 
 static func ink() -> Color:
@@ -61,6 +68,12 @@ static func stamp_color(kind: String) -> Color:
 			return UIStyle.HIERRO_OSC
 		"exit_open":
 			return UIStyle.BRASA_OSC
+		"fuente", "forja":
+			return UIStyle.ALMA_OSC
+		"santuario", "trampa":
+			return UIStyle.SANGRE
+		"mercader":
+			return UIStyle.AMATISTA_OSC
 	return ink()
 
 ## El pergamino entero. markers: {Vector2i: tipo} (RunController.map_markers).

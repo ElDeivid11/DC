@@ -37,7 +37,7 @@ const ENEMY_ACTIONS: Array[String] = ["golpe", "fuerte", "rafaga", "guardia", "p
 const ENEMY_TRAITS: Array[String] = ["blindado", "vampirico", "furioso", "espinoso", "veloz"]
 
 var rng: RandomNumberGenerator
-## {id, name, hp, max_hp, atk, def, ability_bonus, crit_bonus, souls}
+## {id, name, hp, max_hp, atk, def, ability_bonus, crit_bonus, souls, extra_effects}
 var hero := {}
 ## {name, hp, max_hp, atk, kind, ability_name}
 var enemy := {}
@@ -141,6 +141,8 @@ func setup(p_hero: Dictionary, p_enemy: Dictionary, mode := "normal") -> Array:
 	rage = 0
 	impetu = 0
 	fx = SoulBuild.effects(hero.souls)
+	# Efectos que no vienen de las almas (bendiciones de los santuarios).
+	SoulBuild.add_effects(fx, hero.get("extra_effects", []))
 	cooldowns.clear()
 	for i in (hero.souls as Array).size():
 		cooldowns.append(0)

@@ -223,6 +223,14 @@ func _update_interaction(fd: FloorData, cell: Vector2i, facing: int, markers: Di
 			key = "hud.act_sealed"
 		"door":
 			key = "hud.act_door"
+		"fuente":
+			key = "hud.act_drink"
+		"santuario":
+			key = "hud.act_pray"
+		"mercader":
+			key = "hud.act_trade"
+		"forja":
+			key = "hud.act_forge"
 	if key == "" and not fd.enemy_at(front).is_empty():
 		key = "hud.act_fight"
 	_interact_key = key

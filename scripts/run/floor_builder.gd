@@ -541,6 +541,80 @@ func spawn_chest(cell: Vector2i, fd: FloorData) -> Node3D:
 	chest.play_role("idle")
 	return chest
 
+## Color de lo que brilla en cada evento de sala (y de su luz).
+const EVENT_GLOW := {"fuente": "#7fe0d0", "santuario": "#ff8a4a", "mercader": "#ffd27a", "forja": "#6ab7d9"}
+const TRAP_TEXTURE := "res://assets/textures/props/trampa.png"
+
+## Evento de sala (fuente, santuario, mercader, forja): un sprite de pixel
+## art como el cofre (assets/sprites/props/<tipo>.*, de
+## tools/sprites/draw_eventos.py), de espaldas a la pared y con su luz.
+func spawn_event(type: String, cell: Vector2i, fd: FloorData) -> Node3D:
+	var rot := 0.0
+	for i in 4:
+		var d: Vector2i = [Vector2i(0, 1), Vector2i(1, 0), Vector2i(0, -1), Vector2i(-1, 0)][i]
+		if not fd.is_wall(cell + d):
+			rot = [0.0, 90.0, 180.0, 270.0][i]
+			break
+	var glow := Color.html(String(EVENT_GLOW.get(type, "#ffd27a")))
+	var def := {
+		"sprite": "res://assets/sprites/props/%s.json" % type,
+		"shadow": 0.8,
+		"light": {"color": glow, "energy": DataRegistry.bal_f("render.event_light_energy", 0.7),
+			"range": DataRegistry.bal_f("render.event_light_range", 3.2), "pos": [0.0, 1.1, 0.3], "on_self": false},
+	}
+	var node := EnemySprite.new()
+	node.setup(def, Color.WHITE, glow, cell.x * 13 + cell.y * 29)
+	node.position = cell_to_world(cell)
+	node.rotation_degrees.y = rot
+	world.add_child(node)
+	node.play_role("idle")
+	return node
+
+## Trampa de pinchos: una losa con agujeros casi al ras del piso y los
+## pinchos de hierro escondidos debajo (spring_trap los saca).
+func spawn_trap(cell: Vector2i) -> Node3D:
+	var holder := Node3D.new()
+	holder.position = cell_to_world(cell)
+	var plate := MeshInstance3D.new()
+	var quad := PlaneMesh.new()
+	quad.size = Vector2(1.5, 1.5)
+	quad.subdivide_width = 3
+	quad.subdivide_depth = 3
+	plate.mesh = quad
+	plate.position.y = 0.04
+	var tex: Texture2D = load(TRAP_TEXTURE) if ResourceLoader.exists(TRAP_TEXTURE) else null
+	plate.material_override = make_psx_material(Color.WHITE, tex)
+	holder.add_child(plate)
+	var iron := make_psx_material(Color.html("#9a9aa8"))
+	var spikes := Node3D.new()
+	spikes.name = "Spikes"
+	spikes.position.y = -0.5
+	for gy in 3:
+		for gx in 3:
+			var spike := MeshInstance3D.new()
+			var cone := CylinderMesh.new()
+			cone.top_radius = 0.0
+			cone.bottom_radius = 0.07
+			cone.height = 0.45
+			cone.radial_segments = 4
+			cone.rings = 1
+			spike.mesh = cone
+			spike.material_override = iron
+			spike.position = Vector3((gx - 1) * 0.42, 0.225, (gy - 1) * 0.42)
+			spikes.add_child(spike)
+	holder.add_child(spikes)
+	world.add_child(holder)
+	return holder
+
+## La trampa salta: los pinchos suben de golpe y se quedan afuera.
+static func spring_trap(node: Node3D) -> void:
+	var spikes := node.get_node_or_null("Spikes") as Node3D
+	if spikes == null:
+		return
+	var tw := spikes.create_tween()
+	tw.tween_property(spikes, "position:y", 0.04, 0.06)
+	tw.tween_property(spikes, "position:y", -0.12, 0.5).set_delay(0.6)
+
 func spawn_item(cell: Vector2i) -> Node3D:
 	var holder := Node3D.new()
 	var gem := CSGBox3D.new()

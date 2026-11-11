@@ -35,6 +35,8 @@ var souls_taken_by_species: Dictionary = {}
 ## Protección contra la mala suerte: kills seguidas (sin jefes) que no
 ## soltaron alma. Cada una suma soul_drop.pity_per_kill a la próxima.
 var soul_dry_streak := 0
+## Bendiciones de los santuarios (ids de bendiciones.json): duran la run.
+var blessings: Array[String] = []
 var items_used: Dictionary = {}
 var flee_count := 0
 var bosses_defeated: Array[int] = []
@@ -68,7 +70,8 @@ func new_run(p_seed: int, p_test_room := false) -> void:
 	rng.seed = p_seed
 	floor_n = 1
 	max_floor = 1
-	coin_breakdown = {"kills": 0, "boss": 0, "chests": 0}
+	coin_breakdown = {"kills": 0, "boss": 0, "chests": 0, "otros": 0, "gastos": 0}
+	blessings = []
 	kills_by_species = {}
 	kills_total = 0
 	seen_species = {}
@@ -353,6 +356,7 @@ func combat_hero(m: Dictionary, souls: Variant = null) -> Dictionary:
 		"id": String(m.id), "name": String(m.name), "hp": int(m.hp), "max_hp": member_max_hp(m),
 		"atk": member_atk(m), "def": member_def(m), "ability_bonus": member_ability_bonus(m),
 		"crit_bonus": member_crit_bonus(m), "souls": souls if souls is Array else m.souls,
+		"extra_effects": blessing_effects(),
 	}
 
 ## Un CombatCore con el héroe (sin enemigo): para describir sus activas con
@@ -406,7 +410,162 @@ func party_passive_total(effect_type: String) -> float:
 	var total := 0.0
 	for m: Dictionary in alive_members():
 		total += SoulEffects.total(m, effect_type)
+	for e: Dictionary in blessing_effects():
+		if String(e.get("type", "")) == effect_type:
+			total += float(e.get("value", 0.0))
 	return total
+
+# --- Eventos de sala: fuente, santuario, trampa, mercader y forja -----------------------
+# Las reglas (las usan RunController y el simulador); los valores, en
+# balance.json → eventos.
+
+## Efectos de las bendiciones de la run: [{type, value}].
+func blessing_effects() -> Array:
+	var out: Array = []
+	for id in blessings:
+		out.append_array(DataRegistry.get_blessing(id).get("efectos", []))
+	return out
+
+## Fuente: cura un % del HP máximo. Devuelve lo curado.
+func drink_fountain() -> int:
+	var m := hero()
+	return heal_member(m, roundi(member_max_hp(m) * DataRegistry.bal_f("eventos.fuente_cura", 0.4)))
+
+## Santuario: lo que cuesta rezar (HP) y si alcanza (no mata).
+func shrine_cost() -> int:
+	return maxi(roundi(member_max_hp(hero()) * DataRegistry.bal_f("eventos.santuario_costo", 0.2)), 1)
+
+func can_pray() -> bool:
+	return int(hero().hp) > shrine_cost()
+
+## Paga con sangre y se lleva la bendición (hasta el final de la run).
+func pray(blessing_id: String) -> bool:
+	if not can_pray() or DataRegistry.get_blessing(blessing_id).is_empty():
+		return false
+	var m := hero()
+	m["hp"] = int(m.hp) - shrine_cost()
+	blessings.append(blessing_id)
+	return true
+
+## Bendiciones que ofrece un santuario (sin repetir las que ya se tienen).
+func roll_blessings(p_rng: RandomNumberGenerator) -> Array[String]:
+	var pool: Array[String] = []
+	for id: String in DataRegistry.blessings.keys():
+		if not blessings.has(id):
+			pool.append(id)
+	var out: Array[String] = []
+	for i in DataRegistry.bal_i("eventos.santuario_opciones", 2):
+		if pool.is_empty():
+			break
+		var k := p_rng.randi_range(0, pool.size() - 1)
+		out.append(pool[k])
+		pool.remove_at(k)
+	return out
+
+## Trampa de pinchos: la AGI da chance de esquivarla; si no, saca un % del
+## HP máximo (no mata). {dodged, dmg}.
+func spring_trap(p_rng: RandomNumberGenerator) -> Dictionary:
+	var m := hero()
+	var dodge := minf(RunRules.stat_flee(member_stat(m, "agi")), DataRegistry.bal_f("eventos.trampa_esquive_max", 0.6))
+	if p_rng.randf() < dodge:
+		return {"dodged": true, "dmg": 0}
+	var dmg := mini(maxi(roundi(member_max_hp(m) * DataRegistry.bal_f("eventos.trampa_dano", 0.12)), 1), int(m.hp) - 1)
+	m["hp"] = int(m.hp) - maxi(dmg, 0)
+	return {"dodged": false, "dmg": maxi(dmg, 0)}
+
+## Gasta monedas de la run (mercader, forja). false si no alcanza.
+func spend_coins(amount: int) -> bool:
+	if amount > run_coins():
+		return false
+	add_coins(-amount, "gastos")
+	return true
+
+## Precio de un objeto en el mercader: los raros (poco peso) cuestan más.
+func shop_price(item_id: String) -> int:
+	var w := maxf(float(DataRegistry.get_item(item_id).get("peso_aparicion", 1)), 1.0)
+	return roundi(DataRegistry.bal_f("eventos.mercader_precio", 10.0) * (1.0 + 8.0 / w))
+
+## Lo que vende un mercader: objetos de la tabla, sin repetir.
+func roll_shop(p_rng: RandomNumberGenerator, item_pool: Array[String]) -> Array[String]:
+	var out: Array[String] = []
+	for i in DataRegistry.bal_i("eventos.mercader_stock", 3) * 4:
+		if out.size() >= DataRegistry.bal_i("eventos.mercader_stock", 3):
+			break
+		var id := FloorGenerator.roll_item(p_rng, item_pool)
+		if id != "" and not out.has(id):
+			out.append(id)
+	return out
+
+## Compra un objeto. "" si salió bien; si no, por qué: "coins" | "full".
+func buy_item(item_id: String) -> String:
+	if inventory_full():
+		return "full"
+	if not spend_coins(shop_price(item_id)):
+		return "coins"
+	add_item(item_id)
+	return ""
+
+## Forja: templar un alma (monedas → un rango mejor, hasta el 1).
+func temper_cost(soul: Dictionary) -> int:
+	return DataRegistry.bal_i("eventos.forja_templar", 8) * (12 - int(soul.get("source_rank", 10)))
+
+func can_temper(index: int) -> bool:
+	var souls: Array = hero().souls
+	return index >= 0 and index < souls.size() and int((souls[index] as Dictionary).get("source_rank", 10)) > 1
+
+func temper_soul(index: int) -> bool:
+	if not can_temper(index):
+		return false
+	var soul: Dictionary = hero().souls[index]
+	if not spend_coins(temper_cost(soul)):
+		return false
+	_set_soul_rank(soul, int(soul.source_rank) - 1)
+	return true
+
+static func _set_soul_rank(soul: Dictionary, rank: int) -> void:
+	soul["source_rank"] = clampi(rank, 1, 10)
+	soul["bonus_poder"] = DataRegistry.soul_rank_power(int(soul.source_rank))
+
+## Forja: sacrificar un alma por monedas (más cuanto mejor su rango).
+func sacrifice_value(soul: Dictionary) -> int:
+	return DataRegistry.bal_i("eventos.forja_sacrificio", 4) * (11 - int(soul.get("source_rank", 10)))
+
+func sacrifice_soul(index: int) -> int:
+	var m := hero()
+	var souls: Array = m.souls
+	if index < 0 or index >= souls.size():
+		return 0
+	var value := sacrifice_value(souls[index])
+	souls.remove_at(index)
+	m["hp"] = mini(int(m.hp), member_max_hp(m))
+	add_coins(value, "otros")
+	return value
+
+## Forja: pares de almas iguales que se pueden fundir: [[i, j], ...].
+func fusable_pairs() -> Array:
+	var souls: Array = hero().souls
+	var out: Array = []
+	for i in souls.size():
+		for j in range(i + 1, souls.size()):
+			if String((souls[i] as Dictionary).get("id", "")) == String((souls[j] as Dictionary).get("id", "-")):
+				out.append([i, j])
+	return out
+
+## Funde dos almas iguales en una: queda la de mejor rango, mejorada, y se
+## libera un espacio.
+func fuse_souls(i: int, j: int) -> bool:
+	var m := hero()
+	var souls: Array = m.souls
+	if i == j or mini(i, j) < 0 or maxi(i, j) >= souls.size():
+		return false
+	var a: Dictionary = souls[i]
+	var b: Dictionary = souls[j]
+	if String(a.get("id", "")) != String(b.get("id", "-")):
+		return false
+	_set_soul_rank(a, mini(int(a.get("source_rank", 10)), int(b.get("source_rank", 10))) - DataRegistry.bal_i("eventos.forja_fundir_rangos", 2))
+	souls.remove_at(j)
+	m["hp"] = mini(int(m.hp), member_max_hp(m))
+	return true
 
 # --- Monedas, kills y especies ----------------------------------------------------------
 

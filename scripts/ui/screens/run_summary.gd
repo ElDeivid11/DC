@@ -101,6 +101,10 @@ func _build_coins(p_panel: UIPanel) -> void:
 	b.add_child(UILedgerRow.new(DataRegistry.t("summary.kills_coins"), "+" + UIFormat.number(int(coins.kills)), "CoinLabel"))
 	b.add_child(UILedgerRow.new(DataRegistry.t("summary.boss_coins"), "+" + UIFormat.number(int(coins.boss)), "CoinLabel"))
 	b.add_child(UILedgerRow.new(DataRegistry.t("summary.chest_coins"), "+" + UIFormat.number(int(coins.chests)), "CoinLabel"))
+	if int(coins.get("otros", 0)) > 0:
+		b.add_child(UILedgerRow.new(DataRegistry.t("summary.other_coins"), "+" + UIFormat.number(int(coins.otros)), "CoinLabel"))
+	if int(coins.get("gastos", 0)) > 0:
+		b.add_child(UILedgerRow.new(DataRegistry.t("summary.spent_coins"), "-" + UIFormat.number(int(coins.gastos)), "CoinDangerLabel"))
 	b.add_child(UILedgerRow.new(DataRegistry.t("summary.first_kill_coins"), "+" + UIFormat.number(int(coins.first_kill)), "CoinLabel"))
 	if int(coins.botin_bonus) > 0:
 		b.add_child(UILedgerRow.new(DataRegistry.t("summary.botin", [int(coins.botin_pct)]), "+" + UIFormat.number(int(coins.botin_bonus)), "CoinLabel"))

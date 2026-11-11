@@ -50,6 +50,9 @@ var souls: Dictionary = {}
 ## {nombre, almas: [id, id], efectos}}.
 var affinities: Dictionary = {}
 var pacts: Dictionary = {}
+## Bendiciones de los santuarios (bendiciones.json): {id: {nombre,
+## descripcion, icono, efectos}}; duran toda la expedición.
+var blessings: Dictionary = {}
 var items: Dictionary = {}
 var upgrades: Dictionary = {}
 var unlocks: Dictionary = {}
@@ -82,6 +85,7 @@ func reload() -> void:
 	var synergies := _load_dict("sinergias.json")
 	affinities = synergies.get("afinidades", {})
 	pacts = synergies.get("pactos", {})
+	blessings = _load_dict("bendiciones.json")
 	items = _load_dict("items.json")
 	upgrades = _load_dict("upgrades.json")
 	unlocks = _load_dict("unlocks.json")
@@ -97,6 +101,7 @@ func reload() -> void:
 	_validate_species()
 	_validate_souls()
 	_validate_synergies()
+	_validate_blessings()
 	_validate_items()
 	_validate_unlocks()
 	_validate_upgrades()
@@ -180,11 +185,15 @@ func bal_i(path: String, default: int = 0) -> int:
 
 ## Stats de un monstruo según su rango (10 = más débil, 1 = más fuerte).
 ## Mismos números que el prototipo, ahora con los coeficientes en balance.json.
+## hp_curve / atk_curve: un extra que crece con el cuadrado desde
+## curve_from pasos (los rangos fuertes de los pisos profundos se endurecen
+## sin tocar el piso 1).
 func stats_for_rank(rank: int) -> Dictionary:
 	var steps := 11 - rank
+	var deep := maxi(steps - bal_i("stats_for_rank.curve_from", 3), 0)
 	return {
-		"hp": roundi(bal_f("stats_for_rank.hp_base", 10) + steps * bal_f("stats_for_rank.hp_per_rank", 2)),
-		"atk": roundi(bal_f("stats_for_rank.atk_base", 1) + steps * bal_f("stats_for_rank.atk_per_rank", 1)),
+		"hp": roundi(bal_f("stats_for_rank.hp_base", 10) + steps * bal_f("stats_for_rank.hp_per_rank", 2) + deep * deep * bal_f("stats_for_rank.hp_curve", 0.0)),
+		"atk": roundi(bal_f("stats_for_rank.atk_base", 1) + steps * bal_f("stats_for_rank.atk_per_rank", 1) + deep * deep * bal_f("stats_for_rank.atk_curve", 0.0)),
 	}
 
 ## Poder extra de la activa de un alma según el rango del monstruo que la
@@ -472,6 +481,28 @@ func _validate_effect(F: String, id: String, e: Dictionary) -> void:
 		_err("%s → '%s': efecto desconocido '%s'" % [F, id, t_])
 	e["value"] = float(e.get("value", 0))
 
+## Bendiciones: nombre, descripción, ícono y al menos un efecto conocido.
+func _validate_blessings() -> void:
+	const F := "bendiciones.json"
+	if blessings.is_empty():
+		_err("%s: no hay bendiciones" % F)
+	for id: String in blessings.keys():
+		var b: Dictionary = blessings[id]
+		_req(F, id, b, "nombre", TYPE_STRING)
+		_req(F, id, b, "descripcion", TYPE_STRING)
+		b["icono"] = String(b.get("icono", "almas"))
+		b["rampa"] = String(b.get("rampa", "vela"))
+		if _req(F, id, b, "efectos", TYPE_ARRAY):
+			if (b.efectos as Array).is_empty():
+				_err("%s → '%s': necesita al menos un efecto" % [F, id])
+			for e: Variant in b.efectos:
+				if typeof(e) == TYPE_DICTIONARY:
+					_validate_effect(F, id, e)
+
+func get_blessing(id: String) -> Dictionary:
+	var b: Dictionary = blessings.get(id, {})
+	return b
+
 ## Afinidades (niveles en orden creciente, con efectos) y pactos (dos almas
 ## distintas que existen, con efectos).
 func _validate_synergies() -> void:
@@ -699,6 +730,13 @@ func _validate_floors() -> void:
 			if _req(F, id, fl, field, TYPE_FLOAT):
 				fl[field] = int(fl[field])
 		fl["n"] = i + 1
+		# Eventos del piso: cuántos de cada uno (FloorGenerator.EVENT_TYPES + trampas).
+		var evs: Dictionary = fl.get("eventos", {})
+		for k: Variant in evs.keys():
+			if String(k) != "trampas" and not FloorGenerator.EVENT_TYPES.has(String(k)):
+				_err("%s → %s: evento desconocido '%s' (usa %s o trampas)" % [F, id, k, FloorGenerator.EVENT_TYPES])
+			evs[k] = int(evs[k])
+		fl["eventos"] = evs
 		if _req(F, id, fl, "theme", TYPE_STRING) and not floor_themes.has(fl.theme):
 			_err("%s → %s: el tema '%s' no existe en 'themes'" % [F, id, fl.theme])
 		if fl.get("rank_min", 0) > fl.get("rank_max", 0):

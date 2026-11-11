@@ -170,6 +170,19 @@ func _souls_page() -> Control:
 	var core := GameState.preview_core()
 	for i in souls.size():
 		col.add_child(UISoulCard.new(souls[i], false, core, i))
+	# Bendiciones de los santuarios (duran toda la expedición).
+	if not GameState.blessings.is_empty():
+		var bless := UIPanel.new(DataRegistry.t("status.blessings"), "PanelAlt")
+		for id in GameState.blessings:
+			var b := DataRegistry.get_blessing(id)
+			var line := HBoxContainer.new()
+			line.add_theme_constant_override("separation", UIStyle.SPACE * 2)
+			line.add_child(UIIcon.make(String(b.icono), String(b.rampa)))
+			var bl := UILabel.make("%s: %s" % [b.nombre, b.descripcion], "", true)
+			bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			line.add_child(bl)
+			bless.body.add_child(line)
+		col.add_child(bless)
 	var right_scroll := ScrollContainer.new()
 	right_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	right_scroll.custom_minimum_size.x = 440

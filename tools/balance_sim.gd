@@ -56,6 +56,10 @@ const FORCED_RANK := 6
 const ENCOUNTER_RATE := 0.75
 ## Cómo empiezan los combates (chocar primero / normal / emboscada). Los
 ## jefes siempre empiezan con sorpresa (ver _fight).
+## Chance de pisar cada trampa del piso (están a la vista para el que mira).
+const TRAP_STEP := 0.5
+## Qué bendición se prefiere en un santuario (primero la que más ayuda a ganar).
+const BLESSING_ORDER: Array[String] = ["filo", "eco", "sed", "piedra", "manto", "ojo", "estrella", "codicia"]
 const START_SURPRISE := 0.6
 const START_AMBUSH := 0.15
 
@@ -338,6 +342,16 @@ func _play_run(rec: Dictionary) -> int:
 			var id := FloorGenerator.roll_item(rng, pool)
 			if id != "":
 				GameState.add_item(id, false)
+		# Eventos del piso (las mismas reglas de GameState que el juego): el
+		# santuario al llegar, las trampas en el camino, el mercader y la
+		# forja a mitad del piso y la fuente cuando hace falta.
+		var evs: Dictionary = def.get("eventos", {})
+		var fountains := int(evs.get("fuente", 0))
+		for k in int(evs.get("santuario", 0)):
+			_sim_shrine()
+		for k in int(evs.get("trampas", 0)):
+			if rng.randf() < TRAP_STEP:
+				GameState.spring_trap(rng)
 		var fights := roundi(int(def.enemies) * ENCOUNTER_RATE)
 		for k in fights:
 			# Mismo sorteo que el generador de pisos (especie, rango y tipo).
@@ -346,6 +360,16 @@ func _play_run(rec: Dictionary) -> int:
 				_deaths += 1
 				return n
 			_heal_between_fights()
+			if fountains > 0 and float(int(m.hp)) / GameState.member_max_hp(m) < 0.55:
+				GameState.drink_fountain()
+				fountains -= 1
+			if k == int(fights / 2.0) and not _forced_mode:
+				for j in int(evs.get("mercader", 0)):
+					_sim_merchant(pool)
+				for j in int(evs.get("forja", 0)):
+					_sim_forge()
+		if fountains > 0 and float(int(m.hp)) / GameState.member_max_hp(m) < 0.85:
+			GameState.drink_fountain()
 		var b: Dictionary = def.boss
 		if not _fight(String(b.species), int(b.rank), RunRules.BOSS, def):
 			_deaths += 1
@@ -356,6 +380,43 @@ func _play_run(rec: Dictionary) -> int:
 		if n < floors:
 			GameState.advance_floor()
 	return floors + 1
+
+## Santuario: con la vida alta, paga y se lleva la bendición que más ayuda.
+func _sim_shrine() -> void:
+	var m := GameState.hero()
+	if float(int(m.hp)) / GameState.member_max_hp(m) < 0.7 or not GameState.can_pray():
+		return
+	var options := GameState.roll_blessings(rng)
+	for id in BLESSING_ORDER:
+		if options.has(id):
+			GameState.pray(id)
+			return
+
+## Mercader: compra la cura más barata si lleva menos de dos.
+func _sim_merchant(pool: Array[String]) -> void:
+	var heals := 0
+	for id in GameState.inventory:
+		if String(DataRegistry.get_item(id).efecto.tipo) == "curar":
+			heals += 1
+	if heals >= 2:
+		return
+	var best := ""
+	for id in GameState.roll_shop(rng, pool):
+		var it := DataRegistry.get_item(id)
+		if String(it.efecto.tipo) == "curar" and bool(it.efecto.get("en_combate", false)) and (best == "" or GameState.shop_price(id) < GameState.shop_price(best)):
+			best = id
+	if best != "":
+		GameState.buy_item(best)
+
+## Forja: funde las almas repetidas y templa la primera si le sobra la plata
+## (hasta la mitad de las monedas de la run).
+func _sim_forge() -> void:
+	var pairs := GameState.fusable_pairs()
+	if not pairs.is_empty():
+		GameState.fuse_souls(int((pairs[0] as Array)[0]), int((pairs[0] as Array)[1]))
+	var souls: Array = GameState.hero().souls
+	if not souls.is_empty() and GameState.can_temper(0) and GameState.temper_cost(souls[0]) * 2 <= GameState.run_coins():
+		GameState.temper_soul(0)
 
 func _heal_between_fights() -> void:
 	for m: Dictionary in GameState.alive_members():

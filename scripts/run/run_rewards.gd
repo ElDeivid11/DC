@@ -14,6 +14,9 @@ static func compute(snap: Dictionary, meta: Node) -> Dictionary:
 	var kills_coins := int(breakdown.get("kills", 0))
 	var boss_coins := int(breakdown.get("boss", 0))
 	var chest_coins := int(breakdown.get("chests", 0))
+	# Sacrificios en la forja (suman) y lo gastado en el mercader y la forja (resta).
+	var other_coins := int(breakdown.get("otros", 0))
+	var spent_coins := -int(breakdown.get("gastos", 0))
 
 	# Primera kill de especie: bonus una sola vez en toda la partida.
 	var new_species: Array = []
@@ -29,7 +32,7 @@ static func compute(snap: Dictionary, meta: Node) -> Dictionary:
 		first_kill_coins += bonus
 		new_species.append({"id": sid, "name": sp.get("display_name", sid), "rank": rank, "bonus": bonus})
 
-	var subtotal := kills_coins + boss_coins + chest_coins + first_kill_coins
+	var subtotal := maxi(kills_coins + boss_coins + chest_coins + other_coins - spent_coins, 0) + first_kill_coins
 	var botin_pct := float(meta.call("upgrade_bonus", "coin_bonus_pct"))
 	var botin_bonus := roundi(float(subtotal) * botin_pct / 100.0)
 	var gross := subtotal + botin_bonus
@@ -56,6 +59,8 @@ static func compute(snap: Dictionary, meta: Node) -> Dictionary:
 			"kills": kills_coins,
 			"boss": boss_coins,
 			"chests": chest_coins,
+			"otros": other_coins,
+			"gastos": spent_coins,
 			"first_kill": first_kill_coins,
 			"subtotal": subtotal,
 			"botin_pct": botin_pct,

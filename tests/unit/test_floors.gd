@@ -31,6 +31,8 @@ func test_todo_es_alcanzable_con_cofres_bloqueando() -> void:
 			var blocked := {}
 			for c in fd.chests:
 				blocked[c] = true
+			for ev: Dictionary in fd.events:
+				blocked[ev.cell] = true
 			var reach := fd.distances_from(fd.start_cell, blocked)
 			for c in fd.floor_cells():
 				if not blocked.has(c) and not fd.solid.has(c):

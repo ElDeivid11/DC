@@ -20,6 +20,9 @@ const DIRS: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), 
 ## ver FloorBuilder.spawn_prop).
 const PROPS: Array[String] = ["box_large", "barrel_large", "box_small_decorated", "barrel_small_stack", "crates_stacked", "barrel_large_decorated", "box_stacked", "barrel_small"]
 
+## Eventos de sala que bloquean su celda (se usan chocándolos, como un cofre).
+const EVENT_TYPES: Array[String] = ["fuente", "santuario", "mercader", "forja"]
+
 static func generate(floor_n: int, run_seed: int, item_pool: Array[String]) -> FloorData:
 	var def := DataRegistry.get_floor(floor_n)
 	var gen := DataRegistry.floor_generation
@@ -47,8 +50,12 @@ static func generate(floor_n: int, run_seed: int, item_pool: Array[String]) -> F
 	_place_chests(fd, rng, int(def.get("chests", 2)), blocked)
 	for c in fd.chests:
 		blocked[c] = true
+	_place_events(fd, rng, def.get("eventos", {}), blocked)
+	for ev: Dictionary in fd.events:
+		blocked[ev.cell] = true
 	_place_enemies(fd, rng, def, dist, blocked, int(gen.get("min_enemy_distance_from_start", 5)))
 	_place_items(fd, rng, int(def.get("floor_items", 2)), item_pool, blocked)
+	_place_traps(fd, rng, int((def.get("eventos", {}) as Dictionary).get("trampas", 0)), blocked)
 	_place_decor(fd, rng, float(gen.get("props_per_room", 1.0)), blocked)
 	_place_torches(fd, rng, int(DataRegistry.get_theme(floor_n).get("antorcha_cada", 5)))
 	return fd
@@ -101,6 +108,12 @@ static func test_room() -> FloorData:
 		{"cell": Vector2i(1, 6), "dir": 3},
 	]
 	fd.exit_cell = Vector2i(-1, -1)
+	# Uno de cada evento en las esquinas y una trampa, para probarlos.
+	fd.events = [
+		{"cell": Vector2i(1, 1), "type": "fuente"}, {"cell": Vector2i(13, 1), "type": "santuario"},
+		{"cell": Vector2i(1, 7), "type": "mercader"}, {"cell": Vector2i(13, 7), "type": "forja"},
+	]
+	fd.traps = [Vector2i(5, 5)]
 	return fd
 
 ## rank < 0 = el rango base de la especie. Una especie de tier "elite" ya es
@@ -461,6 +474,48 @@ static func _place_chests(fd: FloorData, rng: RandomNumberGenerator, count: int,
 			fd.chests.append(c)
 		else:
 			test.erase(c)
+
+## Eventos (fuente, santuario, mercader, forja): en esquinas libres de las
+## salas, sin cortar el paso a ninguna celda.
+static func _place_events(fd: FloorData, rng: RandomNumberGenerator, counts: Dictionary, blocked: Dictionary) -> void:
+	var candidates: Array[Vector2i] = []
+	for i in range(1, fd.rooms.size()):
+		var r := fd.rooms[i]
+		for c: Vector2i in [r.position, Vector2i(r.end.x - 1, r.position.y), Vector2i(r.position.x, r.end.y - 1), r.end - Vector2i.ONE]:
+			candidates.append(c)
+	_shuffle(candidates, rng)
+	var test := blocked.duplicate()
+	for type in EVENT_TYPES:
+		var left := int(counts.get(type, 0))
+		for c in candidates:
+			if left <= 0:
+				break
+			if test.has(c) or c == fd.start_cell:
+				continue
+			test[c] = true
+			if _is_connected(fd, test):
+				fd.events.append({"cell": c, "type": type})
+				left -= 1
+			else:
+				test.erase(c)
+
+## Trampas: celdas de sala (no la de inicio ni las de la sala del jefe) sin
+## nada encima. Se pisan caminando: están a la vista para el que mira el piso.
+static func _place_traps(fd: FloorData, rng: RandomNumberGenerator, count: int, blocked: Dictionary) -> void:
+	var candidates: Array[Vector2i] = []
+	for i in range(1, fd.rooms.size()):
+		var r := fd.rooms[i]
+		for y in range(r.position.y, r.end.y):
+			for x in range(r.position.x, r.end.x):
+				var c := Vector2i(x, y)
+				if blocked.has(c) or fd.solid.has(c) or fd.boss_room.has_point(c) or fd.is_wall(c):
+					continue
+				if fd.items.any(func(it: Dictionary) -> bool: return it.cell == c):
+					continue
+				candidates.append(c)
+	_shuffle(candidates, rng)
+	for i in mini(count, candidates.size()):
+		fd.traps.append(candidates[i])
 
 static func _place_enemies(fd: FloorData, rng: RandomNumberGenerator, def: Dictionary, dist: Dictionary, blocked: Dictionary, min_dist: int) -> void:
 	var pool := species_pool(int(def.rank_min), int(def.rank_max))

@@ -101,6 +101,7 @@
 			"enemies": 7,
 			"chests": 2,
 			"floor_items": 2,
+			"eventos": {"fuente": 1, "santuario": 1, "trampas": 2},
 			"boss": {
 				"display_name": "Nigromante novicio",
 				"epiteto": "Aprendiz de los que no descansan",
@@ -121,6 +122,7 @@
 			"enemies": 9,
 			"chests": 2,
 			"floor_items": 2,
+			"eventos": {"fuente": 1, "santuario": 1, "mercader": 1, "trampas": 3},
 			"boss": {
 				"display_name": "Sacerdote del osario",
 				"epiteto": "El que reza sobre los huesos",
@@ -141,6 +143,7 @@
 			"enemies": 11,
 			"chests": 3,
 			"floor_items": 3,
+			"eventos": {"fuente": 1, "santuario": 1, "forja": 1, "trampas": 3},
 			"boss": {
 				"display_name": "Vidente ahogado",
 				"epiteto": "Ve lo que el agua se llevó",
@@ -161,6 +164,7 @@
 			"enemies": 12,
 			"chests": 3,
 			"floor_items": 3,
+			"eventos": {"fuente": 1, "santuario": 1, "mercader": 1, "forja": 1, "trampas": 4},
 			"boss": {
 				"display_name": "Archinigromante",
 				"epiteto": "Señor del castillo carmesí",
@@ -181,6 +185,7 @@
 			"enemies": 14,
 			"chests": 3,
 			"floor_items": 3,
+			"eventos": {"fuente": 1, "santuario": 1, "mercader": 1, "forja": 1, "trampas": 5},
 			"boss": {
 				"display_name": "Señor de la cripta",
 				"epiteto": "El último que te espera",
