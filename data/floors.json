@@ -27,6 +27,7 @@
 		"catacumbas": {
 			"nombre": "Catacumbas del Pozo",
 			"texturas": "res://assets/textures/catacumbas/",
+			"postal": "res://assets/art/bioma_catacumbas.png",
 			"niebla": "#120e0b",
 			"niebla_cerca": 5.0,
 			"niebla_lejos": 16.0,
@@ -40,6 +41,7 @@
 		"cisterna": {
 			"nombre": "Cisterna Anegada",
 			"texturas": "res://assets/textures/cisterna/",
+			"postal": "res://assets/art/bioma_cisterna.png",
 			"niebla": "#14241d",
 			"niebla_cerca": 4.0,
 			"niebla_lejos": 13.0,
@@ -53,6 +55,7 @@
 		"luna": {
 			"nombre": "Salones de la Luna",
 			"texturas": "res://assets/textures/luna/",
+			"postal": "res://assets/art/bioma_luna.png",
 			"niebla": "#0e1428",
 			"niebla_cerca": 6.0,
 			"niebla_lejos": 20.0,
@@ -67,6 +70,7 @@
 		"castillo": {
 			"nombre": "Castillo Carmesí",
 			"texturas": "res://assets/textures/castillo/",
+			"postal": "res://assets/art/bioma_castillo.png",
 			"niebla": "#2a0608",
 			"niebla_cerca": 5.0,
 			"niebla_lejos": 16.0,
@@ -80,6 +84,7 @@
 		"abismo": {
 			"nombre": "El Abismo",
 			"texturas": "res://assets/textures/abismo/",
+			"postal": "res://assets/art/bioma_abismo.png",
 			"niebla": "#0a0614",
 			"niebla_cerca": 3.0,
 			"niebla_lejos": 11.0,

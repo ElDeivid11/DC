@@ -26,6 +26,8 @@ var player: Node3D
 var hud: RunHud
 var combat: Node = null
 var menu: Control = null
+## La postal del bioma que se muestra al llegar (UIFloorCard); null si ya se fue.
+var _floor_card: UIFloorCard = null
 ## La tragaperras del cofre abierto (UIChestSlots), mientras gira.
 var chest_slots: UIChestSlots = null
 ## El pergamino del mapa (M), colgado de la cámara.
@@ -57,6 +59,9 @@ func _ready() -> void:
 	hud = RunHud.new()
 	add_child(hud)
 	_after_move()
+	# La postal del bioma al llegar (se va sola o con el primer paso).
+	if not GameState.test_room:
+		_floor_card = UIFloorCard.show_for(self, GameState.floor_n)
 	if GameState.floor_n == 1 and GameState.elapsed_sec < 0.5:
 		var theme_name := String(DataRegistry.get_theme(GameState.floor_n).get("nombre", ""))
 		EventBus.hud_message.emit(DataRegistry.t("run.start_msg", [theme_name]) if not GameState.test_room else DataRegistry.t("run.test_room_msg"))
@@ -187,6 +192,10 @@ func try_interact(cell: Vector2i, _p: Node3D) -> bool:
 # --- Exploración ------------------------------------------------------------------------
 
 func _on_player_moved(cell: Vector2i) -> void:
+	# La postal del piso se va con el primer paso.
+	if is_instance_valid(_floor_card):
+		_floor_card.dismiss()
+	_floor_card = null
 	_pickup_at(cell)
 	_check_trap(cell)
 	_after_move()

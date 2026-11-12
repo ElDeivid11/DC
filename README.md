@@ -12,6 +12,10 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
 
 ![Hub](docs/capturas/hub_demo.png)
 
+El fondo del Hub y la **postal de cada bioma** (aparece al llegar a un piso) son pinturas generadas con un modelo abierto que corre en la máquina, gratis, y pasadas al píxel y al color del juego (`tools/art/`, procedencia en `assets/art/README.md`).
+
+![Postal del bioma](docs/capturas/postal_bioma.png)
+
 ## Cómo jugarlo
 
 1. Abre el proyecto con **Godot 4.7** (`project.godot`). La primera vez tarda un poco: reimporta modelos y texturas.
@@ -49,9 +53,18 @@ Dungeon crawler por grilla (giros de 90°), combate por turnos con cámara está
   - **pactos**: dos almas concretas juntas dan un efecto propio (Hemorragia, Lluvia de acero, Muralla de huesos, Verdugo…). Cada tarjeta dice con qué alma pacta.
   Todo está en **Estado → Almas** (tarjetas con las cifras reales y las sinergias activas o a medias) y en `data/souls.json` y `data/sinergias.json`.
   ![Elegir el alma del jefe](docs/capturas/jefe_almas.png)
-- **Combate**: Atacar, **Habilidad** (las activas listas, con su daño y recarga), Defender, Objeto y Huir. El enemigo muestra sus estados bajo la barra (sangrado, aturdido, marca, debilitado) y el jefe **avisa** cuando prepara su golpe fuerte (cada 3 turnos): es el momento de Defender.
+- **Combate**: Atacar, **Habilidad** (las activas listas, con su daño y recarga), Defender, Objeto y Huir. El enemigo muestra sus estados bajo la barra (sangrado, aturdido, marca, debilitado, en guardia) y, en una cinta, **lo que va a hacer en su próximo turno** y cuánto dolería: cada especie pelea con su patrón (el esbirro golpea dos veces y después pega fuerte; el arquero toma impulso para un golpe doble y lanza ráfagas; el guardián se cubre y contraataca fuerte; el nigromante te drena y se cura).
+  - **Bloqueo perfecto**: Defender justo cuando viene un golpe fuerte o cargado (la cinta se pone roja) frena el 80%, da un punto de Ímpetu y adelanta un turno la recarga de tus almas.
+  - **Ímpetu**: cada Atacar carga un punto (hasta 3) y tu próxima habilidad lo gasta entero: +20% de poder por punto. Atacar ya no es relleno: prepara el golpe grande.
+  - **Élites con rasgos**: blindado (recibe menos), vampírico (se cura con lo que te pega), furioso (pega cada vez más), espinoso (te pincha cuando le pegas) o veloz (golpea dos veces). El rasgo va en su nombre, y a veces dejan un objeto.
   Cada golpe **se siente**: números que saltan (los críticos enormes, con «¡Crítico!», destello y un instante de pausa), astillas de hueso, la cámara que se sacude y el enemigo que retrocede, los golpes de una ráfaga uno por uno y su total, el cartel con el nombre de la activa en el color de su afinidad y un **aviso cada vez que salta una sinergia** («Pacto: Hemorragia», «Sangre · Herida abierta»). Recibir daño tiñe los bordes de rojo, y con poca vida late. Al vencer, el enemigo estalla en astillas, su alma sube y aparece «¡Derrotado!». Opciones → «Destellos y sacudones» apaga los destellos, la viñeta y el sacudón.
 - **Niveles** (solo durante la expedición): cada enemigo da EXP. Cada nivel da **3 puntos** para repartir en **Estado → Atributos** entre VIT, ATQ, DEF, ESP, AGI y SUE (hexágono con el reparto antes de confirmar), y **cada 2 niveles** un espacio de alma más. El HUD marca con ▲ si hay puntos sin repartir.
+- **El alma a la vista**: cada enemigo lleva en el pecho la **llama del alma que guarda**, del color de su afinidad (Hueso blanca, Sangre roja, Sombra violeta, Espíritu celeste, Acero naranja, Fortuna dorada); la del nigromante arde en su báculo. Se ve desde el pasillo, así eliges a quién cazar para tu build; al acercarte el aviso dice qué alma es. Al morir, el alma sube y se pierde, o va hacia ti si la soltó.
+
+  ![El alma a la vista](docs/capturas/alma_a_la_vista.png)
+- **Salas con eventos** (se usan chocándolos): la **fuente** cura el 30% una vez; el **santuario** da una bendición para toda la expedición, a elegir entre dos, a cambio del 25% de tu vida; el **mercader** vende objetos por monedas de la run (lo que gastes no vuelve al Hub); la **forja de almas** permite templar un alma (monedas → un rango mejor), fundir dos iguales en una sola dos rangos mejor, o sacrificarla por monedas. Y hay **trampas de pinchos** en el piso de las salas: lastiman al pisarlas (no matan) y la AGI puede esquivarlas.
+
+  ![Eventos de sala](docs/capturas/eventos.png) ![Forja de almas](docs/capturas/forja.png)
 - **Mapa de mano**: no hay minimapa. Con **M** el héroe baja la mirada y levanta un **pergamino** entre dos varas, dibujado a tinta con lo que ya recorriste (los muros, los cofres, los enemigos que viste, la puerta del jefe y la salida; tú, una flecha roja). Con el mapa abierto no se camina; M o Esc lo guardan.
 
   ![El mapa de mano](docs/capturas/map.png)
@@ -112,13 +125,15 @@ Todos se cambian en `data/balance.json` (y en los otros JSON de `data/`) sin toc
 | Almas | 3 espacios al empezar, +1 cada 2 niveles (y el Amuleto de hueso). Drop: normal 20% × factor de rango, élite 60%, jefe 100% (elegir 1 de 3, `almas.opciones_jefe`); +5% por cada enemigo seguido sin alma (`soul_drop.pity_per_kill`). Poder extra por rango del alma: 0,35 × (11 − rango) (`almas.poder_por_rango`); recarga mínima 2 (`almas.recarga_minima`). Afinidades y pactos en `data/sinergias.json` |
 | Inventario | 8 objetos; se empieza con 1 Poción menor (`start_items`) |
 | Tragaperras de los cofres | Premio (tres iguales) en el 10% de los cofres (`chest_slots.premio_chance`); «casi» en el 35% de los demás. Premios por peso: monedas ×2 (50), objeto extra (30), racha de alma +4 (15), trofeo = monedas ×3 + objeto (5) |
+| Eventos por piso | Fuente y santuario en todos; mercader en los pisos 2, 4 y 5; forja en 3, 4 y 5; trampas 2 a 5 (`floors.json → eventos`). Valores en `balance.json → eventos`; bendiciones en `data/bendiciones.json` |
+| Combate | Golpe fuerte ×1,6, ráfaga 3 × 0,45, guardia −50%, preparar ×2, drenar cura el 50% (`combat.acciones`); Ímpetu 3 × 20% (`combat.impetu`); bloqueo perfecto 80% (`combat.bloqueo_perfecto`); rasgos de élite en `combat.rasgos` |
 | Mejoras | Tope 5 niveles; coste = base × nivel. Fuerza +0,4 ATK y Vitalidad +1,6 HP por nivel, redondeado (ver *Balance*) |
 | Huir | 50% ± 10% por rango de diferencia con la media del piso; no contra jefes. Si fallas, pierdes el turno |
 | Curación entre pisos | 30% del HP máximo al bajar (`heal_between_floors_pct`) |
 | Élites | El esqueleto guardián (especie élite, desde el piso 2) y un 5% de variantes élite de los básicos (`enemies.elite_chance`): stats ×1,25, monedas ×2, ojos ámbar |
 | Enemigos dormidos | Esbirro 50%, arquero 30% (`dormant_chance` en `species.json`); se levantan a 2 pasos (`enemies.wake_radius`) |
 | Jefes | Stats × 1,5; cada 3 turnos, un golpe fuerte (×1,6) que anuncian el turno antes (Defender lo frena a la mitad). No deambulan: duermen en su sala hasta la presentación, y después golpeas primero (turno gratis ×1,5, como un ataque sorpresa). Rangos por piso: 8, 6, 4, 2, 1 |
-| Enemigos por rango | HP 5,25 + 4,75 × (11 − rango), ATK −0,25 + 1,9 × (11 − rango), redondeado (`stats_for_rank`): en el piso 1 casi como antes, mucho más duros en los profundos (las almas y sus sinergias crecen rápido) |
+| Enemigos por rango | HP 5,25 + 4,75 × (11 − rango), ATK −0,25 + 1,9 × (11 − rango), más una curva desde el rango 7 hacia los fuertes: (pasos − 3)² × 0,25 de HP y × 0,08 de ATK (`stats_for_rank`): el piso 1 queda igual y los profundos se endurecen (hay más herramientas: bendiciones, forja, Ímpetu) |
 | Niveles | Por expedición; tope 10. EXP por kill = 3 + (10 − rango), élite ×1,5, jefe ×4, para cada personaje en pie. Curva `leveling.xp_to_next` (24, 44, 76, 120…: los primeros niveles llegan rápido y los altos cuestan). Al subir: 3 puntos, cura 10% y +1 espacio de alma en los niveles 3, 5, 7 y 9 |
 | Atributos (por punto) | VIT +1 HP máx. · ATQ +1 ataque cada 4 · DEF −1 daño recibido cada 4 (un golpe nunca baja de 1) · ESP +1 a las habilidades de alma cada 2 · AGI +1,5% crítico y +1,5% huida · SUE +0,5% almas y +2% monedas |
 | "Completar una run sin pociones" | Cuenta retirarse o ganar (no morir) |

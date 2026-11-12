@@ -1,15 +1,19 @@
 class_name HubScreen
 extends Control
 ## Hub mínimo entre runs, como portada del grimorio: logo gótico, lema, menú
-## con cursor de llama sobre un fondo PSX (una sala con niebla y la cámara
-## girando lento) con viñeta de trama. Sin exploración.
+## con cursor de llama sobre la entrada de la cripta pintada (con un vaivén
+## lento y motas que suben) y una viñeta de trama. Sin exploración.
 ##   Iniciar expedición · Mejoras · Objetos y desbloqueos · Bestiario ·
 ##   Estadísticas · Opciones · Salir
 ## A la derecha, el resumen de la última run; arriba, las monedas.
 
-var builder: FloorBuilder
-var cam_pivot: Node3D
-var container: RetroView
+## Fondo: la entrada de la cripta (assets/art/fondo_hub.png), en píxel ×2.
+const BACKGROUND := "res://assets/art/fondo_hub.png"
+## La imagen se desplaza apenas de lado a lado (px) para que no quede muerta.
+const DRIFT := 12.0
+
+var background: TextureRect
+var _time := 0.0
 var coins_plate: UICoinPlate
 var logo: TextureRect
 var last_run_panel: PanelContainer
@@ -31,39 +35,30 @@ func _ready() -> void:
 	_refresh()
 	UIFocus.grab_first(self)
 
-func _exit_tree() -> void:
-	if builder:
-		builder.dispose()
-
 func _process(delta: float) -> void:
-	if cam_pivot:
-		cam_pivot.rotation.y += delta * 0.12
+	# Vaivén lento y a saltos de píxel: la niebla parece moverse.
+	_time += delta
+	if background:
+		background.position.x = roundf(sin(_time * 0.12) * DRIFT / UIStyle.PIXEL_SCALE) * UIStyle.PIXEL_SCALE - DRIFT
 
-# --- Fondo 3D -----------------------------------------------------------------------
+# --- Fondo --------------------------------------------------------------------------
 
+## La entrada de la cripta, pintada (arte generado y pasado al píxel del
+## juego: tools/art/), un poco más ancha que la pantalla para el vaivén, con
+## motas que suben como ceniza.
 func _build_background() -> void:
-	container = RetroView.new()
-	add_child(container)
-	var world := container.world
-	builder = FloorBuilder.new(world)
-	var fd := FloorGenerator.test_room()
-	builder.build_blocks(fd)
-	builder.build_pillars(fd)
-	builder.build_props(fd)
-	builder.build_lighting()
-	builder.build_torches(fd)
-	# Un par de "trofeos" quietos: lo que espera abajo.
-	for e: Dictionary in fd.enemies.slice(0, 3):
-		builder.spawn_enemy(e)
-	cam_pivot = Node3D.new()
-	cam_pivot.position = FloorBuilder.cell_to_world(Vector2i(7, 4), 1.1)
-	world.add_child(cam_pivot)
-	var cam := Camera3D.new()
-	cam.current = true
-	cam.fov = 70.0
-	cam.position = Vector3(0, 0.3, 3.5)
-	cam.rotation_degrees.x = -6.0
-	cam_pivot.add_child(cam)
+	background = TextureRect.new()
+	background.texture = load(BACKGROUND) if ResourceLoader.exists(BACKGROUND) else null
+	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	background.offset_right = DRIFT * 2.0
+	add_child(background)
+	var motes := UISoulMotes.new()
+	motes.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(motes)
 
 # --- UI ---------------------------------------------------------------------------------
 

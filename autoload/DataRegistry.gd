@@ -822,6 +822,9 @@ func _validate_themes(F: String) -> void:
 			for slot in FloorBuilder.TEXTURE_SLOTS:
 				if not ResourceLoader.exists(dir + slot + ".png"):
 					_err("%s → tema '%s': falta la textura '%s%s.png'" % [F, id, dir, slot])
+		# Postal del bioma (opcional): la pintura que se muestra al llegar.
+		if th.has("postal") and not ResourceLoader.exists(String(th.postal)):
+			_err("%s → tema '%s': no existe la postal '%s'" % [F, id, th.postal])
 		for c: String in ["niebla", "ambiente", "antorcha"]:
 			if _req_color(F, id, th, c):
 				th[c] = _to_color(th[c])
