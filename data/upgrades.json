@@ -1,0 +1,53 @@
+{
+	"vitalidad": {
+		"nombre": "Vitalidad",
+		"descripcion": "Más HP máximos para el héroe.",
+		"efecto": {
+			"tipo": "max_hp_flat",
+			"valor": 1.6
+		},
+		"coste_base": 20,
+		"max_nivel": 5
+	},
+	"fuerza": {
+		"nombre": "Fuerza",
+		"descripcion": "Más ataque para el héroe.",
+		"efecto": {
+			"tipo": "atk_flat",
+			"valor": 0.4
+		},
+		"coste_base": 30,
+		"max_nivel": 5
+	},
+	"botin": {
+		"nombre": "Botín",
+		"descripcion": "Más monedas al terminar cada expedición.",
+		"efecto": {
+			"tipo": "coin_bonus_pct",
+			"valor": 5
+		},
+		"coste_base": 25,
+		"max_nivel": 5
+	},
+	"provisiones": {
+		"nombre": "Provisiones",
+		"descripcion": "Empiezas cada expedición con pociones menores extra.",
+		"efecto": {
+			"tipo": "start_item",
+			"valor": 1,
+			"item": "pocion_menor"
+		},
+		"coste_base": 40,
+		"max_nivel": 5
+	},
+	"sabiduria": {
+		"nombre": "Sabiduría",
+		"descripcion": "Mayor probabilidad de que un enemigo suelte su alma.",
+		"efecto": {
+			"tipo": "soul_chance_pct",
+			"valor": 2
+		},
+		"coste_base": 50,
+		"max_nivel": 5
+	}
+}

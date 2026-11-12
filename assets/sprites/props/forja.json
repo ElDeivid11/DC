@@ -1,0 +1,31 @@
+{
+	"version": 1,
+	"sheet": "forja.png",
+	"glow": "forja_glow.png",
+	"normal": "forja_normal.png",
+	"frame": [
+		30,
+		42
+	],
+	"columns": 16,
+	"pivot": [
+		15,
+		40
+	],
+	"pixels_per_meter": 24,
+	"flat_light": true,
+	"self_light": 0.35,
+	"anims": {
+		"idle": {
+			"loop": true,
+			"fps": 5.0,
+			"dirs": {
+				"s": [
+					0,
+					1,
+					2
+				]
+			}
+		}
+	}
+}

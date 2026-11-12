@@ -1,0 +1,69 @@
+{
+	"nota": "Apariencia de los héroes (Hub → Héroes). Las piezas las dibuja tools/portraits/draw_hero_parts.py (assets/portraits/heroes/partes.png + partes.json); acá van los nombres de cada opción (por id, en el orden de las piezas) y las paletas: cada color tiene tres tonos (claro, medio, oscuro; los ojos, dos). La apariencia de cada héroe se guarda como índices (MetaState.heroes); la de arranque está en balance.json → party[].apariencia.",
+	"partes": {
+		"cara": {"nombre": "Cara", "opciones": {"redonda": "Redonda", "cuadrada": "Cuadrada", "fina": "Fina"}},
+		"ojos": {"nombre": "Ojos", "opciones": {"normales": "Despiertos", "entornados": "Entornados", "grandes": "Grandes"}},
+		"boca": {"nombre": "Boca", "opciones": {"neutral": "Seria", "sonrisa": "Sonrisa", "mueca": "Mueca"}},
+		"marca": {"nombre": "Marca", "opciones": {"ninguna": "Ninguna", "cicatriz": "Cicatriz", "pintura": "Pintura de guerra", "pecas": "Pecas"}},
+		"pelo": {"nombre": "Pelo", "opciones": {"calvo": "Rapado", "corto": "Corto", "flequillo": "Flequillo", "largo": "Largo", "coleta": "Coleta", "cresta": "Cresta", "trenzas": "Trenzas"}},
+		"barba": {"nombre": "Barba", "opciones": {"ninguna": "Ninguna", "corta": "Corta", "larga": "Larga", "bigote": "Bigote", "candado": "Candado"}},
+		"tocado": {"nombre": "Tocado", "opciones": {"ninguno": "Ninguno", "capucha": "Capucha", "oso": "Cabeza de oso", "cinta": "Cinta", "casco": "Casco"}},
+		"ropa": {"nombre": "Ropa", "opciones": {"tunica": "Túnica", "cuero": "Coraza de cuero", "armadura": "Armadura", "harapos": "Harapos"}}
+	},
+	"colores": {
+		"piel": {"nombre": "Piel", "opciones": [
+			{"nombre": "Pálida", "tonos": ["#f6d8c0", "#d8aa8c", "#a06e58"]},
+			{"nombre": "Clara", "tonos": ["#f0c4a0", "#d09070", "#9a5a48"]},
+			{"nombre": "Trigueña", "tonos": ["#d8a07c", "#b07858", "#7a4c38"]},
+			{"nombre": "Morena", "tonos": ["#a8704c", "#7e5036", "#523020"]},
+			{"nombre": "Oscura", "tonos": ["#7a4e34", "#5a3624", "#3a2218"]},
+			{"nombre": "Ceniza", "tonos": ["#c0c8b8", "#9aa294", "#6a7266"]}
+		]},
+		"pelo": {"nombre": "Color de pelo", "opciones": [
+			{"nombre": "Negro", "tonos": ["#3a2a28", "#24181a", "#120a0c"]},
+			{"nombre": "Castaño", "tonos": ["#a0603a", "#704028", "#482818"]},
+			{"nombre": "Rubio", "tonos": ["#f0e0a0", "#c8b070", "#8a7848"]},
+			{"nombre": "Pelirrojo", "tonos": ["#e8823a", "#b8502a", "#7a2c1a"]},
+			{"nombre": "Canoso", "tonos": ["#c8c8c8", "#9a9a9a", "#6a6a6a"]},
+			{"nombre": "Blanco", "tonos": ["#f2ead2", "#c4b294", "#86727a"]},
+			{"nombre": "Azul noche", "tonos": ["#5a6aa8", "#3d4a80", "#252c50"]},
+			{"nombre": "Ceniza verde", "tonos": ["#8aa070", "#5e7448", "#3a4a2c"]}
+		]},
+		"ojos": {"nombre": "Color de ojos", "opciones": [
+			{"nombre": "Azules", "tonos": ["#5a8ac0", "#2c4a70"]},
+			{"nombre": "Verdes", "tonos": ["#6aa848", "#3a6028"]},
+			{"nombre": "Marrones", "tonos": ["#9a6a40", "#5e3a20"]},
+			{"nombre": "Grises", "tonos": ["#a0a8b0", "#5c6470"]},
+			{"nombre": "Ámbar", "tonos": ["#e0a838", "#9a6a18"]}
+		]},
+		"ropa": {"nombre": "Color de ropa", "opciones": [
+			{"nombre": "Verde azulado", "tonos": ["#4a8a8a", "#2e6060", "#1c3c40"]},
+			{"nombre": "Musgo", "tonos": ["#6a8a58", "#4a6a3c", "#2c4426"]},
+			{"nombre": "Azul", "tonos": ["#5a6aa8", "#3d4a80", "#252c50"]},
+			{"nombre": "Rojo", "tonos": ["#9a3a3a", "#6a2828", "#401818"]},
+			{"nombre": "Pardo", "tonos": ["#a89a74", "#7a6e50", "#4e4432"]},
+			{"nombre": "Gris", "tonos": ["#6a6a7a", "#4a4a58", "#2a2a36"]},
+			{"nombre": "Morado", "tonos": ["#7a5a9a", "#583e74", "#36264a"]},
+			{"nombre": "Negro", "tonos": ["#3a3440", "#26222c", "#16121a"]}
+		]},
+		"capa": {"nombre": "Color de capa", "opciones": [
+			{"nombre": "Morado", "tonos": ["#8a52aa", "#6a3a8a", "#42245a"]},
+			{"nombre": "Rojo", "tonos": ["#e04a3a", "#92243a", "#5e1714"]},
+			{"nombre": "Azul", "tonos": ["#3d62a8", "#24396b", "#16223f"]},
+			{"nombre": "Verde", "tonos": ["#6a9a48", "#4a7034", "#2c4426"]},
+			{"nombre": "Ocre", "tonos": ["#d8a838", "#a07828", "#604818"]},
+			{"nombre": "Negro", "tonos": ["#3a3440", "#26222c", "#16121a"]},
+			{"nombre": "Pardo", "tonos": ["#9a7a5a", "#6e5640", "#463626"]},
+			{"nombre": "Blanco", "tonos": ["#e8e0cc", "#b8ac94", "#80745e"]}
+		]}
+	},
+	"fijos": {
+		"tinta": ["#1a1020"],
+		"blanco": ["#f2ead2"],
+		"cuero": ["#9a5a30", "#6a4028", "#432818"],
+		"metal": ["#d4dce6", "#9a9aa8", "#5c5c6a"],
+		"oso": ["#8a6040", "#5e4028", "#3a2618"],
+		"dientes": ["#f2ead2"],
+		"pintura": ["#e04a3a", "#92243a", "#5e1714"]
+	}
+}

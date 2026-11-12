@@ -38,7 +38,7 @@ const SHADER_FLAGS := [
 	["#ALPHA_DISABLED", "depth_draw_opaque,#ALPHA_SCISSOR", "depth_draw_always"],
 	["cull_back", "cull_front", "cull_disabled"],
 	["depth_test_default", "depth_test_inverted", "depth_test_disabled"],
-	["unshaded", "", "vertex_lighting"],
+	["unshaded,#SHADING_UNSHADED", "", "vertex_lighting"], # PARCHE: define para la niebla (psx.gdshaderinc)
 	["fog_disabled", "", "fog_disabled,#VERTEX_FOG_ENABLED", "fog_disabled,#VERTEX_FOG_ALWAYS"],
 	["", "#EMISSION_ADD", "#EMISSION_MULTIPLY"],
 	[

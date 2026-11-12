@@ -1,0 +1,39 @@
+Modular Character Outfits - Fantasy [Standard] - Quaternius (https://quaternius.com)
+
+Usado en: capucha, chaqueta y mangas del nigromante (traje Male_Ranger,
+ajustado al rig de UAL2, decimado y recoloreado; la falda es generada).
+Pipeline: tools/assets/.
+
+Copia usada: https://github.com/agentkaerf/FreeModels
+  commit db3df04d1e4714298a09510b26fb6de6645138a2
+  carpeta 'Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/'
+  Male_Ranger.gltf  sha256 e1033a212332d84d98c19bc4927c621635478d0aa15d13c79da68d3ba9e0196f
+  Male_Ranger.bin   sha256 5bbb0d42cb324c6c27ce00417e68a876d92978f07d161f83590f0d7c0570eff6
+  T_Ranger_BaseColor.png
+
+Nota: Quaternius anunció una licencia propia (QAL) para lanzamientos
+futuros. Esta copia y su archivo de licencia (abajo, tal cual) dicen CC0 1.0.
+
+------------------------------------------------------------------------------
+License_Standard.txt de esa copia:
+
+This is the standard FREE version of the the Modular Character Outfits - Fantasy, which only contains 
+a portion of the models. Get all remaining outfits and separate parts by buying the Source version. 
+
+You can get the other versions from the website https://quaternius.com
+
+-------------------------------------------------------
+License:
+CC0 1.0 Universal (CC0 1.0) 
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+------------------------------------------------------
+Models by @Quaternius
+Consider supporting me on Patreon!
+
+https://www.patreon.com/quaternius
+
+-------------------------------------------------------
+Join the Discord Server:
+https://discord.gg/vJqnRUYRfT

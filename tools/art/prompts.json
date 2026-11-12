@@ -1,0 +1,20 @@
+{
+	"model": "SimianLuo/LCM_Dreamshaper_v7",
+	"steps": 6,
+	"guidance": 8.0,
+	"style": "dark fantasy concept art, painterly, moody chiaroscuro, muted earthy palette, gothic, atmospheric fog, highly detailed, no people, no text",
+	"images": [
+		{"id": "fondo_hub", "seed": 7, "size": [768, 432], "pixel": [640, 360], "out": "assets/art/fondo_hub.png",
+			"prompt": "entrance to an ancient crypt at night seen from outside, wide stone stairway descending into darkness under a gothic stone arch, iron gate half open, two lit braziers on the sides, dead trees, full moon behind clouds"},
+		{"id": "bioma_catacumbas", "seed": 31, "size": [768, 432], "pixel": [320, 180], "out": "assets/art/bioma_catacumbas.png",
+			"prompt": "ossuary catacomb tunnel, walls built of thousands of stacked human skulls and bones, rows of small burning candles on the floor, warm amber candlelight, low vaulted ceiling"},
+		{"id": "bioma_cisterna", "seed": 12, "size": [768, 432], "pixel": [320, 180], "out": "assets/art/bioma_cisterna.png",
+			"prompt": "flooded underground cistern, rows of stone columns reflected in still dark green water, moss, dripping ceiling, pale green light"},
+		{"id": "bioma_luna", "seed": 13, "size": [768, 432], "pixel": [320, 180], "out": "assets/art/bioma_luna.png",
+			"prompt": "vast ruined gothic hall, tall broken arched windows, shafts of cold blue moonlight, silver dust, cracked marble floor"},
+		{"id": "bioma_castillo", "seed": 14, "size": [768, 432], "pixel": [320, 180], "out": "assets/art/bioma_castillo.png",
+			"prompt": "crimson castle interior, long hall with torn red banners and a red carpet, iron chandeliers with candles, deep red and black"},
+		{"id": "bioma_abismo", "seed": 42, "size": [768, 432], "pixel": [320, 180], "out": "assets/art/bioma_abismo.png",
+			"prompt": "narrow broken stone bridge crossing a bottomless black chasm deep underground, floating rocks, glowing purple violet mist rising from below, purple light, cavern"}
+	]
+}

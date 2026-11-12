@@ -1,0 +1,1893 @@
+{
+	"version": 1,
+	"pixel_scale": 2,
+	"palette_sha256": "47e2e9d6c57ac7505b96595fa9499d60f80d24a79cf9234505ea28a73582fc33",
+	"generator_sha256": "6458f06c5877421b45c0d68992a420d390a130f0430dd1f2e0bd98fb9fcb0ccc",
+	"atlas": "res://ui/kit/ui_atlas.png",
+	"size": [
+		1024,
+		320
+	],
+	"sprites": {
+		"bar_fill_coin": {
+			"region": [
+				366,
+				288,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_enemy": {
+			"region": [
+				118,
+				288,
+				8,
+				12
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_exp": {
+			"region": [
+				518,
+				288,
+				8,
+				6
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_exp_thin": {
+			"region": [
+				550,
+				288,
+				8,
+				2
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_flash": {
+			"region": [
+				382,
+				288,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_hp": {
+			"region": [
+				398,
+				288,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_progress": {
+			"region": [
+				414,
+				288,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_soul": {
+			"region": [
+				430,
+				288,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_fill_trail": {
+			"region": [
+				446,
+				288,
+				8,
+				8
+			],
+			"margin": [
+				0,
+				0,
+				0,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"bar_focus": {
+			"region": [
+				980,
+				248,
+				16,
+				16
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				2,
+				2,
+				2,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"bar_frame": {
+			"region": [
+				6,
+				288,
+				16,
+				16
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				2,
+				2,
+				2,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"button_danger_focus": {
+			"region": [
+				606,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"button_disabled": {
+			"region": [
+				646,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"button_focus": {
+			"region": [
+				686,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"button_normal": {
+			"region": [
+				726,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"button_pressed": {
+			"region": [
+				766,
+				88,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				6,
+				3,
+				6,
+				3
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"card": {
+			"region": [
+				206,
+				248,
+				28,
+				28
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"card_focus": {
+			"region": [
+				242,
+				248,
+				28,
+				28
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"card_soul": {
+			"region": [
+				278,
+				248,
+				28,
+				28
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"keycap": {
+			"region": [
+				728,
+				248,
+				20,
+				22
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				4
+			],
+			"content": [
+				3,
+				1,
+				3,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"menu_band": {
+			"region": [
+				262,
+				288,
+				96,
+				10
+			],
+			"margin": [
+				0,
+				0,
+				40,
+				1
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"panel_hud": {
+			"region": [
+				544,
+				248,
+				24,
+				24
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				5,
+				4,
+				5,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"panel_inset": {
+			"region": [
+				576,
+				248,
+				24,
+				24
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				6,
+				6,
+				6,
+				6
+			],
+			"axis": [
+				"tile",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"panel_iron": {
+			"region": [
+				434,
+				6,
+				60,
+				60
+			],
+			"margin": [
+				10,
+				10,
+				10,
+				10
+			],
+			"content": [
+				14,
+				14,
+				14,
+				14
+			],
+			"axis": [
+				"tile",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"portrait_frame": {
+			"region": [
+				6,
+				208,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"portrait_frame_active": {
+			"region": [
+				46,
+				208,
+				32,
+				32
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				4
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"rank_plaque": {
+			"region": [
+				812,
+				248,
+				20,
+				20
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				3,
+				1,
+				3,
+				1
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"ribbon": {
+			"region": [
+				670,
+				6,
+				80,
+				36
+			],
+			"margin": [
+				8,
+				0,
+				8,
+				0
+			],
+			"content": [
+				10,
+				3,
+				10,
+				3
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"ribbon_small": {
+			"region": [
+				350,
+				248,
+				64,
+				26
+			],
+			"margin": [
+				5,
+				0,
+				5,
+				0
+			],
+			"content": [
+				7,
+				0,
+				7,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"scroll_grabber": {
+			"region": [
+				30,
+				288,
+				12,
+				16
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"scroll_grabber_hot": {
+			"region": [
+				50,
+				288,
+				12,
+				16
+			],
+			"margin": [
+				3,
+				3,
+				3,
+				3
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"scroll_track": {
+			"region": [
+				134,
+				288,
+				12,
+				12
+			],
+			"margin": [
+				2,
+				2,
+				2,
+				2
+			],
+			"content": [
+				2,
+				2,
+				2,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"separator": {
+			"region": [
+				534,
+				288,
+				8,
+				4
+			],
+			"margin": [
+				0,
+				1,
+				0,
+				1
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"tile",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"separator_v": {
+			"region": [
+				506,
+				288,
+				4,
+				8
+			],
+			"margin": [
+				1,
+				0,
+				1,
+				0
+			],
+			"content": [
+				0,
+				0,
+				0,
+				0
+			],
+			"axis": [
+				"stretch",
+				"tile"
+			],
+			"draw_center": true
+		},
+		"slot_empty": {
+			"region": [
+				502,
+				6,
+				48,
+				48
+			],
+			"margin": [
+				5,
+				5,
+				5,
+				5
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"slot_focus": {
+			"region": [
+				558,
+				6,
+				48,
+				48
+			],
+			"margin": [
+				5,
+				5,
+				5,
+				5
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"slot_normal": {
+			"region": [
+				614,
+				6,
+				48,
+				48
+			],
+			"margin": [
+				5,
+				5,
+				5,
+				5
+			],
+			"content": [
+				4,
+				4,
+				4,
+				4
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"tab_focus": {
+			"region": [
+				608,
+				248,
+				32,
+				24
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				0
+			],
+			"content": [
+				6,
+				3,
+				6,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": false
+		},
+		"tab_normal": {
+			"region": [
+				648,
+				248,
+				32,
+				24
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				0
+			],
+			"content": [
+				6,
+				3,
+				6,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"tab_selected": {
+			"region": [
+				688,
+				248,
+				32,
+				24
+			],
+			"margin": [
+				4,
+				4,
+				4,
+				0
+			],
+			"content": [
+				6,
+				3,
+				6,
+				2
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		},
+		"tooltip": {
+			"region": [
+				314,
+				248,
+				28,
+				28
+			],
+			"margin": [
+				3,
+				3,
+				5,
+				5
+			],
+			"content": [
+				5,
+				4,
+				7,
+				6
+			],
+			"axis": [
+				"stretch",
+				"stretch"
+			],
+			"draw_center": true
+		}
+	},
+	"frames": {
+		"cursor_flame": {
+			"region": [
+				456,
+				248,
+				80,
+				24
+			],
+			"frame": [
+				16,
+				24
+			],
+			"count": 5,
+			"fps": 8
+		}
+	},
+	"icons": {
+		"afin_acero": {
+			"acero": [
+				758,
+				6,
+				32,
+				32
+			],
+			"apagado": [
+				798,
+				6,
+				32,
+				32
+			]
+		},
+		"afin_espiritu": {
+			"alma": [
+				838,
+				6,
+				32,
+				32
+			],
+			"apagado": [
+				878,
+				6,
+				32,
+				32
+			]
+		},
+		"afin_fortuna": {
+			"moneda": [
+				958,
+				6,
+				32,
+				32
+			],
+			"apagado": [
+				918,
+				6,
+				32,
+				32
+			]
+		},
+		"afin_hueso": {
+			"hueso": [
+				46,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				6,
+				88,
+				32,
+				32
+			]
+		},
+		"afin_sangre": {
+			"sangre": [
+				126,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				86,
+				88,
+				32,
+				32
+			]
+		},
+		"afin_sombra": {
+			"amatista": [
+				166,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				206,
+				88,
+				32,
+				32
+			]
+		},
+		"almas": {
+			"alma": [
+				246,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				326,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				286,
+				88,
+				32,
+				32
+			]
+		},
+		"atacar": {
+			"bronce": [
+				406,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				446,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				366,
+				88,
+				32,
+				32
+			]
+		},
+		"bestiario": {
+			"bronce": [
+				526,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				566,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				486,
+				88,
+				32,
+				32
+			]
+		},
+		"continuar": {
+			"bronce": [
+				846,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				886,
+				88,
+				32,
+				32
+			],
+			"apagado": [
+				806,
+				88,
+				32,
+				32
+			]
+		},
+		"desbloqueos": {
+			"bronce": [
+				966,
+				88,
+				32,
+				32
+			],
+			"vela": [
+				6,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				926,
+				88,
+				32,
+				32
+			]
+		},
+		"escudo": {
+			"bronce": [
+				46,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				86,
+				128,
+				32,
+				32
+			]
+		},
+		"estadisticas": {
+			"bronce": [
+				166,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				206,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				126,
+				128,
+				32,
+				32
+			]
+		},
+		"estado": {
+			"bronce": [
+				326,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				446,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				246,
+				128,
+				32,
+				32
+			]
+		},
+		"estado_aturdido": {
+			"vela": [
+				286,
+				128,
+				32,
+				32
+			]
+		},
+		"estado_debil": {
+			"amatista": [
+				366,
+				128,
+				32,
+				32
+			]
+		},
+		"estado_marca": {
+			"sangre": [
+				406,
+				128,
+				32,
+				32
+			]
+		},
+		"exp": {
+			"amatista": [
+				486,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				526,
+				128,
+				32,
+				32
+			]
+		},
+		"habilidad": {
+			"bronce": [
+				606,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				646,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				566,
+				128,
+				32,
+				32
+			]
+		},
+		"hp": {
+			"sangre": [
+				726,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				686,
+				128,
+				32,
+				32
+			]
+		},
+		"huir": {
+			"bronce": [
+				806,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				846,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				766,
+				128,
+				32,
+				32
+			]
+		},
+		"iniciar": {
+			"bronce": [
+				926,
+				128,
+				32,
+				32
+			],
+			"vela": [
+				966,
+				128,
+				32,
+				32
+			],
+			"apagado": [
+				886,
+				128,
+				32,
+				32
+			]
+		},
+		"inventario": {
+			"bronce": [
+				46,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				86,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				6,
+				168,
+				32,
+				32
+			]
+		},
+		"mapa": {
+			"bronce": [
+				166,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				206,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				126,
+				168,
+				32,
+				32
+			]
+		},
+		"mejoras": {
+			"bronce": [
+				286,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				326,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				246,
+				168,
+				32,
+				32
+			]
+		},
+		"monedas": {
+			"moneda": [
+				406,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				366,
+				168,
+				32,
+				32
+			]
+		},
+		"muerte": {
+			"sangre": [
+				526,
+				168,
+				32,
+				32
+			],
+			"bronce": [
+				486,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				446,
+				168,
+				32,
+				32
+			]
+		},
+		"objeto": {
+			"bronce": [
+				606,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				646,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				566,
+				168,
+				32,
+				32
+			]
+		},
+		"opciones": {
+			"bronce": [
+				726,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				766,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				686,
+				168,
+				32,
+				32
+			]
+		},
+		"pacto": {
+			"alma": [
+				806,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				886,
+				168,
+				32,
+				32
+			],
+			"apagado": [
+				846,
+				168,
+				32,
+				32
+			]
+		},
+		"piso": {
+			"bronce": [
+				926,
+				168,
+				32,
+				32
+			],
+			"vela": [
+				966,
+				168,
+				32,
+				32
+			]
+		},
+		"retiro": {
+			"bronce": [
+				126,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				206,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				86,
+				208,
+				32,
+				32
+			],
+			"sangre": [
+				166,
+				208,
+				32,
+				32
+			]
+		},
+		"salir": {
+			"bronce": [
+				286,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				326,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				246,
+				208,
+				32,
+				32
+			]
+		},
+		"stat_agi": {
+			"bronce": [
+				406,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				446,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				366,
+				208,
+				32,
+				32
+			]
+		},
+		"stat_atq": {
+			"bronce": [
+				526,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				566,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				486,
+				208,
+				32,
+				32
+			]
+		},
+		"stat_def": {
+			"bronce": [
+				646,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				686,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				606,
+				208,
+				32,
+				32
+			]
+		},
+		"stat_esp": {
+			"bronce": [
+				766,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				806,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				726,
+				208,
+				32,
+				32
+			]
+		},
+		"stat_sue": {
+			"bronce": [
+				886,
+				208,
+				32,
+				32
+			],
+			"vela": [
+				926,
+				208,
+				32,
+				32
+			],
+			"apagado": [
+				846,
+				208,
+				32,
+				32
+			]
+		},
+		"stat_vit": {
+			"bronce": [
+				6,
+				248,
+				32,
+				32
+			],
+			"vela": [
+				46,
+				248,
+				32,
+				32
+			],
+			"apagado": [
+				966,
+				208,
+				32,
+				32
+			]
+		},
+		"tiempo": {
+			"bronce": [
+				86,
+				248,
+				32,
+				32
+			]
+		},
+		"victoria": {
+			"moneda": [
+				166,
+				248,
+				32,
+				32
+			],
+			"bronce": [
+				126,
+				248,
+				32,
+				32
+			]
+		}
+	},
+	"singles": {
+		"check_off": [
+			756,
+			248,
+			20,
+			20
+		],
+		"check_on": [
+			784,
+			248,
+			20,
+			20
+		],
+		"crest": [
+			880,
+			248,
+			22,
+			18
+		],
+		"divider_gem": [
+			154,
+			288,
+			10,
+			10
+		],
+		"map_chest": [
+			172,
+			288,
+			10,
+			10
+		],
+		"map_enemy": [
+			190,
+			288,
+			10,
+			10
+		],
+		"map_exit": [
+			208,
+			288,
+			10,
+			10
+		],
+		"map_player": [
+			226,
+			288,
+			10,
+			10
+		],
+		"map_stairs": [
+			244,
+			288,
+			10,
+			10
+		],
+		"option_arrow": [
+			462,
+			288,
+			14,
+			8
+		],
+		"option_arrow_focus": [
+			484,
+			288,
+			14,
+			8
+		],
+		"pip_empty": [
+			70,
+			288,
+			8,
+			14
+		],
+		"pip_full": [
+			86,
+			288,
+			8,
+			14
+		],
+		"pip_vela": [
+			102,
+			288,
+			8,
+			14
+		],
+		"seal": [
+			422,
+			248,
+			26,
+			26
+		],
+		"seal_mini": [
+			910,
+			248,
+			18,
+			18
+		],
+		"slider_grabber": [
+			840,
+			248,
+			12,
+			20
+		],
+		"slider_grabber_focus": [
+			860,
+			248,
+			12,
+			20
+		],
+		"soul_empty": [
+			936,
+			248,
+			14,
+			18
+		],
+		"soul_full": [
+			958,
+			248,
+			14,
+			18
+		]
+	},
+	"logo": {
+		"region": [
+			6,
+			6,
+			420,
+			74
+		],
+		"text": "Dungeon Grid"
+	}
+}

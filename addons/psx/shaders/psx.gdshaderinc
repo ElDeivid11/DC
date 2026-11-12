@@ -4,9 +4,13 @@ global uniform float psx_precision_uv;
 global uniform float psx_precision_xy;
 global uniform float psx_precision_z;
 
-instance uniform float i_precision_uv = 1.0;
-instance uniform float i_precision_xy = 1.0;
-instance uniform float i_precision_z = 1.0;
+// PARCHE (dungeon crawler): eran `instance uniform` (multiplicadores por
+// instancia). El juego no los usa y cada instancia gastaba 3 lugares del
+// buffer de variables globales (4096 en Compatibilidad): con ~400 mallas en
+// un piso grande se agotaba. Ver docs/ESTADO_TECNICO_PROTOTIPO.md.
+const float i_precision_uv = 1.0;
+const float i_precision_xy = 1.0;
+const float i_precision_z = 1.0;
 
 uniform bool u_vertex_color_use_as_albedo = true;
 
@@ -15,6 +19,9 @@ uniform vec4 u_albedo_color: source_color = vec4(1.0);
 
 varying vec3 v_vertex_color;
 varying vec4 v_clip;
+// PARCHE (dungeon crawler): w de CLIP para el mapeo afín (v_clip está en
+// espacio de vista y su w siempre vale 1). Ver docs/ESTADO_TECNICO_PROTOTIPO.md.
+varying float v_w;
 varying vec2 v_uv;
 varying vec2 v_uv2;
 
@@ -101,7 +108,9 @@ void vertex() {
 
 	v_clip = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
 	float fov = 2.0 * atan(1.0 / PROJECTION_MATRIX[1][1]);
-	float clip_depth = v_clip.z * fov;
+	// PARCHE: un vértice en z=0 de vista dividía por cero (NaN: el triángulo
+	// desaparecía al pegarse a una pared grande).
+	float clip_depth = min(v_clip.z, -0.001) * fov;
 
 	if (precision_xy != 0.0) {
 		v_clip.xy = trunc((v_clip.xy / clip_depth) * precision_xy) * clip_depth / precision_xy;
@@ -112,12 +121,18 @@ void vertex() {
 
 	VERTEX = (inverse(MODELVIEW_MATRIX) * v_clip).xyz;
 
-	v_uv = UV * v_clip.w;
-	v_uv2 = UV2 * v_clip.w;
+	// PARCHE: afín real = interpolar UV·w y dividir por w en el fragmento,
+	// con la w de CLIP (antes v_clip.w = 1 y el afín no hacía nada).
+	v_w = max((PROJECTION_MATRIX * v_clip).w, 0.001);
+	v_uv = UV * v_w;
+	v_uv2 = UV2 * v_w;
 
 #if defined VERTEX_FOG_ENABLED
+	// PARCHE: distancia real a la cámara (antes usaba v_clip.w = 1: la niebla
+	// nunca aparecía).
+	float view_dist = length(v_clip.xyz);
 	v_fog_strength = psx_fog_near != psx_fog_far ?
-		psx_fog_color.a * clamp((v_clip.w - psx_fog_near) / (psx_fog_far - psx_fog_near), 0.0, 1.0) :
+		psx_fog_color.a * clamp((view_dist - psx_fog_near) / (psx_fog_far - psx_fog_near), 0.0, 1.0) :
 		0.0;
 	v_fog_color = psx_fog_color.rgb;
 #elif defined VERTEX_FOG_ALWAYS
@@ -128,8 +143,8 @@ void vertex() {
 
 
 void fragment() {
-	vec2 uv = mix(UV, v_uv / v_clip.w, psx_affine_strength);
-	vec2 uv2 = mix(UV2, v_uv2 / v_clip.w, psx_affine_strength);
+	vec2 uv = mix(UV, v_uv / v_w, psx_affine_strength);
+	vec2 uv2 = mix(UV2, v_uv2 / v_w, psx_affine_strength);
 	float precision_uv = psx_precision_uv * i_precision_uv;
 
 	if (precision_uv != 0.0) {
@@ -158,9 +173,15 @@ void fragment() {
 #endif
 
 #if (defined VERTEX_FOG_ENABLED) || (defined VERTEX_FOG_ALWAYS)
-	NORMAL = mix(NORMAL, vec3(0.0, 0.0, -1.0), v_fog_strength);
+	// PARCHE: con niebla total el color es EXACTAMENTE el de la niebla (= el
+	// fondo): se apaga el albedo (las luces no lo iluminan) y la niebla entra
+	// por emisión. Antes ALBEDO=niebla se sumaba a la luz y brillaba.
+#if defined SHADING_UNSHADED
 	ALBEDO = mix(albedo.rgb, v_fog_color, v_fog_strength);
-	EMISSION += v_fog_color * v_fog_strength;
+#else
+	ALBEDO = albedo.rgb * (1.0 - v_fog_strength);
+	EMISSION = EMISSION * (1.0 - v_fog_strength) + v_fog_color * v_fog_strength;
+#endif
 #else
 	ALBEDO = albedo.rgb;
 #endif

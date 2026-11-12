@@ -196,7 +196,7 @@ func convert_scene_from(scene: PackedScene, new_path: String) -> PackedScene:
 
 		var data: Dictionary
 		for k in materials:
-			var converted_material := convert_resource(materials[k], "res://%s%s.tres" % [k, PSX_SUFFIX])
+			var converted_material: Variant = convert_resource(materials[k], "res://%s%s.tres" % [k, PSX_SUFFIX])
 
 			data[k] = {
 				"use_external/enabled": true,
@@ -253,7 +253,7 @@ func convert_object_plist(obj: Object) -> void:
 		if not property_is_resource(prop): continue
 
 		var old = obj.get(prop[&"name"])
-		var new := convert_resource(old)
+		var new: Variant = convert_resource(old)
 
 		if new == null or new == old: continue
 

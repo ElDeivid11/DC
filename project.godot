@@ -15,52 +15,73 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Dungeon Grid Prototype"
-run/main_scene="res://scenes/Main.tscn"
+run/main_scene="res://scenes/Boot.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
+EventBus="*res://autoload/EventBus.gd"
+DataRegistry="*res://autoload/DataRegistry.gd"
+MetaState="*res://autoload/MetaState.gd"
+SaveSystem="*res://autoload/SaveSystem.gd"
+GameState="*res://autoload/GameState.gd"
+Controls="*res://autoload/Controls.gd"
+SceneRouter="*res://autoload/SceneRouter.gd"
+DebugTools="*res://autoload/DebugTools.gd"
 psx_post_process="*uid://u3y0jxl0vtmg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/dungeon_crawler_3d/plugin.cfg", "res://addons/level_block/plugin.cfg", "res://addons/psx/plugin.cfg")
 
+[gui]
+
+common/show_focus_state_on_pointer_event=2
+theme/custom="res://ui/theme_main.tres"
+
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 environment/defaults/default_clear_color=Color(0.02, 0.02, 0.03, 1)
 
 [shader_globals]
 
 psx_affine_strength={
 "type": "float",
-"value": 1.0
+"value": 0.6
 }
 psx_bit_depth={
 "type": "int",
-"value": 5
+"value": 0
 }
 psx_fog_color={
 "type": "color",
-"value": Color(0.5, 0.5, 0.5, 0)
+"value": Color(0.07, 0.055, 0.045, 1)
 }
 psx_fog_far={
 "type": "float",
-"value": 20.0
+"value": 16.0
 }
 psx_fog_near={
 "type": "float",
-"value": 10.0
+"value": 5.0
 }
 psx_precision_uv={
 "type": "float",
-"value": 128.0
+"value": 0.0
 }
 psx_precision_xy={
 "type": "float",
-"value": 256.0
+"value": 160.0
 }
 psx_precision_z={
 "type": "float",
-"value": 512.0
+"value": 0.0
 }

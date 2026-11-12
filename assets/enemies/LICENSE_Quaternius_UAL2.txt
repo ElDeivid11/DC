@@ -1,0 +1,34 @@
+Universal Animation Library 2 [Standard] - Quaternius (https://quaternius.com)
+
+Usado en: rig de 65 huesos (estilo Unreal) al que se ata el esqueleto y
+parte de sus animaciones (assets/enemies/*.glb). Pipeline: tools/assets/.
+
+Copia usada: https://github.com/agentkaerf/FreeModels
+  commit db3df04d1e4714298a09510b26fb6de6645138a2
+  ruta 'Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb'
+  sha256 9a0ffda4931f934f13fb584002c51673723b03f9655a581167e7e5dae744f086
+
+Nota: Quaternius anunció una licencia propia (QAL) para lanzamientos
+futuros. Esta copia y su archivo de licencia (abajo, tal cual) dicen CC0 1.0.
+
+------------------------------------------------------------------------------
+License.txt de esa copia:
+
+Explore all the animations in the Animation Viewer!
+https://quaternius.com/animviewer.html
+
+-------------------------------------------------------
+License:
+CC0 1.0 Universal (CC0 1.0) 
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+------------------------------------------------------
+Models by @Quaternius
+Consider supporting me on Patreon!
+
+https://www.patreon.com/quaternius
+
+-------------------------------------------------------
+Join the Discord Server:
+https://discord.gg/vJqnRUYRfT

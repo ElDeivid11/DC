@@ -1,0 +1,25 @@
+"Skeleton - Realistic" - Paul Kotelevets
+Blender Studio, Human Base Meshes v1.4.1 (asset bundle)
+
+Usado en: la malla de los cuatro esqueletos (assets/enemies/*.glb),
+decimada, atada al rig de UAL2 y con textura propia. Pipeline: tools/assets/.
+
+Licencia: CC0 1.0 Universal (dominio público)
+  https://creativecommons.org/publicdomain/zero/1.0/
+Lo declaran la página oficial del bundle
+  https://www.blender.org/download/demo-files/#asset-bundles
+  (https://mirror.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip,
+   sha256 811f43accbb31a88266d932f8f5563b2d13586fca0ba2693aad1f5fe582b3515)
+y los metadatos del propio asset (colección "Skeleton - Realistic"):
+  author = Paul Kotelevets
+  license = CC0
+  description = Realistic model of a full human skeleton.
+tools/assets/build_skeletons.py los lee y se niega a seguir si no dicen CC0.
+
+Copia usada (solo esa colección, sin cambios, guardada aparte):
+  https://github.com/beldenge/diamondback
+  commit 3e582c7eecdef16867fb52ccc3c7a2947e5a1eaa
+  ruta src/reimagined/models/sources/blender-skeleton/skeleton-realistic.blend
+  sha256 f54a3ee1e943b487db6432ccfdc013c3b4cfa09104c65a3555b06387e846eeb7
+  (el código de ese repositorio es MIT; el asset sigue siendo CC0, como
+   explica su README en esa misma carpeta).
