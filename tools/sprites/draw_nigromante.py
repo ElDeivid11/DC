@@ -460,8 +460,11 @@ class Necro:
             fl = FLAMES[min(size, len(FLAMES)) - 1]
             if P.get("flame_t", 0) % 2:
                 fl = flip_x(fl)
+            # La llama del báculo es el alma que guarda el jefe: toma el color
+            # de su afinidad (canal de alma, no el de los ojos).
+            fl = recolor(fl, {"E": "1", "F": "2"})
             fw, fh = len(fl[0]), len(fl)
-            out.append(Piece("f", "flat").stamp(fl, b[0] - fw // 2 + 1, ry - fh + 2))
+            out.append(Piece("2", "flat").stamp(fl, b[0] - fw // 2 + 1, ry - fh + 2))
 
     def heap(self, P, out):
         """Un montón de túnica en el piso, con la calavera (y la corona) encima

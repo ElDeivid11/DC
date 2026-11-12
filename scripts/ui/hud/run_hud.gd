@@ -34,6 +34,8 @@ var message_label: Label
 var interact_panel: PanelContainer
 var interact_key: Control
 var interact_label: Label
+## Ícono de la afinidad del alma que guarda el enemigo de enfrente.
+var interact_soul: UIIcon
 var debug_label: Label
 ## Leyenda del mapa de mano (se arma la primera vez que se abre).
 var map_legend: PanelContainer
@@ -163,6 +165,9 @@ func _ready() -> void:
 	interact_label.add_theme_color_override("font_color", UIStyle.TEXT)
 	interact_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	irow.add_child(interact_label)
+	interact_soul = UIIcon.make("almas", "alma")
+	interact_soul.visible = false
+	irow.add_child(interact_soul)
 
 	# Mensajes (inf. centro, sobre la placa de interacción).
 	message_panel = PanelContainer.new()
@@ -235,8 +240,16 @@ func _update_interaction(fd: FloorData, cell: Vector2i, facing: int, markers: Di
 		key = "hud.act_fight"
 	_interact_key = key
 	interact_panel.visible = key != "" and not map_open
+	interact_soul.visible = false
 	if key != "":
 		interact_label.text = DataRegistry.t(key)
+	# Frente a un enemigo: qué alma guarda (la llama que se le ve).
+	if key == "hud.act_fight":
+		var af := DataRegistry.soul_affinity(String(fd.enemy_at(front).get("soul_id", "")))
+		if not af.is_empty():
+			interact_label.text = DataRegistry.t("hud.act_fight_soul", [af.nombre])
+			interact_soul.set_icon(String(af.icono), String(af.rampa))
+			interact_soul.visible = true
 
 ## Con el pergamino abierto: la leyenda a la derecha (piso, sellos y cómo
 ## guardarlo) y sin la placa de interacción ni los atajos.

@@ -467,6 +467,8 @@ func spawn_enemy(e: Dictionary) -> Node3D:
 		else:
 			v = EnemyVisual.new()
 		v.setup(species.visual, tint, e.get("eye_color", Color.WHITE), int(e.get("variant_seed", 0)))
+		# El alma que guarda arde en su pecho con el color de su afinidad.
+		v.set_soul(DataRegistry.soul_flame_color(String(e.get("soul_id", ""))))
 		v.scale = Vector3.ONE * scale_mult
 		v.position = cell_to_world(e.cell)
 		v.rotation_degrees.y = 180.0 - int(e.get("facing", 2)) * 90.0

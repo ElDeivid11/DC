@@ -37,6 +37,15 @@ func set_then(_role: String) -> void:
 func has_role(_role: String) -> bool:
 	return false
 
+## El alma que guarda: su llama se enciende con ese color (negro = ninguna).
+func set_soul(_color: Color) -> void:
+	pass
+
+## Al morir el alma se le va: la llama se apaga y un fuego fatuo sube (se
+## escapa) o va hacia `towards` (posición en el mundo: el héroe se la lleva).
+func release_soul(_towards: Variant = null) -> void:
+	pass
+
 func is_dead() -> bool:
 	return false
 

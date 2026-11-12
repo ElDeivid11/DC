@@ -454,6 +454,23 @@ func _refresh_statuses() -> void:
 		status_row.remove_child(c)
 		c.queue_free()
 	if not finished:
+		# El alma que guarda (la llama que se le ve): si la suelta, es esa.
+		var held := DataRegistry.get_soul(String(enemy_data.get("soul_id", "")))
+		if not held.is_empty():
+			var af := DataRegistry.soul_affinity(String(enemy_data.soul_id))
+			var schip := HBoxContainer.new()
+			schip.add_theme_constant_override("separation", 2)
+			schip.mouse_filter = Control.MOUSE_FILTER_PASS
+			schip.add_child(UIIcon.make(String(af.get("icono", "almas")), String(af.get("rampa", "alma"))))
+			var sl := UILabel.make(String((held.get("active", {}) as Dictionary).get("name", "")), "DetailLabel")
+			sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			sl.add_theme_color_override("font_color", UIStyle.ramp_color(String(af.get("rampa", "alma"))))
+			schip.add_child(sl)
+			var names: Array[String] = []
+			for a: Variant in held.get("afinidades", []):
+				names.append(String(DataRegistry.get_affinity(String(a)).get("nombre", a)))
+			UITooltip.attach(schip, DataRegistry.t("combat.soul_held_tip", [sl.text, ", ".join(names)]))
+			status_row.add_child(schip)
 		for t in core.traits:
 			var tspec: Array = TRAIT_ICONS[t]
 			var tchip := HBoxContainer.new()
@@ -776,7 +793,15 @@ func _ability_banner(i: int) -> void:
 func _kill_fx() -> void:
 	var at := _enemy_center()
 	fx.burst(at, [UIStyle.HUESO, UIStyle.CENIZA, UIStyle.VELA_BLANCA, UIStyle.SANGRE_LUZ], 48, 540.0)
-	fx.burst(at, [UIStyle.SOUL, UIStyle.SOUL_LIGHT], 16, 180.0, Vector2.INF, true)
+	# Su alma: sube y se pierde, o viaja a la tarjeta del héroe si la soltó.
+	var af := DataRegistry.soul_affinity(String(enemy_data.get("soul_id", "")))
+	var soul_color := UIStyle.ramp_color(String(af.get("rampa", "alma")))
+	if soul_drop.is_empty() and soul_options.is_empty():
+		fx.burst(at, [soul_color, UIStyle.VELA_BLANCA], 16, 180.0, Vector2.INF, true)
+		if not af.is_empty():
+			_log(DataRegistry.t("combat.log_soul_escaped", [enemy_data.name]))
+	else:
+		fx.burst(at, [soul_color, UIStyle.VELA_BLANCA], 22, 220.0, _hero_float_pos() + Vector2(0, 40))
 	fx.flash(UIStyle.VELA_BLANCA, 0.4)
 	fx.tag(DataRegistry.t("combat.fx_kill"), at + Vector2(0, -90), UIStyle.ACCENT, true)
 	SceneRouter.play_ui("kill")

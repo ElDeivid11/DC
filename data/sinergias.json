@@ -2,7 +2,7 @@
 	"afinidades": {
 		"hueso": {
 			"nombre": "Hueso",
-			"icono": "afin_hueso",
+			"icono": "afin_hueso", "llama": "#fff2d0",
 			"rampa": "hueso",
 			"descripcion": "Armazón de los que no caen.",
 			"niveles": [
@@ -12,7 +12,7 @@
 		},
 		"sangre": {
 			"nombre": "Sangre",
-			"icono": "afin_sangre",
+			"icono": "afin_sangre", "llama": "#ff5a48",
 			"rampa": "sangre",
 			"descripcion": "Heridas que no cierran.",
 			"niveles": [
@@ -22,7 +22,7 @@
 		},
 		"sombra": {
 			"nombre": "Sombra",
-			"icono": "afin_sombra",
+			"icono": "afin_sombra", "llama": "#b48aff",
 			"rampa": "amatista",
 			"descripcion": "Golpear donde no se ve.",
 			"niveles": [
@@ -32,7 +32,7 @@
 		},
 		"espiritu": {
 			"nombre": "Espíritu",
-			"icono": "afin_espiritu",
+			"icono": "afin_espiritu", "llama": "#5cc8f0",
 			"rampa": "alma",
 			"descripcion": "Las almas responden más rápido.",
 			"niveles": [
@@ -42,7 +42,7 @@
 		},
 		"acero": {
 			"nombre": "Acero",
-			"icono": "afin_acero",
+			"icono": "afin_acero", "llama": "#ff8a2a",
 			"rampa": "acero",
 			"descripcion": "El arma de siempre, mejor afilada.",
 			"niveles": [
@@ -52,7 +52,7 @@
 		},
 		"fortuna": {
 			"nombre": "Fortuna",
-			"icono": "afin_fortuna",
+			"icono": "afin_fortuna", "llama": "#ffe640",
 			"rampa": "moneda",
 			"descripcion": "Los muertos pagan bien.",
 			"niveles": [

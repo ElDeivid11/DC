@@ -675,6 +675,7 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 		"kind": kind, "species_id": e.species_id,
 		"ability_name": String(DataRegistry.get_soul(String(e.get("soul_id", ""))).get("active", {}).get("name", "")),
 		"pattern": species.get("patron", []),
+		"soul_id": String(e.get("soul_id", "")),
 		"traits": [String(e.trait)] if String(e.get("trait", "")) != "" else [],
 	})
 	combat.set("hero_data", hero)
@@ -702,7 +703,9 @@ func start_combat(cell: Vector2i, _p: Node3D, mode := "surprise") -> void:
 		elif action != "ability" or _anim(e, "ability", "combat") <= 0.0:
 			_anim(e, "attack", "combat")
 	)
-	combat.connect("enemy_defeated", func() -> void: _anim(e, "death", ""))
+	combat.connect("enemy_defeated", func() -> void:
+		_anim(e, "death", "")
+		_release_soul(e, bool(e.get("dropped_soul", false))))
 	combat.connect("impact", func(what: String, strength: float) -> void: _on_combat_impact(e, what, strength))
 	combat.connect("combat_ended", func(outcome: String, result: Dictionary) -> void: _on_combat_ended(e, outcome, result))
 	hud.visible = false
@@ -764,6 +767,17 @@ func _knockback(e: Dictionary, amount: float) -> void:
 	var tw := node.create_tween()
 	tw.tween_property(node, "position", home + away.normalized() * amount, 0.05)
 	tw.tween_property(node, "position", home, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+## Al morir, el alma se le va: sube y se pierde, o va hacia el héroe si la
+## soltó (después se decide si tomarla).
+func _release_soul(e: Dictionary, captured: bool) -> void:
+	var v := _visual(e)
+	if v == null:
+		return
+	if captured:
+		v.release_soul((player.get_child(0) as Camera3D).global_position + Vector3(0.0, -0.3, 0.0))
+	else:
+		v.release_soul()
 
 ## Parpadeo PS1 del modelo al recibir un golpe.
 func _blink(node: Node3D) -> void:
@@ -1228,6 +1242,7 @@ func _grant_xp(xp: int) -> void:
 		hud.refresh()
 
 func _on_combat_ended_debug(e: Dictionary) -> void:
+	_release_soul(e, false)
 	GameState.register_kill(String(e.species_id), int(e.rank), String(e.kind))
 	_grant_xp(GameState.kill_xp(int(e.rank), String(e.kind)))
 	_dispose_corpse(e)

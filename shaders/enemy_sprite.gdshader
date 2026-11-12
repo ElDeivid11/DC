@@ -5,7 +5,10 @@
 // Los ojos (máscara `glow` a 1) brillan con su color sin luz ni niebla: dos
 // puntos en la oscuridad que se ven antes que el cuerpo. Lo «espiritual»
 // (máscara a 0,5: un espectro, una llama, un aura) brilla igual pero con su
-// gris por el color de ojos, así tiene tonos.
+// gris por el color de ojos, así tiene tonos. El ALMA que guarda el enemigo
+// (máscara a 0,25: la llama entre las costillas, la del báculo del jefe)
+// brilla igual con el color de su afinidad y parpadea a saltos; apagada
+// (murió o no guarda ninguna) es un hueco oscuro.
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_lambert, specular_disabled, shadows_disabled, fog_disabled;
 
@@ -23,6 +26,9 @@ uniform vec3 eye_color : source_color = vec3(1.0);
 uniform float eye_energy = 1.4;
 // Lo espiritual (máscara a 0,5) brilla menos que los ojos: se ve, pero no tapa.
 uniform float spirit_energy = 0.6;
+// El alma que guarda: color de su afinidad y energía (0 = apagada).
+uniform vec3 soul_color : source_color = vec3(0.0);
+uniform float soul_energy = 0.0;
 // Golpe recibido: el sprite se pone blanco (0..1).
 uniform float flash = 0.0;
 // Luz propia mínima: que la silueta se lea aunque no la alumbre nada.
@@ -85,17 +91,29 @@ vec3 sprite_light(vec2 uv, out vec3 spec) {
 	return mix(vec3(lum), lit, tint_amount);
 }
 
-// Reflejo de los ojos: el hueso a 1-2 píxeles de una pupila toma un poco de
-// su luz (las cuencas, negras, siguen negras).
-float eye_halo(vec2 uv) {
+// Reflejo de los ojos y del alma: el hueso a 1-2 píxeles de una pupila (x)
+// o de la llama del alma (y) toma un poco de su luz (las cuencas, negras,
+// siguen negras).
+vec2 glow_halo(vec2 uv) {
+	vec2 halo = vec2(0.0);
 	for (int dy = -2; dy <= 2; dy++) {
 		for (int dx = -2; dx <= 2; dx++) {
-			if (texture(glow, uv + vec2(float(dx), float(dy)) * texel).r > 0.75) {
-				return 0.12;
+			float g = texture(glow, uv + vec2(float(dx), float(dy)) * texel).r;
+			if (g > 0.75) {
+				halo.x = 0.12;
+			} else if (g > 0.15 && g < 0.4) {
+				halo.y = 0.22;
 			}
 		}
 	}
-	return 0.0;
+	return halo;
+}
+
+// Parpadeo de llama: cambia de a saltos y distinto en cada fila de píxeles.
+float soul_flicker(vec2 uv) {
+	float row = texel.y > 0.0 ? floor(uv.y / texel.y) : 0.0;
+	float n = fract(sin(floor(TIME * 9.0) * 12.9898 + row * 4.137) * 43758.5453);
+	return 0.72 + 0.28 * n;
 }
 
 void fragment() {
@@ -107,6 +125,12 @@ void fragment() {
 	vec4 c = texture(sheet, uv);
 	ALPHA = c.a;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
+	float g = texture(glow, uv).r;
+	bool held = g > 0.15 && g < 0.4;
+	if (held && soul_energy <= 0.0) {
+		// Sin alma: el hueco entre las costillas, casi negro.
+		c.rgb = vec3(0.0103, 0.0052, 0.0144);
+	}
 	vec3 albedo = mix(c.rgb * tint.rgb, vec3(1.0), flash);
 	// Igual que el material PSX sombreado: con niebla total el color es
 	// exactamente el de la niebla (el albedo se apaga y entra por emisión).
@@ -115,7 +139,8 @@ void fragment() {
 		// emisión con la luz que se calcula acá.
 		vec3 spec;
 		vec3 lit = sprite_light(uv, spec);
-		vec3 halo = albedo * eye_color * eye_energy * eye_halo(uv);
+		vec2 h = glow_halo(uv);
+		vec3 halo = albedo * (eye_color * eye_energy * h.x + soul_color * soul_energy * h.y);
 		ALBEDO = vec3(0.0);
 		EMISSION = (albedo * (lit + vec3(self_light)) + spec + halo + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
 	} else if (flat_light) {
@@ -125,13 +150,15 @@ void fragment() {
 		ALBEDO = albedo * (1.0 - v_fog);
 		EMISSION = (albedo * self_light + vec3(flash) * 0.5) * (1.0 - v_fog) + psx_fog_color.rgb * v_fog;
 	}
-	float g = texture(glow, uv).r;
 	if (g > 0.75) {
 		ALBEDO = vec3(0.0);
 		EMISSION = eye_color * eye_energy;
-	} else if (g > 0.25) {
+	} else if (g > 0.4) {
 		ALBEDO = vec3(0.0);
 		EMISSION = dot(c.rgb, vec3(1.0 / 3.0)) * eye_color * eye_energy * spirit_energy + vec3(flash) * 0.5;
+	} else if (held && soul_energy > 0.0) {
+		ALBEDO = vec3(0.0);
+		EMISSION = dot(c.rgb, vec3(1.0 / 3.0)) * soul_color * soul_energy * soul_flicker(uv) + vec3(flash) * 0.5;
 	}
 	SPECULAR = 0.0;
 	ROUGHNESS = 1.0;

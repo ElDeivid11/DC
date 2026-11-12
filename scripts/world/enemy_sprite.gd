@@ -54,6 +54,9 @@ var _flat := false
 ## Luz por píxel del sprite con su mapa de normales (meta.normal).
 var _normals := false
 var _rng := RandomNumberGenerator.new()
+## El alma que guarda (color de su llama; negro = ninguna) y su resplandor.
+var _soul := Color.BLACK
+var _soul_light: OmniLight3D = null
 
 ## Carga (una vez) el JSON de una hoja y sus texturas. Vacío si algo falla.
 static func load_sheet(json_path: String) -> Dictionary:
@@ -137,6 +140,50 @@ func _pick(role: String) -> String:
 	if options.is_empty():
 		return ""
 	return options[_rng.randi_range(0, options.size() - 1)]
+
+func set_soul(color: Color) -> void:
+	_soul = color
+	var on := color != Color.BLACK and mat != null
+	if mat:
+		mat.set_shader_parameter("soul_color", color)
+		mat.set_shader_parameter("soul_energy", DataRegistry.bal_f("render.soul.energy", 1.5) if on else 0.0)
+	if on and _soul_light == null:
+		# Un resplandor en el piso y las paredes: el alma se ve de lejos. No
+		# entra al grupo de luces de los sprites (no se alumbra a sí mismo).
+		_soul_light = OmniLight3D.new()
+		_soul_light.shadow_enabled = false
+		_soul_light.omni_range = DataRegistry.bal_f("render.soul.light_range", 2.6)
+		_soul_light.position = Vector3(0.0, 0.9, 0.35)
+		add_child(_soul_light)
+	if _soul_light:
+		_soul_light.light_color = color
+		_soul_light.light_energy = DataRegistry.bal_f("render.soul.light_energy", 0.5) if on else 0.0
+
+func release_soul(towards: Variant = null) -> void:
+	if _soul == Color.BLACK:
+		return
+	var color := _soul
+	set_soul(Color.BLACK)
+	# Fuego fatuo: un cuadradito sin sombrear que sube y se achica (o va
+	# hacia el héroe si se la lleva).
+	var wisp := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(0.22, 0.22)
+	wisp.mesh = q
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.albedo_color = color
+	wisp.material_override = m
+	wisp.position = position + Vector3(0.0, 0.9, 0.0)
+	get_parent().add_child(wisp)
+	var goal: Vector3 = wisp.position + Vector3(0.0, 1.6, 0.0)
+	if towards is Vector3:
+		goal = towards
+	var tw := wisp.create_tween().set_parallel(true)
+	tw.tween_property(wisp, "position", goal, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.tween_property(wisp, "scale", Vector3(0.2, 0.2, 0.2), 0.9)
+	tw.chain().tween_callback(wisp.queue_free)
 
 func has_role(role: String) -> bool:
 	return _pick(role) != ""

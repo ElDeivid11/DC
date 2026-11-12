@@ -10,7 +10,7 @@ un golpe, derrumbarse, levantarse).
 import math
 
 from pixel_kit import (HEAD, Canvas, Piece, art, bob, flip_x, jaw_open, lift, lunge, move, pose, recolor,
-                       rot90, shift, squash, stretch)
+                       rot90, shift, soul_fill, squash, stretch)
 
 CANVAS = Canvas(72, 64, 36, 58)
 
@@ -97,6 +97,30 @@ BKKKWWKKKB
 ..KKWWKK..
 ..BWWWWB..
 """)
+# El alma que guarda arde detrás de las costillas: sus huecos son la llama
+# (el núcleo, pegado al esternón). El juego le da el color de su afinidad.
+# De frente y de perfil el pecho entero es la llama y las costillas, barras
+# por delante; de espaldas se ve entre las costillas, a los lados de la
+# columna.
+RIBS = art("""
+BWWWWWWWWB
+W22111122B
+BWWWWWWWWB
+.22111122.
+.BWWWWWWB.
+..211112..
+..BWWWWB..
+""")
+RIBS_SIDE = art("""
+WWWWWW.
+W2111WB
+WWWWWWB
+W21112B
+.WWWWWB
+.211WB.
+..WWB..
+""")
+RIBS_BACK = soul_fill(RIBS_BACK)
 SPINE = art("""
 WB
 KK

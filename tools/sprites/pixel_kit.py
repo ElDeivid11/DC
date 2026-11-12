@@ -43,12 +43,15 @@ PAL = {
     "T": "#7a5a8a",  # plumas
     "X": "#ffffff", "x": "#a8d8ff",  # estela
     "F": "#b4c0b8", "f": "#64766c",  # espíritu (espectro, aura): brilla tenue con el color de ojos
+    "1": "#ffffff", "2": "#8c8c94",  # la llama del ALMA que guarda (núcleo y borde): brilla con el color de su afinidad
 }
 GLOW = "E"
 SPIRIT = "Ff"
+SOUL = "12"
 # Valores de la máscara de brillo: 255 = ojos (color de ojos a pleno),
-# 128 = espíritu (su gris por el color de ojos, sin luz ni niebla).
-GLOW_EYE, GLOW_SPIRIT = 255, 128
+# 128 = espíritu (su gris por el color de ojos, sin luz ni niebla),
+# 64 = alma (su gris por el color de la afinidad del alma; apagada, un hueco).
+GLOW_EYE, GLOW_SPIRIT, GLOW_SOUL = 255, 128, 64
 METAL = "SsGgIiZz"
 
 
@@ -240,7 +243,8 @@ class Canvas:
         nrm = np.zeros((self.h, self.w, 4), np.uint8)
         nrm[..., :3] = np.clip(np.round((normals + 1.0) * 127.5), 0, 255).astype(np.uint8)
         nrm[..., 3] = np.where(np.isin(grid, list(METAL)), 128, 255)
-        glow = np.where(grid == GLOW, GLOW_EYE, np.where(np.isin(grid, list(SPIRIT)), GLOW_SPIRIT, 0)).astype(np.uint8)
+        glow = np.where(grid == GLOW, GLOW_EYE, np.where(np.isin(grid, list(SPIRIT)), GLOW_SPIRIT,
+                        np.where(np.isin(grid, list(SOUL)), GLOW_SOUL, 0))).astype(np.uint8)
         return rgba, glow, nrm
 
 
@@ -431,7 +435,13 @@ def _to_srgb(c):
     return np.where(c <= 0.0031308, c * 12.92, 1.055 * np.clip(c, 0, None) ** (1 / 2.4) - 0.055)
 
 
-def lit(rgba, glow, nrm, lights, eye=(0.6, 1.0, 0.35), ambient=0.12, self_light=0.3, tint=0.5):
+def soul_fill(a, bright=()):
+    """La llama del alma detrás de un hueco: los 'K' de un sello pasan a ser
+    alma ('2' borde; '1' núcleo en las columnas de `bright`)."""
+    return ["".join(("1" if x in bright else "2") if c == "K" else c for x, c in enumerate(r)) for r in a]
+
+
+def lit(rgba, glow, nrm, lights, eye=(0.6, 1.0, 0.35), ambient=0.12, self_light=0.3, tint=0.5, soul=(0.35, 0.78, 0.94)):
     """El cuadro iluminado: lights = [((x, y, z) hacia la luz, (r, g, b)), ...]."""
     n = nrm[..., :3].astype(float) / 127.5 - 1.0
     n /= np.linalg.norm(n, axis=-1, keepdims=True)
@@ -457,6 +467,8 @@ def lit(rgba, glow, nrm, lights, eye=(0.6, 1.0, 0.35), ambient=0.12, self_light=
     c = alb * (light + self_light) + spec + alb * eye[None, None, :] * 1.4 * halo[..., None]
     spirit = glow == GLOW_SPIRIT
     c[spirit] = alb[spirit].mean(-1, keepdims=True) * eye * 1.4 * 0.6
+    held = glow == GLOW_SOUL
+    c[held] = alb[held].mean(-1, keepdims=True) * _to_lin(np.array(soul, float)) * 1.5
     c[glow == GLOW_EYE] = eye * 1.4
     out = np.zeros_like(rgba)
     out[..., :3] = (np.clip(_to_srgb(np.clip(c, 0, 1)), 0, 1) * 255).astype(np.uint8)

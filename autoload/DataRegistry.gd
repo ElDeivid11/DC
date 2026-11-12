@@ -225,6 +225,17 @@ func roll_soul_id(species_id: String, rng: RandomNumberGenerator) -> String:
 		return ""
 	return String(ids[rng.randi_range(0, ids.size() - 1)])
 
+## Primera afinidad de un alma ({} si no tiene o no existe).
+func soul_affinity(soul_id: String) -> Dictionary:
+	var afs: Array = get_soul(soul_id).get("afinidades", [])
+	return get_affinity(String(afs[0])) if not afs.is_empty() else {}
+
+## Color de la llama del alma que guarda un enemigo: el de su primera
+## afinidad (negro = no guarda ninguna).
+func soul_flame_color(soul_id: String) -> Color:
+	var af := soul_affinity(soul_id)
+	return Color.html(String(af.llama)) if af.has("llama") else Color.BLACK
+
 ## Afinidades en el orden de sinergias.json.
 func affinity_ids() -> Array[String]:
 	var ids: Array[String] = []
@@ -514,6 +525,9 @@ func _validate_synergies() -> void:
 		_req(F, id, a, "nombre", TYPE_STRING)
 		_req(F, id, a, "icono", TYPE_STRING)
 		_req(F, id, a, "rampa", TYPE_STRING)
+		# Color de la llama del alma en el mundo (la que se le ve al enemigo).
+		if not Color.html_is_valid(String(a.get("llama", ""))):
+			_err("%s → '%s': 'llama' debe ser un color «#rrggbb»" % [F, id])
 		a["descripcion"] = String(a.get("descripcion", ""))
 		if not _req(F, id, a, "niveles", TYPE_ARRAY):
 			continue
